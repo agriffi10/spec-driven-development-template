@@ -59,6 +59,10 @@ from this template.
 │   ├── process.md                    # the full method (read once)
 │   ├── architecture.md               # sectioned design reference (stub)
 │   ├── component-inventory.md        # reuse index
+│   ├── best-practices/              # domain coding rulebooks (agent references)
+│   │   ├── INDEX.md                 # router: pick one doc + only the sections you need
+│   │   ├── react/react.md           # React 18/19 rules
+│   │   └── accessibility/accessibility.md  # WCAG 2.2 rules
 │   ├── specs/INDEX.md                # spec index + status
 │   ├── spec-delivery/                # one short delivery doc per completed spec
 │   └── templates/

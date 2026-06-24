@@ -22,6 +22,7 @@ is deliberately small and **must not regrow**.
 | The work | `docs/specs/SPEC-XXX-*.md` | the one you're building | requirements + phases |
 | Why | `docs/architecture.md` | the *section* you need | design rationale + Known Constraints |
 | Reuse | `docs/component-inventory.md` | skim for reuse | modules/services/components already built |
+| Rulebooks | `docs/best-practices/INDEX.md` → domain doc | the section(s) you need | domain coding rules (React, a11y, …) |
 | History | `docs/spec-delivery/SPEC-XXX-*.md` | when a dependency points to one | what a past spec shipped |
 | Method | `docs/process.md` (this file) | once | how we work |
 
@@ -69,8 +70,13 @@ This is the operating loop, start to finish. CLAUDE.md's *Session Workflow* is t
 **During the build — one spec, in phases**
 - Every file-changing task is done on its **own branch** and opened as a **PR** — automatically, without
   waiting to be asked. Never commit to `main` directly.
+- Before opening a PR, run the project's **formatter, linter, and unit tests** locally and get them
+  green. These quality gates are a pre-PR step — don't push red and leave CI to discover it.
 - Work the validated plan's phases in order. After each phase, **stop and summarize** what was built and
   how it maps back to the plan before continuing.
+- Before writing code in a domain that has a rulebook (React, accessibility, …), route through
+  `docs/best-practices/INDEX.md` and load only the relevant section(s). Apply the rules as you write;
+  flag (don't silently break) any that conflict with existing code.
 - Specs ship with **no Open Questions** — they're resolved during authoring (§4). An issue that emerges
   mid-build is triaged by *kind*, not parked:
   - **Reversible / technical** (naming, file layout, which helper to reuse, an obvious bug fix): just
@@ -85,7 +91,8 @@ This is the operating loop, start to finish. CLAUDE.md's *Session Workflow* is t
 - Code review and verification run in a **fresh context** (a new session or a subagent), **never the
   session that wrote the code.** A self-reviewing agent assumes its own output was intended and rubber-
   stamps it; a clean reviewer catches what the author can't see. The reviewer checks the diff against
-  the spec's acceptance criteria, not just "does it look fine."
+  the spec's acceptance criteria **and the relevant `best-practices/` rules** (route via its INDEX),
+  not just "does it look fine."
 
 **Landing the spec — watch PRs and watch `main`**
 - **Every PR is watched to completion and merged as soon as CI is green** — never open a PR and walk

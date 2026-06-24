@@ -7,6 +7,7 @@ Loaded every session — keep it lean. Deep docs live in `docs/` and are pulled 
 - `@docs/specs/SPEC-XXX-*.md` — the spec you're implementing
 - `@docs/component-inventory.md` — reusable modules/services/components already built
 - `@docs/spec-delivery/SPEC-XXX-*.md` — what a past spec delivered (pull only when a dependency points to one)
+- `@docs/best-practices/INDEX.md` — domain coding rulebooks (React, accessibility, …); route here, then load only the section(s) you need
 
 ---
 
@@ -28,6 +29,8 @@ detail. Understandable by someone who has never seen the code.]
 
 [The non-negotiable rules: typing/strictness, error handling, naming, file/module structure, testing
 expectations. Keep to what an implementer must not violate.]
+
+- When writing/refactoring code in a domain that has a rulebook (see `@docs/best-practices/INDEX.md`), consult it first and load only the relevant section(s) — don't reinvent or guess the rules.
 
 ## Common Commands
 
@@ -64,7 +67,7 @@ Index + status: `@docs/specs/INDEX.md`. Each spec file's header carries its own 
 
 **Review:** code review and verification run in a **fresh context** (new session or subagent), never the session that wrote the code — check the diff against the spec's acceptance criteria, not just "looks fine."
 
-**PRs & main:** watch every PR to completion and merge it as soon as CI is green — never open-and-abandon. `main` is always watched: after any merge confirm it went green, and if `main` fails, diagnose immediately and fix it with a new PR before anything else.
+**PRs & main:** before opening a PR, get the formatter, linter, and unit tests green locally. Watch every PR to completion and merge it as soon as CI is green — never open-and-abandon. `main` is always watched: after any merge confirm it went green, and if `main` fails, diagnose immediately and fix it with a new PR before anything else.
 
 **On spec completion — keep the always-loaded files lean:**
 1. Set the spec file's `Status: Completed`.
