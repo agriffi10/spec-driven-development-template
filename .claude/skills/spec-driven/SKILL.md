@@ -34,7 +34,14 @@ When a repo has no spec-driven docs yet:
    sectioned stub.
 5. Wire `spec-lint` into CI. If the repo already has a CI workflow, add the spec-lint step there too (or
    keep the standalone `spec-lint.yml` — either is fine, but it must run on PRs).
-6. Run `sh scripts/spec-lint.sh` to confirm it passes (it no-ops cleanly when there are no specs yet).
+6. **Set up language CI (GitHub Actions).** Ask the user *once* what the repo's CI needs — which
+   languages/runtimes, and the install / format-check / lint / typecheck / test commands (default to
+   `CLAUDE.md` → Common Commands). From `.github/workflows/ci.yml.example`, produce a real
+   `.github/workflows/ci.yml`: keep only the job(s) for this repo's languages, fill in the actual
+   commands, run on PR + push to `main`, then delete the `.example`. 🔴 Never leave placeholder commands
+   that would fail — if a check doesn't apply, drop it. This makes "land on green CI" cover the language
+   gates, not just spec-lint.
+7. Run `sh scripts/spec-lint.sh` to confirm it passes (it no-ops cleanly when there are no specs yet).
 
 Keep the always-loaded tier (`CLAUDE.md`) lean — it must not regrow into a wall of prose.
 

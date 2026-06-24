@@ -1,0 +1,49 @@
+# CI (EXAMPLE — does not run as-is)
+#
+# GitHub Actions only runs workflow files ending in .yml/.yaml, so this `.example`
+# file never executes. During scaffolding, copy it to `ci.yml`, keep only the job(s)
+# for the languages this repo uses, replace the commands with this repo's real ones
+# (match CLAUDE.md → Common Commands), then delete this `.example`.
+#
+# Purpose: run the project's quality gates on every PR and push to `main`, so that
+# "land on green CI" (docs/process.md) means the formatter, linter, type-checker, and
+# tests all passed — not just spec-lint. (spec-lint runs in its own workflow.)
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  # ── Node / TypeScript ──────────────────────────────────────────────────────
+  # Delete this job if the repo isn't JS/TS. Adjust script names to match package.json.
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run format:check    # formatter check (e.g. prettier --check)
+      - run: npm run lint            # linter (e.g. eslint)
+      - run: npm run typecheck        # types (e.g. tsc --noEmit) — remove if N/A
+      - run: npm test                 # unit tests
+
+  # ── Python ─────────────────────────────────────────────────────────────────
+  # Delete this job if the repo isn't Python. Swap pip for poetry/uv as appropriate.
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -e ".[dev]"  # or: poetry install --with dev
+      - run: ruff format --check .     # formatter check
+      - run: ruff check .              # linter
+      - run: mypy                      # type-checker — remove if N/A
+      - run: pytest                    # unit tests
