@@ -72,8 +72,20 @@ This is the operating loop, start to finish. CLAUDE.md's *Session Workflow* is t
 - Work the validated plan's phases in order. After each phase, **stop and summarize** what was built and
   how it maps back to the plan before continuing.
 - Specs ship with **no Open Questions** — they're resolved during authoring (§4). An issue that emerges
-  mid-build is handled in the session: resolve it, note the decision, and if it changes scope or
-  contradicts the spec, **update the spec** rather than leaving the divergence implicit.
+  mid-build is triaged by *kind*, not parked:
+  - **Reversible / technical** (naming, file layout, which helper to reuse, an obvious bug fix): just
+    decide in-session and keep moving. If it changes scope or contradicts the spec, **update the spec**
+    rather than leaving the divergence implicit.
+  - **Product-changing / ambiguous** (anything that alters behavior the user would notice, or a call
+    with no clearly-right answer): **stop and escalate to the human.** Don't silently pick — surface the
+    options with a recommendation. Auto-deciding these is how an autonomous run drifts away from what
+    was actually wanted.
+
+**Reviewing the work — in a fresh context**
+- Code review and verification run in a **fresh context** (a new session or a subagent), **never the
+  session that wrote the code.** A self-reviewing agent assumes its own output was intended and rubber-
+  stamps it; a clean reviewer catches what the author can't see. The reviewer checks the diff against
+  the spec's acceptance criteria, not just "does it look fine."
 
 **Landing the spec — watch PRs and watch `main`**
 - **Every PR is watched to completion and merged as soon as CI is green** — never open a PR and walk

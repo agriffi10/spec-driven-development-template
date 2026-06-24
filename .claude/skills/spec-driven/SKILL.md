@@ -68,7 +68,12 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
    writing code.** This validated plan replaces per-phase checkpoints.
 5. Work phases in order; each file-changing task on its own branch → PR. After each phase, stop and
    summarize what was built and how it maps to the plan.
-6. Resolve emergent issues in-session; if scope changes, update the spec.
+6. Triage emergent issues by kind: **reversible/technical** → decide in-session (update the spec
+   if scope changes); **product-changing/ambiguous** → stop and escalate to the human with options
+   + a recommendation, never silently decide.
+7. **Review in a fresh context.** Code review and verification run in a new session or subagent —
+   never the one that wrote the code — checking the diff against the spec's acceptance criteria. A
+   self-reviewing agent rubber-stamps its own work.
 
 ## 3. Watch PRs and watch main
 
