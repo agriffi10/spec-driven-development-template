@@ -26,6 +26,9 @@
 - **§16 Architecture & mental model** — declarative > imperative; react vs react-dom; Elements; FP principles.
 - **§17 Build workflow** — Thinking in React 5-step process.
 - **§18 Tooling** — StrictMode + eslint-plugin-react-hooks; never suppress the linter.
+- **§19 JSDoc component docs** — document components with JSDoc for hover/usage; let TS own types; `@typedef` props, `@example`, extend HTML attrs, element-type reference; JSDoc (not inline comments) is the primary source of context.
+- **§20 Responsive design** — mobile-first; the project's `tablet:`/`desktop:` breakpoint vocabulary; responsive-by-default (utilities on one tree) vs. a justified separate-markup branch; the one viewport hook (`useBreakpoint`) is mount-gating only.
+- **§21 Testing** — integration-style tests; render real hooks/children, mock only the AWS service boundary; one test per user-observable behavior (not per assertion); the shared `renderWithProviders` + `userEvent`; what belongs in a service unit test vs. a component test.
 
 ---
 
@@ -178,3 +181,81 @@ Effects are an escape hatch for syncing with external systems. If no external sy
 - ✅ Enable **StrictMode** (`<React.StrictMode>`) in dev — double-invokes renders and remounts Effects once to surface impurities and missing cleanup. No production effect.
 - ✅ Use **`eslint-plugin-react-hooks`** — enforces Hook call rules (§5) and `exhaustive-deps` (§12).
 - 🔴 **Never suppress the dependency linter** (`// eslint-disable-next-line react-hooks/exhaustive-deps`). It "lies" to React about what the Effect depends on and causes stale-value bugs. The linter only flags *wrong* deps, not the *best* fix — change the code instead (§12, §13). Treat lint errors as compile errors.
+
+## §19 JSDoc component documentation
+Document components with a JSDoc block so usage, prop meaning, and examples surface on hover in the editor. **This repo is TS-strict (§18/CLAUDE.md), so TypeScript owns the *types*** — use JSDoc for the *prose* (what the component does, what each prop means, examples), and let the `interface`/prop types carry the shapes. Don't restate TS types in `@param {string}` tags — duplicated types drift.
+
+**JSDoc is the primary source of context, not inline comments.** This applies to every exported component, hook, and utility/service function, not just components.
+
+- ✅ Put a JSDoc block above every exported component, hook, and non-trivial function: a one-line summary, then prop/param descriptions and (for components/hooks) at least one `@example`. This is what shows on hover.
+- ✅ When code needs explaining, prefer expanding the JSDoc block over adding narrative comments — the doc block is discoverable (hover, IDE, generated docs); a comment buried mid-function is not.
+- 🔴 No verbose or paragraph-length inline comments. Keep inline comments short, sparse, and reserved for the genuinely non-obvious *why* (a tricky workaround, a non-obvious ordering requirement) — never restate *what* the next line does.
+- ✅ **Types come from TS, docs from JSDoc.** Define props as a TS `interface`/`type` (repo convention: `ComponentNameProps` in `component.types.ts` or co-located); annotate meaning with `@property`/inline JSDoc on the interface members, not with typed `@param` tags that repeat the type.
+- ✅ Use **`@example`** (optionally with `<caption>`) to show real usage — the highest-value part for consumers; multiple examples are fine.
+- 🔴 Don't hand-write `@param {object} props` / `@returns {JSX.Element}` type tags in `.tsx` — TS already infers them, and the tags fight the compiler. ✅ Keep `@example` and descriptions; drop the type tags.
+
+Preferred form in this repo (TS carries types; JSDoc carries docs + example):
+
+```tsx
+interface ShopLabelProps {
+  /** The name of the shop */
+  shopName: string;
+  /** Optional class name */
+  className?: string;
+}
+
+/**
+ * Displays a shop name.
+ *
+ * @example
+ * <ShopLabel shopName="My Shop" className="highlight" />
+ */
+export const ShopLabel = ({ shopName, className = '' }: ShopLabelProps) => {
+  return <p className={className}>{shopName}</p>;
+};
+```
+
+- ✅ **Extend native element props** by intersecting your props with the right React attribute type, so consumers get `onClick`, `aria-*`, etc. with correct types: `React.HTMLAttributes<HTMLParagraphElement> & ShopLabelProps`. For inputs use `React.InputHTMLAttributes<HTMLInputElement>` (gives a correctly-typed `onChange`); spread `...props` onto the element.
+- ✅ **Element-type reference** (for prop/return types): `JSX.Element` = a single element (typical component return; prefer over `React.JSX.Element`). `ReactNode` = the wider union (elements, arrays, strings, booleans) — use for a `children`/`fallback` prop that accepts anything renderable. `React.FC` / `React.ComponentType` = the *component itself*, for an `as`/render-component prop (`as={Badge}`), not an already-rendered element.
+- If a **plain-JS** (`.jsx`) file ever needs typing without TS, the article's typed JSDoc (`@typedef`/`@param {ShopLabelProps}` / `React.HTMLAttributes<*>` intersection) is the fallback — but in this repo prefer converting to `.tsx` over annotating JS with JSDoc types.
+
+Source: [Writing JSDoc for React Components — Thomas Schoffelen](https://schof.co/writing-jsdoc-for-react-components/).
+
+## §20 Responsive design
+The app targets three widths with **project-custom breakpoints** (SPEC-095), not Tailwind's defaults. The defaults (`sm`/`md`/`lg`/`xl`/`2xl`) are reset to `initial` in `src/index.css` `@theme`; only two self-documenting prefixes compile:
+
+| Tier | Prefix | Threshold |
+|---|---|---|
+| **Mobile** | base (no prefix) | `< 900px` |
+| **Tablet** | `tablet:` | `900–1299px` |
+| **Desktop** | `desktop:` | `≥ 1300px` |
+
+- ✅ **Mobile-first.** Unprefixed utilities *are* the mobile (`< 900px`) layout; `tablet:` / `desktop:` layer changes on top. A prefix means "at that width **and up**".
+- 🔴 **Never use a prefix to *target* mobile.** There is no lower prefix — mobile is the unprefixed base. (This is why the defaults are removed: a `md:` that secretly meant 900px is a footgun.)
+- ✅ **Tablet-band-only** styles use the stacked `tablet:max-desktop:` variant (≥900 and <1300). `max-tablet:` / `max-desktop:` are also available.
+- ✅ **Responsive by default (FR-008).** Restyle across breakpoints — spacing, direction, column counts, alignment, ordering, per-cell show/hide — with utility variants on **one** element (`flex-col` → `tablet:flex-row`, `grid-cols-1` → `tablet:grid-cols-3`, `hidden`/`desktop:block`, `order-*`, `gap-*`). Keep behavior, state, refs, and a11y in one place.
+- ✅ **A separate component / `tablet:hidden` markup branch is allowed only when the two presentations are genuinely, structurally different** (different DOM/semantics, not just spacing) — the canonical case is the Files **data table vs. mobile card list** (SPEC-099). State the structural justification in the spec and still reuse the same data + shared child components/handlers (no forked logic).
+- ✅ Two cases CSS alone can't express, which always justify a branch: **mounting cost / distinct interaction** (e.g. not mounting Monaco on phones — `hidden` still instantiates it) and **mobile-only chrome** (the `MobileActionBar`, the hamburger — `tablet:hidden`).
+- ✅ Where a viewport hook is genuinely needed (**mount-gating only**, never for styling), use the one shared `useBreakpoint()` / `useIsMobile()` in `src/lib/` — not ad-hoc `matchMedia` per feature.
+- 🔴 No `*Mobile`/`*Desktop` twin for a layout that is only a restyle of the same DOM.
+
+## §21 Testing
+Vitest + React Testing Library, jsdom. Tests describe **user-observable behavior**, not implementation. The goal is few, high-value tests — coverage comes from exercising real code paths, not from many shallow tests.
+
+**The boundary: mock only AWS, nothing else.** Services (`*.service.ts`) and `src/lib` AWS clients are the app's only real seam. A component/feature/hook test mocks *those* and lets the **real** hooks and **real** child components render.
+- ✅ `vi.mock('./x.service')` (or the `src/lib/*Client` / `awsCredentials` / `aws-amplify/auth` module it calls) and drive the returned `ServiceResult`. Render the real tree.
+- 🔴 Don't `vi.mock` the feature's own hooks (`useFileBrowser`, `useDelete`, …) or stub its child components (`MoveDialog`, `MetadataPanel`, …). Mocking the internals is what makes tests brittle *and* fragments coverage (the mocked-out code only gets covered by its own file). One integration render covers the hook, the children, and the wiring at once.
+- ✅ A child that is genuinely heavy/global and covered elsewhere may be stubbed **by exception**, with a one-line `//` why (Monaco editor, the upload dropzone). Default is: don't.
+
+**One test per behavior, not per assertion.** A single `it` may make several assertions about one user-visible outcome. 🔴 Five `it`s for "renders name / size / date / order / icon" → ✅ one `it('renders a populated folder')`. Split only when the *scenario* differs (empty vs error vs populated), not when the field differs.
+
+**Use the shared harness** (`src/test/renderWithProviders.tsx`): `renderWithProviders(ui, {route, auth})` wires QueryClient (retries off) + MemoryRouter + AuthContext and returns `{user, queryClient}`; `renderHookWithProviders` does the same for hooks. Inject auth with the `authFixtures` builders (`authenticated()`, `unauthenticated()`).
+- 🔴 Don't hand-roll a `QueryClientProvider` + `MemoryRouter` wrapper per file — use the harness.
+- ✅ Interact with `userEvent` (`await user.click(...)`), not `fireEvent`, in new/reworked tests — it models real focus/typing.
+- ✅ Query by role/label/text (`getByRole`, `findByRole`); assert what the user sees. 🔴 No `data-testid` unless there's no accessible handle.
+
+**Where a test belongs.**
+- **Service unit test** (`*.service.test.ts`) — pure logic: request shaping, response parsing, `ServiceResult` wrapping, error mapping. Mock the SDK client here; keep these — they're cheap and exhaustive.
+- **Component/feature test** — behavior a user drives through the UI, with services mocked at the boundary. Don't re-assert service parsing here.
+- **Hook test** (`renderHookWithProviders`) — only for hooks with non-trivial state/derivation not better exercised through a component.
+- 🔴 Don't test the same logic at two levels. If the service test covers a parse branch, the component test asserts the *rendered outcome*, not the parse.
