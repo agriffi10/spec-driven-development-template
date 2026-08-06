@@ -3,6 +3,7 @@
 Loaded every session — keep it lean. Deep docs live in `docs/` and are pulled **on demand**:
 - `@docs/process.md` — how we work: spec lifecycle, session rhythm, completion ritual (read once)
 - `@docs/architecture.md` — system design decisions + Known Constraints (read the section you need)
+- `@docs/decisions.md` — the Key Decisions register in full (the digest below is one line each)
 - `@docs/specs/INDEX.md` — the spec index + status (one row per spec)
 - `@docs/specs/SPEC-XXX-*.md` — the spec you're implementing
 - `@docs/component-inventory.md` — reusable modules/services/components already built
@@ -48,10 +49,12 @@ Index + status: `@docs/specs/INDEX.md`. Each spec file's header carries its own 
 
 ---
 
-## Key Decisions (settled — don't re-litigate; detail in the linked spec/architecture)
+## Key Decisions (settled — don't re-litigate)
 
-- [One line per settled decision, each with a pointer to the spec/architecture section that holds the
-  reasoning. Never a paragraph here.]
+One line each — a digest of the full entry in `@docs/decisions.md`; read the entry before working in
+that area. A line here is **never the only home of a fact**, and never a paragraph.
+
+- [One line per settled decision, bold label matching its `decisions.md` heading.]
 
 ## Out of Scope (don't build)
 
@@ -74,4 +77,4 @@ Index + status: `@docs/specs/INDEX.md`. Each spec file's header carries its own 
 2. Update the one-line row in `@docs/specs/INDEX.md` (status only — don't add prose).
 3. Write a short delivery doc at `docs/spec-delivery/SPEC-XXX-<name>.md` from the template.
 4. If it added reusable modules/services/components, add a one-line row to `@docs/component-inventory.md`.
-5. A *new architectural decision* gets one line in Key Decisions above (+ a pointer) — never a paragraph.
+5. A *new architectural decision* gets its full entry in `docs/decisions.md` **first**, then one line in Key Decisions above — the line is never the only home of a fact, and never a paragraph. If it supersedes an earlier decision, add an in-place superseded marker at every doc site still stating the old claim.

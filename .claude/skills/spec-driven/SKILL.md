@@ -94,9 +94,14 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
 In one pass when a spec is done:
 1. Spec header `Status: Completed`.
 2. Update its one-line row in `docs/specs/INDEX.md` (status only).
-3. Write a short delivery doc at `docs/spec-delivery/SPEC-XXX-<name>.md` (< ~40 lines, no code pasted).
-4. If reusable components were added, add a one-line row to `docs/component-inventory.md`.
-5. A new architectural decision → one line in `CLAUDE.md` Key Decisions (+ pointer). Never a paragraph.
+3. Write a short delivery doc at `docs/spec-delivery/SPEC-XXX-<name>.md` (typically under a page,
+   ~40–100 lines; no code pasted).
+4. If reusable components were added, add a one-line row to `docs/component-inventory.md` (in the
+   area file matching the component's path, if the inventory has split).
+5. A new architectural decision → full entry in `docs/decisions.md` **first**, then one line in
+   `CLAUDE.md` Key Decisions. The digest line is never the only home of a fact, and never a
+   paragraph. If it supersedes an earlier decision, add an in-place superseded marker at every doc
+   site still stating the old claim.
 
 ## spec-lint reference
 

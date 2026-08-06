@@ -21,6 +21,7 @@ is deliberately small and **must not regrow**.
 | Status | `docs/specs/INDEX.md` + each spec header | on demand | spec **status** (one row per spec) |
 | The work | `docs/specs/SPEC-XXX-*.md` | the one you're building | requirements + phases |
 | Why | `docs/architecture.md` | the *section* you need | design rationale + Known Constraints |
+| Decisions | `docs/decisions.md` | the *entry* for your area | settled decisions in full + reversal markers |
 | Reuse | `docs/component-inventory.md` | skim for reuse | modules/services/components already built |
 | Rulebooks | `docs/best-practices/INDEX.md` → domain doc | the section(s) you need | domain coding rules (React, a11y, …) |
 | History | `docs/spec-delivery/SPEC-XXX-*.md` | when a dependency points to one | what a past spec shipped |
@@ -46,13 +47,20 @@ Specs move **Draft → In Progress → Completed** (the status in each spec's he
 - **Completed** — merged on green CI, delivery doc written (see §5).
 
 **Arcs.** Related specs can be grouped into *arcs* with an explicit **build order** documented in
-`INDEX.md`. Build in that order; arcs can have non-obvious dependencies.
+`INDEX.md`. Build in that order; arcs can have non-obvious dependencies. If arc narrative outgrows an
+`INDEX.md` row, move it to a `docs/specs/ARCS.md` with **one `##` heading per arc** (a status word in
+the heading — shipped / cancelled / active) and a TOC at the top, so a session can load only the arc
+it's in. Structure it that way from the first entry — retrofitting headings onto grown prose is far
+more work.
 
 ---
 
 ## 3. The session rhythm
 
 This is the operating loop, start to finish. CLAUDE.md's *Session Workflow* is the condensed version.
+**If this section and CLAUDE.md ever disagree, CLAUDE.md wins** — fix the drift here in the same
+session you notice it (two hand-synced copies of one procedure is how numbering and staleness bugs
+happen).
 
 **Start of session**
 1. Read CLAUDE.md, then the **current** spec in full. Don't infer scope from a prior conversation —
@@ -136,15 +144,36 @@ When a spec is done, in the same pass:
 1. Set the spec file header `Status: Completed`.
 2. Update its one-line row in `docs/specs/INDEX.md` (**status only** — no prose).
 3. Write a **short** delivery doc at `docs/spec-delivery/SPEC-XXX-<name>.md` from
-   `docs/templates/spec-completion-template.md` — *what shipped + what changed*, under ~40 lines, **no
-   code/config pasted** (the code + component-inventory are the source of truth for reuse).
+   `docs/templates/spec-completion-template.md` — *what shipped + what changed*, typically under a
+   page (~40–100 lines), **no code/config pasted** (the code + component-inventory are the source of
+   truth for reuse).
 4. If reusable modules/services/components were added, add a **one-line** row to
-   `docs/component-inventory.md`.
-5. A *new architectural decision* gets **one line** in CLAUDE.md's Key Decisions (+ a pointer) — never a
-   paragraph. Reasoning lives in the spec/delivery doc.
+   `docs/component-inventory.md` (if the inventory has split into area files, the row goes in the
+   file **matching the component's path**).
+5. A *new architectural decision* gets its **full entry in `docs/decisions.md` first**, then **one
+   line** in CLAUDE.md's Key Decisions — the digest line is **never the only home of a fact**, and
+   never a paragraph. If the decision **supersedes an earlier one**, update the old register entry in
+   place and add a superseded marker (short blockquote: what changed, which spec, where the full
+   entry lives) at every doc site that still states the old claim — arc narratives, architecture
+   sections. The new entry alone is not enough; a reader who lands only on the old site must see the
+   reversal.
 
-**Anti-regrowth.** If a doc disagrees with the code, fix or delete it — don't let stale state
-accumulate. Don't add prose to the always-loaded tier.
+**Anti-regrowth & doc hygiene** (each rule below was earned by a real doc defect in a project run
+this way):
+
+- If a doc disagrees with the code, fix or delete it — don't let stale state accumulate. Don't add
+  prose to the always-loaded tier.
+- **Standing rules never cite volatile numbers** (line counts, row counts, section ranges) — state
+  the principle. The numbers rot, and a rule resting on false evidence teaches readers to distrust it.
+- **A rule practice consistently violates gets reconciled or deleted.** A dead rule trains agents to
+  ignore the live ones.
+- **Routers and indexes carry only what self-describes.** Hand-maintained metadata (symbol counts,
+  "§1–§N" ranges) rots silently; drop it or let the structure carry the information.
+- **Any doc pulled entry-by-entry gets one heading per entry plus a TOC**, and pointer phrases in
+  other docs must match a greppable heading — "read the entry for your area" must be a jump, not a
+  full-file read.
+- **Live findings and obligations never live in historical or cancelled narrative** — rehome them to
+  an active register and leave a pointer behind.
 
 ---
 

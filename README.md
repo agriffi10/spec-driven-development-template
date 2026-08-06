@@ -63,11 +63,12 @@ knows how to fill and file them.
 | `CLAUDE.md` | **Always-loaded project memory.** Conventions, key decisions, the session workflow, and `@docs/…` pointers to everything else. Kept deliberately short. | Claude, every session (auto) |
 | `docs/process.md` | The full **method** — spec lifecycle, session rhythm, review, completion ritual. Read once to understand the rhythm. | You + Claude (on demand) |
 | `docs/architecture.md` | Sectioned **design reference** + "Known Constraints". Pull the *one section* you need, never the whole file. | Claude (on demand) |
+| `docs/decisions.md` | **Key Decisions register** — full entries with reasoning and reversal markers; `CLAUDE.md` holds the one-line digest. Pull the entry you need. | Claude (on demand) |
 | `docs/component-inventory.md` | One-line index of **reusable** modules/services/components, so a new spec reuses instead of rebuilding. | Claude (on demand) |
 | `docs/best-practices/INDEX.md` | **Router** for domain coding rulebooks — match your task to a domain, then load only the sections you need. | Claude (on demand) |
-| `docs/best-practices/react/react.md` | React 18/19 rulebook (✅/🔴, internal index §1–§18). | Claude (on demand) |
-| `docs/best-practices/accessibility/accessibility.md` | WCAG 2.2 rulebook (Task Index → §1–§4). | Claude (on demand) |
-| `docs/best-practices/python/python.md` | Python / PEP 8 rulebook (§1–§9). | Claude (on demand) |
+| `docs/best-practices/react/react.md` | React 18/19 rulebook (✅/🔴, numbered internal index). | Claude (on demand) |
+| `docs/best-practices/accessibility/accessibility.md` | WCAG 2.2 rulebook (Task Index → Perceivable / Operable / Understandable / Robust). | Claude (on demand) |
+| `docs/best-practices/python/python.md` | Python / PEP 8 rulebook (numbered internal index). | Claude (on demand) |
 | `docs/specs/INDEX.md` | The **spec index + status** (one row per spec; optional build-order "arcs"). | You + Claude |
 | `docs/specs/SPEC-XXX-*.md` | An individual **spec** — the unit of work. You author these. | You + Claude |
 | `docs/spec-delivery/SPEC-XXX-*.md` | Short **"what shipped"** note written when a spec completes. Pulled only when a later spec depends on it. | Claude (on demand) |
@@ -199,5 +200,6 @@ them green — quality gates are a pre-PR step here, not something CI discovers.
   token-efficient agent reference (a short "how to use" + an internal index + ✅/🔴 rules — match the
   existing docs), then add **one row** to `docs/best-practices/INDEX.md`. The index is a router; the
   detail lives in the doc.
-- **Keep `CLAUDE.md` lean:** new architectural decisions get **one line** (+ a pointer), never a
-  paragraph. Reasoning belongs in the spec/delivery doc or `architecture.md`.
+- **Keep `CLAUDE.md` lean:** a new architectural decision gets its **full entry in
+  `docs/decisions.md` first**, then **one line** in `CLAUDE.md` — never a paragraph, and the line is
+  never the only home of a fact.
