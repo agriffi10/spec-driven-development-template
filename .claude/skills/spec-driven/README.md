@@ -1,8 +1,8 @@
 # spec-driven (skill)
 
 The **behavior** layer of the [spec-driven-development-template](../../../README.md): the workflow
-Claude follows to author specs, run plan-gated builds, review in a fresh context, watch PRs/main, and
-run the completion ritual. The full method and rationale live in the top-level `README.md` and in
+Claude follows to author specs, run plan-gated builds, put spec/plan/diff through a blocking
+fresh-context review gate, watch PRs/main, and run the completion ritual. The full method and rationale live in the top-level `README.md` and in
 `docs/process.md`.
 
 ## Files here
