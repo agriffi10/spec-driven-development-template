@@ -250,45 +250,6 @@ which"* — and then did not. A sentence that **promises a decision** is an Open
 declarative shape; so is an acceptance criterion demanding a **computed** bound while supplying none
 of its inputs. Both were caught by an implementer who had to pick, and neither by a reader.
 
-**Rotating the frame — why round count is the wrong exit criterion**
-
-Review rounds converge on the frame they are given, not on correctness. Measured on one spec
-(2026-08-07): **eight** rounds of independent review — two on the spec, three on its revisions, three
-on the code — after which the merged result still carried two defects, one of which was a regression
-of a guarantee an earlier spec had shipped. Rounds 1–3 found design defects; rounds 4–8 increasingly
-found wording. The *first* differently-framed pass afterwards found ~25 defects, several years old.
-
-So the loop rotates the frame instead of adding rounds:
-
-- **Cap same-frame review at two rounds.** After the second, switch frame rather than iterate:
-  adversarial *execution*, whole-module fresh eyes (not the diff), or the frames your domain makes
-  expensive to skip (concurrency, security, accessibility, data loss).
-- **Exit on a new frame finding nothing**, not on the current frame converging. "The reviewer found
-  nothing" means "nothing within the frame I gave it."
-- **At least one pass must start from the system, not the diff.** Every diff-scoped review is
-  structurally blind to a defect that predates the diff — and to the states the diff is never
-  exercised in (a change verified only in the signed-in path says nothing about sign-in).
-- **Reasoning finds wording; execution finds defects.** Require a reproduction, not an argument.
-  Passing review, passing unit tests and deploying successfully are three things that can all be true
-  of code that fails on its first real invocation.
-- **A spec touching lifecycle, concurrency or deploy-time wiring gets an execution harness, not a
-  review.** A race, a cold-start import failure, or a missing runtime binding is not findable by
-  reading; build the harness as in-scope work for the spec.
-
-**When a review changes a rule, re-audit the rule — not the line**
-
-A review finding is usually reported as an instance ("this call site uses the wrong predicate").
-Fixing the cited line and moving on is how the same defect survives repeated review: on one spec,
-three separate reviewers reported the same rule against three *different* call sites, each was fixed,
-and a fourth site shipped broken.
-
-- When a finding is an instance of a **rule**, the fix is a test or lint rule that enumerates
-  **every** site of that rule and asserts each one — for the same reason inventories are derived
-  rather than hand-written: a hand-maintained list rots and a derived one does not.
-- **Scope added mid-review restarts the clock.** Widening a spec in response to a finding is often
-  right, but the widening arrives late, gets the least scrutiny, and inherits confidence it has not
-  earned.
-
 **Landing the spec — watch PRs and watch `main`**
 - **Every PR is watched to completion and merged as soon as CI is green** — never open a PR and walk
   away. A spec's PR merges only on green.
