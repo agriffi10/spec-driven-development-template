@@ -5,8 +5,9 @@ description: >-
   spec-driven work, (b) authoring or refining a spec, (c) starting to build a spec, or (d) completing a
   spec. Provides a template repo layout (CLAUDE.md, layered docs/, spec + completion templates), a
   POSIX spec-lint, and a CI workflow + PR template. Enforces: specs are fully specified before build
-  (no Open Questions), builds run off a validated plan (no per-phase checkpoints baked into the spec),
-  every PR is watched and merged on green, and main is always watched. Triggers on phrases like "set up
+  (no Open Questions), spec/plan/diff each pass a blocking fresh-context review gate, builds run off a
+  reviewed plan (no per-phase checkpoints baked into the spec), every PR is watched and merged on
+  green, and main is always watched. Triggers on phrases like "set up
   spec-driven", "scaffold the docs structure", "write a spec", "start SPEC-XXX", "build this spec",
   "complete the spec / run the completion ritual".
 ---
@@ -57,10 +58,18 @@ Write from `template/docs/templates/spec-template.md`. A spec is *buildable* whe
 - **Implementation Phases** are reviewable units — the *input to the build-time plan*. Do **not** write
   per-phase checkpoints.
 - **No Open Questions.** Resolve every decision while authoring. If something genuinely can't be
-  resolved, that means the spec isn't Draft-ready — get the answer, don't park it.
+  resolved, that means the spec isn't Draft-ready — get the answer, don't park it. A sentence that
+  *promises* a decision ("the spec states which") is an Open Question in declarative clothes, and the
+  lint cannot see it.
+- **It has been through the reviewer gate.** A freshly-authored spec goes to a fresh-context reviewer
+  before it is Draft-ready; findings are fixed or **rejected in writing**. What this catches is rarely
+  a wrong requirement — it is an acceptance criterion that cannot fail, and an Out of Scope bullet an
+  FR quietly needs. Give the reviewer the spec, its build-order entry, and its dependencies — never
+  your authoring rationale.
 
 Add a row to `docs/specs/INDEX.md`. Before handing off, run `sh scripts/spec-lint.sh` — it fails on
-missing sections or an "Open Questions"/"Checkpoint" heading.
+missing sections or an "Open Questions"/"Checkpoint" heading. The lint is the structural half only;
+the gate above is the other half.
 
 ## 2. Build a spec (plan-gated)
 
@@ -71,16 +80,28 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
 2. Confirm CI is green on `main`; investigate failures first.
 3. Branch from fresh `main`.
 4. **Generate an implementation plan from the spec's phases and validate it against the spec** — every
-   FR + acceptance criterion covered, reuse used, nothing out of scope. **Confirm the plan before
-   writing code.** This validated plan replaces per-phase checkpoints.
+   FR + acceptance criterion covered, reuse used, nothing out of scope. **Then send the plan to a
+   fresh-context reviewer before the first line of code**, and confirm the reviewed plan with the user.
+   A wrong plan is more expensive than wrong code, because the code will faithfully implement it. This
+   reviewed plan replaces per-phase checkpoints.
 5. Work phases in order; each file-changing task on its own branch → PR. After each phase, stop and
-   summarize what was built and how it maps to the plan.
+   summarize what was built and how it maps to the plan. A phase that *revises* the plan has produced a
+   new artifact — it goes back through the gate.
 6. Triage emergent issues by kind: **reversible/technical** → decide in-session (update the spec
    if scope changes); **product-changing/ambiguous** → stop and escalate to the human with options
    + a recommendation, never silently decide.
 7. **Review in a fresh context.** Code review and verification run in a new session or subagent —
-   never the one that wrote the code — checking the diff against the spec's acceptance criteria. A
-   self-reviewing agent rubber-stamps its own work.
+   never the one that wrote the code — checking the diff against the spec's acceptance criteria and the
+   relevant `best-practices/` rules. A self-reviewing agent rubber-stamps its own work.
+8. **Rotate the frame instead of adding rounds.** Cap same-frame review at two rounds, then switch
+   frame: adversarial execution, whole-module fresh eyes (not the diff), concurrency, security. **One
+   rotation must actually build the thing** off-repo and run the suites — it finds contradictions,
+   unspecified shapes and sequencing that no reader finds. Every reviewer runs the repo's gates against
+   the branch. Exit when the *class* of finding stops mattering, never on a round count. Brief each
+   reviewer that "this is sound" is a valid verdict, require it to cite where it looked, and tell round
+   N+1 what round N fixed. Budget a round for any substantial **rewrite** a finding causes — that
+   replacement is the least-reviewed thing in the loop. Full contract and the measurements behind it:
+   `docs/process.md` §3.
 
 ## 3. Watch PRs and watch main
 
@@ -94,14 +115,9 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
 In one pass when a spec is done:
 1. Spec header `Status: Completed`.
 2. Update its one-line row in `docs/specs/INDEX.md` (status only).
-3. Write a short delivery doc at `docs/spec-delivery/SPEC-XXX-<name>.md` (typically under a page,
-   ~40–100 lines; no code pasted).
-4. If reusable components were added, add a one-line row to `docs/component-inventory.md` (in the
-   area file matching the component's path, if the inventory has split).
-5. A new architectural decision → full entry in `docs/decisions.md` **first**, then one line in
-   `CLAUDE.md` Key Decisions. The digest line is never the only home of a fact, and never a
-   paragraph. If it supersedes an earlier decision, add an in-place superseded marker at every doc
-   site still stating the old claim.
+3. Write a short delivery doc at `docs/spec-delivery/SPEC-XXX-<name>.md` (< ~40 lines, no code pasted).
+4. If reusable components were added, add a one-line row to `docs/component-inventory.md`.
+5. A new architectural decision → one line in `CLAUDE.md` Key Decisions (+ pointer). Never a paragraph.
 
 ## spec-lint reference
 
