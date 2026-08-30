@@ -19,7 +19,10 @@ A workflow for shipping features as: **specify → plan → build in reviewable 
 record leanly.** This skill carries the scaffold under `template/` and the rules for operating it. The
 goal is a small always-loaded context (`CLAUDE.md`) backed by layered, on-demand docs.
 
-Read `template/docs/process.md` for the full method. The four jobs below are the operating modes.
+`template/docs/process.md` is the **pristine** copy of the method, for scaffolding. In a repo that
+has already been scaffolded, read that repo's own **`docs/process.md`** instead, every session — it
+is the contract `CLAUDE.md` summarises, and its *Operational traps* and *Project ground rules*
+sections are filled in per project and exist nowhere else. The four jobs below are the operating modes.
 
 ## 0. Scaffold a repo (bootstrap)
 
@@ -28,6 +31,10 @@ When a repo has no spec-driven docs yet:
 1. Copy the contents of this skill's `template/` into the repo root: `CLAUDE.md`, `docs/`, `scripts/`,
    `.github/`. **Do not clobber** existing files — if `CLAUDE.md`, a PR template, or a workflow already
    exists, merge rather than overwrite, and tell the user what you merged.
+   🔴 **If the repo you are scaffolding is the template repo itself**, stop: its root is a generated
+   mirror of `template/`, `scripts/sync-from-skill.sh` regenerates it, and edits belong in `template/`
+   followed by a sync. Steps 3 and 6 below would fill in the mirror and delete `ci.yml.example`, which
+   must survive there.
 2. `chmod +x scripts/spec-lint.sh`.
 3. Fill in the placeholders in `CLAUDE.md` (Project Overview, Layout, Tech Stack, Code Conventions,
    Common Commands) from what the repo actually is — detect the language/build/test/lint tooling from
@@ -77,18 +84,21 @@ the gate above is the other half.
 
 Only when told to build (a Draft spec sitting in the repo is not a signal to start).
 
-1. Read `CLAUDE.md`, then the **current spec in full**. Skim `component-inventory.md`; pull only the
-   `architecture.md` section / dependency delivery-doc you need — never the whole file.
+1. Read `CLAUDE.md` and the repo's own **`docs/process.md`**, then the **current spec in full**. Skim
+   `component-inventory.md`; pull only the `architecture.md` section / dependency delivery-doc you
+   need — never the whole file.
 2. Confirm CI is green on `main`; investigate failures first.
-3. Branch from fresh `main`.
+3. Branch from fresh `main`, and set the spec's `Status: In Progress` + its `INDEX.md` row in that
+   first commit — nothing gates that transition, so it is missed by being skipped.
 4. **Generate an implementation plan from the spec's phases and validate it against the spec** — every
    FR + acceptance criterion covered, reuse used, nothing out of scope. **Then send the plan to a
    fresh-context reviewer before the first line of code.** A wrong plan is more expensive than wrong
    code, because the code will faithfully implement it. This reviewed plan replaces per-phase
    checkpoints.
 5. **Send the PR grouping to a reviewer too**, before the first push — as few PRs as the dependencies
-   allow. A phase is a unit of work, not a unit of PR. **These two reviews are the gates, and they
-   are the only ones that need answering:** the build then runs **straight through to completion**.
+   allow. A phase is a unit of work, not a unit of PR. **These two reviews are the only ones that gate
+   the START of the build** — the diff review in step 7 gates the push, at the other end, and is
+   blocking too. Past the plan and the grouping, the build runs **straight through to completion**.
    Summarize a phase in passing where it is worth saying, but never end the turn on it — a summary
    that ends the turn *is* a request for approval, and on a twelve-phase spec it re-asks a question
    the user already answered twelve times. A phase that *revises* the plan has produced a new
@@ -136,7 +146,8 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
 In one pass when a spec is done:
 1. Spec header `Status: Completed`.
 2. Update its one-line row in `docs/specs/INDEX.md` (status only).
-3. Write a short delivery doc at `docs/spec-delivery/SPEC-XXX-<name>.md` (< ~40 lines, no code pasted).
+3. Write a short delivery doc at `docs/spec-delivery/SPEC-XXX-<name>.md` from
+   `docs/templates/spec-completion-template.md` — typically under a page (~40–100 lines), no code pasted.
 4. If reusable components were added, add a one-line row to `docs/component-inventory.md`.
 5. A new architectural decision → full entry in `docs/decisions.md` **first**, then one line in
    `CLAUDE.md` Key Decisions (+ pointer). Never a paragraph, and never the only home of a fact. If it

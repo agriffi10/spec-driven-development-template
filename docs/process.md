@@ -6,8 +6,8 @@ start of every session, before any other doc** — CLAUDE.md's Session Workflow 
 statements are cheap to write and neither is checked, so keep them agreeing; see §5.)
 
 Goal: each feature is **specified before it's built**, built in **reviewable phases** off a
-**validated plan**, landed as a **single PR on green CI**, and recorded in **lean, layered docs** so
-the next session starts cheap.
+**reviewed plan**, landed as **as few PRs on green CI as the dependencies allow**, and recorded in
+**lean, layered docs** so the next session starts cheap.
 
 ---
 
@@ -72,7 +72,9 @@ happen).
 2. Skim `component-inventory.md` for reuse; pull only the `architecture.md` section / dependency
    delivery-doc you actually need.
 3. Confirm CI is green on `main`. Investigate failures before building.
-4. **Branch from fresh `main`.**
+4. **Branch from fresh `main`**, and set the spec header's `Status: In Progress` plus its `INDEX.md`
+   row in the same commit — that transition is what makes "exactly one spec in flight" (§2) legible
+   to the next session, and nothing gates it, so it is missed by being skipped rather than by failing.
 5. **Generate and validate a plan before writing code.** Turn the spec's Implementation Phases into a
    concrete implementation plan, then validate it against the spec — every FR + acceptance criterion is
    covered, reuse from `component-inventory.md` is used, and nothing out of scope crept in. The plan —
@@ -84,10 +86,13 @@ happen).
    useful boundaries are inert-vs-live, either side of a switchover, a deletion following its last
    caller, and infrastructure that must apply before what depends on it.
 
-**These two reviews are the gates, and they are the only ones that need answering.** Once the plan
-and the grouping have each been reviewed, the build runs to completion without checking in. The user
+**These two reviews are the only ones that gate the START of the build**, and once the plan and the
+grouping have each been answered, the build runs to completion without checking in. The user
 confirmed the work when they set the spec going; a per-phase check-in re-asks a question already
-answered, and on a twelve-phase spec it asks it twelve times.
+answered, and on a twelve-phase spec it asks it twelve times. This does **not** retire the diff
+review — that one gates the push, at the other end of the build, and it is blocking too (*The
+reviewer contract*, below). Three artifacts are reviewed on the way to a merge: the plan and the
+grouping before the first line of code, the diff before the first push.
 
 **During the build — one spec, in phases**
 - Every file-changing task is done on its **own branch** and opened as a **PR** — automatically, without
@@ -108,6 +113,12 @@ answered, and on a twelve-phase spec it asks it twelve times.
   *is* a request for approval, whatever its wording says. Re-review the plan only if the phase
   changed it — a phase that revises the plan has produced a new artifact, and it goes through the
   gate as one.
+- **An acceptance criterion that cannot settle before the push does not pass the pre-push review —
+  it is recorded as owed.** A criterion closing "against a green CI run" is undecidable while the
+  branch is still local, and the failure mode is a reviewer ticking it vacuously, which is the exact
+  defect the spec review exists to catch. Name it in the PR body as owed, settle it on the green run,
+  and do not merge until it is settled. If a spec has several of these, that is the dependency the PR
+  grouping is for: the job lands in the PR before the one whose criteria depend on it.
 - **Stop only for a question that genuinely needs an answer:** a product-changing or ambiguous call,
   a finding that changes scope, a phase discovering the plan was wrong. Reporting is not the same act
   as asking, and doing the first while intending the second is how the build stalls.
@@ -142,8 +153,10 @@ expensive of the two because the code that follows will faithfully implement it.
   spec file, its build-order entry in `INDEX.md`, the `architecture.md` sections and `decisions.md`
   entries it claims to follow, and the specs it depends on. For a plan: the plan, the spec, and
   `component-inventory.md`. For a diff: the diff, the spec's acceptance criteria, and the
-  `best-practices/` rules for the domains it touches (route via their INDEX). Handing over the
-  authoring rationale tells the reviewer what to conclude.
+  `best-practices/` rules for the domains it touches (route via their INDEX). For a **PR grouping**:
+  the reviewed plan and the phase list, and nothing else — the question is only whether the split is
+  the fewest the dependencies allow, and whether any boundary leaves `main` in a half-built state.
+  Handing over the authoring rationale tells the reviewer what to conclude.
 - **What each review is for.** A **spec** review asks: is every FR testable and binary; does any
   acceptance criterion pass vacuously; is anything in Out of Scope actually required by an FR; does it
   contradict a settled decision or silently supersede one without saying so; are there Open Questions
