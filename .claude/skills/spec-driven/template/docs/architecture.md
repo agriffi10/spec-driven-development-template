@@ -19,6 +19,20 @@ sections describe the target design, not necessarily what's implemented yet.
 
 ---
 
+## Architecture Decision Record
+
+An **index** of the decisions that changed the *shape* of the system — a piece added or removed, a
+boundary moved, a mechanism swapped. Not every decision: a rule, a fence or a per-feature choice is a
+`decisions.md` entry and nothing more, and a table that grows a row per spec has stopped being an
+orientation aid. Rows are **append-only and never renumbered** — a superseded decision keeps its row
+and gains a note naming the row that replaced it.
+
+| # | Decision | Context | Note |
+|---|---|---|---|
+| 1 | [what changed] | [the one-line situation that forced it] | [pointer to the `decisions.md` entry] |
+
+---
+
 ## Known Constraints
 
 Hard constraints and non-obvious gotchas that shape every spec. New constraints get added here the

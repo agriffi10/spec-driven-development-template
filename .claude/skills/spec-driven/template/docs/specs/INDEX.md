@@ -5,7 +5,7 @@ to status only — no prose.
 
 | Spec | Title | Status | Depends On |
 |------|-------|--------|------------|
-| SPEC-001 | [title] | Draft | None |
+| _(no specs yet — add a row per spec, and delete this line)_ | | | |
 
 ## Arcs (build order)
 

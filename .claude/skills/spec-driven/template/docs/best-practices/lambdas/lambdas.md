@@ -124,7 +124,7 @@ Thin handlers + pure functions make logic testable without a Lambda runtime.
 - ✅ Unit-test the **pure logic** functions directly (no Lambda context); the handler is thin enough (§2) that most coverage is on the functions it calls.
 - ✅ **Stub/mock AWS** (e.g. `moto`, botocore stubbers, or injected client fakes) — never hit real AWS in unit tests.
 - ✅ Cover the **happy path, each terminal failure, and idempotency** (run the op twice → same end state; §3) and **authorization** rejections (§9).
-- ✅ Co-locate tests with the function (`test_<name>.py`) and keep them green before opening a PR (CLAUDE.md PR rule).
+- ✅ Co-locate tests with the function (`test_<name>.py`) and keep them green before pushing (CLAUDE.md PR rule).
 - ✅ When you split a monolith (§1), split its tests too — each new function gets a focused test file, not one giant suite.
 
 ## §12 Code/infra split & packaging
