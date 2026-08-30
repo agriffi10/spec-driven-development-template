@@ -30,14 +30,15 @@ to use it.
 ## The method (what the workflow actually does)
 
 ```
-specify  →  plan  →  build in phases  →  review (fresh context)  →  land on green  →  record leanly
+specify  →  plan  →  build in phases  →  review (fresh context)  →  push  →  land on green  →  record leanly
 ```
 
 - **One spec in flight at a time.** You finish and merge before starting the next.
 - **Specs are fully resolved before building** — no "open questions" left to discover mid-build.
 - **Builds run off a plan you approved**, generated from the spec's phases — not improvised.
 - **Review happens in a fresh context** (a new session or subagent), never the session that wrote the
-  code, so the reviewer isn't biased by its own work.
+  code, so the reviewer isn't biased by its own work — and it **gates the push, not the merge**, so a
+  branch reaches the remote already reviewed rather than collecting fixes in public.
 - **Context stays lean.** `CLAUDE.md` is small and loaded every session; everything else is pulled
   **on demand** so you're not paying tokens for docs you don't need.
 
@@ -61,7 +62,7 @@ knows how to fill and file them.
 | Path | What it is | Who reads it |
 |---|---|---|
 | `CLAUDE.md` | **Always-loaded project memory.** Conventions, key decisions, the session workflow, and `@docs/…` pointers to everything else. Kept deliberately short. | Claude, every session (auto) |
-| `docs/process.md` | The full **method** — spec lifecycle, session rhythm, review, completion ritual. Read once to understand the rhythm. | You + Claude (on demand) |
+| `docs/process.md` | The full **method** — spec lifecycle, session rhythm, review, completion ritual. It is the contract `CLAUDE.md` summarises, so Claude reads it every session. | You + Claude (every session) |
 | `docs/architecture.md` | Sectioned **design reference** + "Known Constraints". Pull the *one section* you need, never the whole file. | Claude (on demand) |
 | `docs/decisions.md` | **Key Decisions register** — full entries with reasoning and reversal markers; `CLAUDE.md` holds the one-line digest. Pull the entry you need. | Claude (on demand) |
 | `docs/component-inventory.md` | One-line index of **reusable** modules/services/components, so a new spec reuses instead of rebuilding. | Claude (on demand) |
@@ -184,10 +185,10 @@ them green — quality gates are a pre-PR step here, not something CI discovers.
 | Guardrail | Enforced by |
 |---|---|
 | Specs are fully specified before build (no Open Questions) | `spec-lint.sh` (CI) + `process.md` |
-| Builds run off a plan you approved (no per-phase checkpoints) | `process.md` + `SKILL.md` build mode |
+| Builds run off a reviewed plan, straight through (no per-phase checkpoints) | `process.md` + `SKILL.md` build mode |
 | Emergent issues triaged by kind: reversible → decide; product-changing → escalate to you | `process.md` + `CLAUDE.md` |
-| Review runs in a fresh context, not the authoring session | `process.md` + `CLAUDE.md` |
-| Formatter / linter / tests green **before** a PR | `process.md` + `CLAUDE.md` + PR template |
+| Review runs in a fresh context, not the authoring session, and gates the **push** | `process.md` + `CLAUDE.md` |
+| Formatter / linter / typecheck / tests green **before** a push | `process.md` + `CLAUDE.md` + PR template |
 | Every PR watched and merged on green; `main` always watched; red `main` fixed first | `process.md` + `CLAUDE.md` |
 | Domain code follows the right rulebook, loading only what's needed | `best-practices/INDEX.md` + `process.md` |
 | The always-loaded tier stays lean | the completion ritual in `process.md` |

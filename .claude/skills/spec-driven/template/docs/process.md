@@ -1,8 +1,9 @@
 # The Spec-Driven Development Process
 
 How work gets done in this repo. `CLAUDE.md` carries the terse, always-loaded rules; this doc is the
-fuller **method** they point to — read it once to understand the rhythm, then let CLAUDE.md's Session
-Workflow be your in-session checklist. It is read on demand, not every session.
+fuller **method** they point to, and it is the contract CLAUDE.md only summarises. **Read it at the
+start of every session, before any other doc** — CLAUDE.md's Session Workflow says the same. (Both
+statements are cheap to write and neither is checked, so keep them agreeing; see §5.)
 
 Goal: each feature is **specified before it's built**, built in **reviewable phases** off a
 **validated plan**, landed as a **single PR on green CI**, and recorded in **lean, layered docs** so
@@ -25,7 +26,7 @@ is deliberately small and **must not regrow**.
 | Reuse | `docs/component-inventory.md` | skim for reuse | modules/services/components already built |
 | Rulebooks | `docs/best-practices/INDEX.md` → domain doc | the section(s) you need | domain coding rules (React, a11y, …) |
 | History | `docs/spec-delivery/SPEC-XXX-*.md` | when a dependency points to one | what a past spec shipped |
-| Method | `docs/process.md` (this file) | once | how we work |
+| Method | `docs/process.md` (this file) | every session | how we work — the method behind CLAUDE.md's summary |
 
 **Context discipline (session-start token cost matters):**
 - Read **only the current spec** in full.
@@ -50,10 +51,11 @@ Specs move **Draft → In Progress → Completed** (the status in each spec's he
 
 **Arcs.** Related specs can be grouped into *arcs* with an explicit **build order** documented in
 `INDEX.md`. Build in that order; arcs can have non-obvious dependencies. If arc narrative outgrows an
-`INDEX.md` row, move it to a `docs/specs/ARCS.md` with **one `##` heading per arc** (a status word in
-the heading — shipped / cancelled / active) and a TOC at the top, so a session can load only the arc
-it's in. Structure it that way from the first entry — retrofitting headings onto grown prose is far
-more work.
+`INDEX.md` row, move it to a `docs/specs/ARCS.md` with **one `##` heading per arc** and a TOC at the
+top, so a session can load only the arc it's in. Structure it that way from the first entry —
+retrofitting headings onto grown prose is far more work. The heading names the **arc**, never its
+status: status rots the day the next spec lands, and it belongs in the arc's body or its `INDEX.md`
+rows (see §5).
 
 ---
 
@@ -77,16 +79,38 @@ happen).
    not per-phase checkpoints baked into the spec — is what gates the work.
 6. **Put the plan through the reviewer gate before the first line of code** (*The reviewer contract*,
    below). A plan is reviewed for the same reason a PR is: the author cannot see what they assumed.
-   Confirm the reviewed plan with the user, then build.
+7. **Put the PR grouping through the same gate**, before the first push. Group consecutive phases
+   into as few PRs as the dependencies allow — a phase is a unit of work, not a unit of PR, and the
+   useful boundaries are inert-vs-live, either side of a switchover, a deletion following its last
+   caller, and infrastructure that must apply before what depends on it.
+
+**These two reviews are the gates, and they are the only ones that need answering.** Once the plan
+and the grouping have each been reviewed, the build runs to completion without checking in. The user
+confirmed the work when they set the spec going; a per-phase check-in re-asks a question already
+answered, and on a twelve-phase spec it asks it twelve times.
 
 **During the build — one spec, in phases**
 - Every file-changing task is done on its **own branch** and opened as a **PR** — automatically, without
   waiting to be asked. Never commit to `main` directly.
-- Before opening a PR, run the project's **formatter, linter, and unit tests** locally and get them
-  green. These quality gates are a pre-PR step — don't push red and leave CI to discover it.
-- Work the **reviewed** plan's phases in order. After each phase, **stop and summarize** what was built
-  and how it maps back to the plan before continuing. Re-review the plan only if the phase changed it —
-  a phase that revises the plan has produced a new artifact, and it goes through the gate as one.
+- **The diff review runs BEFORE the push, not before the merge.** Commit locally, run the gates, send
+  the diff to a fresh-context reviewer, fix or explicitly reject every finding — *then* push and open
+  the PR. Pushing first and reviewing after inverts the gate: the branch is already public, the fixes
+  arrive as follow-up commits, and the review reads as commentary on something that has already
+  happened rather than as the thing that decides whether it should. Rotating the frame (below) happens
+  in the same window. A push is the point of no return for the review, the same way the merge is the
+  point of no return for CI. **Green CI is not a review** — it cannot see a test that passes against
+  the bug it claims to catch, a lock taken in the wrong order, or an acceptance criterion ticked with
+  no evidence.
+- Before pushing, run the project's **formatter, linter, typecheck and unit tests** locally and get
+  them green. These quality gates are a pre-push step — don't push red and leave CI to discover it.
+- Work the **reviewed** plan's phases in order, **straight through to completion**. Summarize a phase
+  in passing where it is worth saying, but do not end the turn on it — a summary that ends the turn
+  *is* a request for approval, whatever its wording says. Re-review the plan only if the phase
+  changed it — a phase that revises the plan has produced a new artifact, and it goes through the
+  gate as one.
+- **Stop only for a question that genuinely needs an answer:** a product-changing or ambiguous call,
+  a finding that changes scope, a phase discovering the plan was wrong. Reporting is not the same act
+  as asking, and doing the first while intending the second is how the build stalls.
 - Before writing code in a domain that has a rulebook (React, accessibility, …), route through
   `docs/best-practices/INDEX.md` and load only the relevant section(s). Apply the rules as you write;
   flag (don't silently break) any that conflict with existing code.
@@ -108,14 +132,18 @@ context that produced the artifact. An author reviewing their own work assumes i
 intended and rubber-stamps it; that is as true of a plan as of code, and a wrong plan is the more
 expensive of the two because the code that follows will faithfully implement it.
 
-- **The gate is blocking.** A spec is not Draft-ready, and a plan does not start code, until it has
-  been through a review round and every finding is either **fixed** or **explicitly rejected in
-  writing** — in the spec/plan itself, or in the session summary, saying which finding and why. A
-  finding that is silently dropped is a finding that was not reviewed.
+- **The gate is blocking, and what it asks for is an answer, not a filing.** A spec is not
+  Draft-ready, a plan does not start code, and a branch does not reach the remote, until every
+  finding has been either **fixed** or **flagged** — said out loud, so the call is visible and can be
+  argued with. A finding silently dropped is a finding that was not reviewed; a finding rejected in
+  one sentence is a finding that was. **Write a rejection down only when it carries a lesson worth
+  keeping** — then it belongs in the register or the spec, as reasoning, not as a paper trail.
 - **The reviewer gets the artifact and its sources, never the author's reasoning.** For a spec: the
   spec file, its build-order entry in `INDEX.md`, the `architecture.md` sections and `decisions.md`
   entries it claims to follow, and the specs it depends on. For a plan: the plan, the spec, and
-  `component-inventory.md`. Handing over the authoring rationale tells the reviewer what to conclude.
+  `component-inventory.md`. For a diff: the diff, the spec's acceptance criteria, and the
+  `best-practices/` rules for the domains it touches (route via their INDEX). Handing over the
+  authoring rationale tells the reviewer what to conclude.
 - **What each review is for.** A **spec** review asks: is every FR testable and binary; does any
   acceptance criterion pass vacuously; is anything in Out of Scope actually required by an FR; does it
   contradict a settled decision or silently supersede one without saying so; are there Open Questions
@@ -129,9 +157,10 @@ expensive of the two because the code that follows will faithfully implement it.
   Rotate instead — for a spec, a reviewer briefed only on the *dependencies* it claims, or one asked to
   build the thing from the spec alone and report what it could not determine; for a plan, one asked to
   find the phase that will be discovered impossible.
-- **A reviewer finding is not an instruction.** The author decides; the record of the decision is what
-  the gate requires. A rejected finding that turns out right is a cheap lesson with a written trail; a
-  fixed finding that was wrong is a silent regression.
+- **A reviewer finding is not an instruction.** The author decides. Rejecting one is ordinary and
+  costs a sentence; the thing to avoid is deciding silently, because then nobody can tell a
+  considered rejection from a finding that was never read. A fixed finding that was wrong is a
+  silent regression, which is the same failure in the other direction.
 
 **Rotating the frame — why round count is the wrong exit criterion**
 
@@ -163,6 +192,33 @@ So the loop rotates the frame instead of adding rounds:
 - **At least one pass must start from the system, not the diff.** Every diff-scoped review is
   structurally blind to a defect that predates the diff — and to the states the diff is never
   exercised in (a change verified only in the signed-in path says nothing about sign-in).
+- **A review SAMPLES; when the risk is ABSENCE, enumerate instead.** Review is the right instrument
+  for "is this new code correct" and a weak one for "what did we stop checking" — a reviewer reads
+  what is there, and a deletion leaves nothing to read. Measured on a test-suite reduction in a
+  project run this way: three fresh frames returned **4, then 7, then 17** findings, diverging
+  rather than converging, because each sampled a population of hundreds. The mechanical sweep that
+  answered it completely — error codes raised vs error codes asserted — ran in seconds. **Before
+  reviewing a change whose risk is what it removed, write the sweep that lists the whole
+  population.**
+- **Spot-check a negative claim before acting on it, and again before writing it down.** "Only
+  documented on page X", "no test covers this", "nothing imports this file", "there is no scrubber"
+  — each is a claim about an absence, and an absence is what a search proves badly. Verify it
+  yourself whether a reviewer said it or you did. The asymmetry that makes this worth a rule: a
+  wrong claim entering **code** has tests to catch it later, while one entering a spec, a register
+  entry, a docstring or a commit message has nothing, and the next session reads it as settled. Two
+  such claims shipped as source comments in one project and were believed for weeks — a "registry
+  guard" a router advertised and did not have, and a credential "scrub" a config module named as the
+  thing keeping tokens out of logs. Both were found by writing the test that assumed them.
+- **A mechanical sweep REPORTS before it applies.** Print what it would change, read the list, then
+  re-run with `--apply`, and check the result by diffing **test names** rather than a pass count. A
+  classifier that looks right is routinely wrong at its edges: a sweep for unused module-level
+  helpers classified a test framework's discovered classes as dead and would have deleted every test
+  inside them — caught only because it printed first. A regex over source is the same hazard one
+  level down; parse instead where a parser exists.
+- **A finding should carry a reproducing mutation, and the fix is verified by re-planting it.**
+  Then fix-verification is mechanical and needs no second reviewer — which is what stops a review
+  round spawning a review of its fixes. A frame only finds what its mutations probe, so a fix that
+  satisfies a weak mutation can still be wrong.
 - **Reasoning finds wording; execution finds defects.** Require a reproduction, not an argument.
   Passing review, passing unit tests and deploying successfully are three things that can all be true
   of code that fails on its first real invocation.
@@ -251,8 +307,15 @@ declarative shape; so is an acceptance criterion demanding a **computed** bound 
 of its inputs. Both were caught by an implementer who had to pick, and neither by a reader.
 
 **Landing the spec — watch PRs and watch `main`**
+- **A branch reaches the remote already reviewed.** The gate above is the precondition for the push,
+  so a PR opens carrying work whose findings are already fixed or answered. If a review round happens
+  after a push anyway — a late finding, a rotated frame, a reviewer that ran long — its fixes are
+  committed and reviewed locally before the next push, rather than each one going up as it lands.
 - **Every PR is watched to completion and merged as soon as CI is green** — never open a PR and walk
   away. A spec's PR merges only on green.
+- **Key the watch on the current head sha, never a bare `gh pr checks --watch`** — it can exit clean
+  against the **previous** commit's checks, and a hand-written shell condition can invert and print
+  "settled" while a job is still running. Both report a green that is not there.
 - **`main` is always watched.** After any merge, confirm `main`'s build went green. If `main` fails,
   **diagnose immediately and fix it with a new PR** — a red `main` is the top priority and blocks
   starting the next spec.
@@ -281,7 +344,7 @@ Specs are written from `docs/templates/spec-template.md`. What makes a spec *bui
   parked in the spec. A sentence that *promises* a decision is an Open Question in declarative
   clothes (§3).
 - **Then the reviewer gate** (§3, *The reviewer contract*). A freshly-authored spec goes to a
-  fresh-context reviewer before it is Draft-ready, and its findings are fixed or rejected in writing.
+  fresh-context reviewer before it is Draft-ready, and its findings are fixed or flagged.
   The commonest thing this catches is not a wrong requirement — it is an acceptance criterion that
   cannot fail, and an Out of Scope bullet that an FR quietly needs.
 
@@ -311,12 +374,50 @@ When a spec is done, in the same pass:
    entry lives) at every doc site that still states the old claim — arc narratives, architecture
    sections. The new entry alone is not enough; a reader who lands only on the old site must see the
    reversal.
+6. **If the decision changed the SHAPE of the system** — a new piece, a piece removed, a boundary
+   moved, a mechanism swapped — add a row to `docs/architecture.md` → *Architecture Decision Record*
+   **and** update the prose section it contradicts. The row is an index entry: number, title,
+   one-line context, a short note, linking to the `decisions.md` entry. Rows are **append-only and
+   never renumbered**; a superseded decision keeps its row and gains a note naming the row that
+   replaced it. Most decisions do **not** qualify — a rule, a fence or a per-feature choice is a
+   register entry and nothing more, and a table that grows a row per spec has stopped being an
+   orientation aid.
 
 **Anti-regrowth & doc hygiene** (each rule below was earned by a real doc defect in a project run
 this way):
 
 - If a doc disagrees with the code, fix or delete it — don't let stale state accumulate. Don't add
   prose to the always-loaded tier.
+- **Documentation lives beside the code it describes.** A page named for a source file, a module or
+  a directory belongs in that tree, not in `docs/`; `docs/` carries what spans trees or belongs to
+  no tree. The test is where a reader is standing when they need it — someone changing a handler is
+  in the handler's tree, and a doc they must leave the tree to find is a doc they will not open.
+- **One organising axis per subject, and one doc that owns it.** If a subject is documented per-area,
+  exactly one place is per-area. A second doc on the same axis is not redundancy, it is a fork with
+  no merge — and the two will already have diverged by the time anyone notices.
+- **A register is grouped by AREA; ordering it by spec number turns it into a changelog.** The
+  question a reader arrives with is "what has been settled about X", never "what did SPEC-143
+  decide". A register is the only home of the rejected alternatives and the fences, so a shape that
+  reads as disposable gets treated as disposable. The CLAUDE.md digest and the register **group by
+  the same areas**, so a reader who finds an area in one finds it in the other.
+- **When a doc moves, the pointers that rot unseen are in SOURCE files** — docstrings, infra
+  comments, CI steps. A markdown-only sweep reports the tree clean. Grep the path, not the filename,
+  and fix the Draft specs too: a Draft is an unbuilt instruction, and pointing one at a deleted file
+  sends the next builder nowhere.
+- **A doc's own statement of when to read it must agree with CLAUDE.md's.** Both are cheap to write
+  and neither is checked, so they drift silently and the reader follows the wrong one.
+- **Status never appears in the heading of a doc whose status can change** — an arc, an
+  `architecture.md` section, a `decisions.md` entry. It rots the day the next spec lands, and a
+  reader who greps the heading gets an answer that was true once. Status lives in `INDEX.md` and the
+  spec header, which are the two places gated to agree. (A delivery doc's `# Completed Spec — …`
+  title is not this: it names a finished record whose status cannot change.)
+- **A heading in a doc read by SUBJECT names the subject, not the spec that produced it** — that is
+  `architecture.md` and the rulebooks, where a reader arrives asking how a thing works, never "what
+  did SPEC-168 decide". The scope is deliberate and stops there: a `decisions.md` entry IS a record
+  of what one spec settled, and its number is part of its identity when you arrive from a delivery
+  doc or a superseded marker, so those headings keep theirs. A rule stated more broadly than that
+  would be violated by most of a mature register on the day it was written, and a rule practice
+  contradicts at scale trains readers to ignore the ones that hold.
 - **Standing rules never cite volatile numbers** (line counts, row counts, section ranges) — state
   the principle. The numbers rot, and a rule resting on false evidence teaches readers to distrust it.
 - **A rule practice consistently violates gets reconciled or deleted.** A dead rule trains agents to

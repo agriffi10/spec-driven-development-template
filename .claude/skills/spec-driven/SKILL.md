@@ -5,9 +5,10 @@ description: >-
   spec-driven work, (b) authoring or refining a spec, (c) starting to build a spec, or (d) completing a
   spec. Provides a template repo layout (CLAUDE.md, layered docs/, spec + completion templates), a
   POSIX spec-lint, and a CI workflow + PR template. Enforces: specs are fully specified before build
-  (no Open Questions), spec/plan/diff each pass a blocking fresh-context review gate, builds run off a
-  reviewed plan (no per-phase checkpoints baked into the spec), every PR is watched and merged on
-  green, and main is always watched. Triggers on phrases like "set up
+  (no Open Questions), spec/plan/diff each pass a blocking fresh-context review gate, the diff review
+  gates the push rather than the merge, builds run off a reviewed plan straight to completion (no
+  per-phase checkpoints), every PR is watched and merged on green, and main is always watched.
+  Triggers on phrases like "set up
   spec-driven", "scaffold the docs structure", "write a spec", "start SPEC-XXX", "build this spec",
   "complete the spec / run the completion ritual".
 ---
@@ -62,10 +63,11 @@ Write from `template/docs/templates/spec-template.md`. A spec is *buildable* whe
   *promises* a decision ("the spec states which") is an Open Question in declarative clothes, and the
   lint cannot see it.
 - **It has been through the reviewer gate.** A freshly-authored spec goes to a fresh-context reviewer
-  before it is Draft-ready; findings are fixed or **rejected in writing**. What this catches is rarely
-  a wrong requirement — it is an acceptance criterion that cannot fail, and an Out of Scope bullet an
-  FR quietly needs. Give the reviewer the spec, its build-order entry, and its dependencies — never
-  your authoring rationale.
+  before it is Draft-ready; findings are **fixed or flagged** — a rejection said out loud costs a
+  sentence, and only goes in writing when it carries a lesson worth keeping. What this catches is
+  rarely a wrong requirement — it is an acceptance criterion that cannot fail, and an Out of Scope
+  bullet an FR quietly needs. Give the reviewer the spec, its build-order entry, and its dependencies
+  — never your authoring rationale.
 
 Add a row to `docs/specs/INDEX.md`. Before handing off, run `sh scripts/spec-lint.sh` — it fails on
 missing sections or an "Open Questions"/"Checkpoint" heading. The lint is the structural half only;
@@ -81,18 +83,29 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
 3. Branch from fresh `main`.
 4. **Generate an implementation plan from the spec's phases and validate it against the spec** — every
    FR + acceptance criterion covered, reuse used, nothing out of scope. **Then send the plan to a
-   fresh-context reviewer before the first line of code**, and confirm the reviewed plan with the user.
-   A wrong plan is more expensive than wrong code, because the code will faithfully implement it. This
-   reviewed plan replaces per-phase checkpoints.
-5. Work phases in order; each file-changing task on its own branch → PR. After each phase, stop and
-   summarize what was built and how it maps to the plan. A phase that *revises* the plan has produced a
-   new artifact — it goes back through the gate.
+   fresh-context reviewer before the first line of code.** A wrong plan is more expensive than wrong
+   code, because the code will faithfully implement it. This reviewed plan replaces per-phase
+   checkpoints.
+5. **Send the PR grouping to a reviewer too**, before the first push — as few PRs as the dependencies
+   allow. A phase is a unit of work, not a unit of PR. **These two reviews are the gates, and they
+   are the only ones that need answering:** the build then runs **straight through to completion**.
+   Summarize a phase in passing where it is worth saying, but never end the turn on it — a summary
+   that ends the turn *is* a request for approval, and on a twelve-phase spec it re-asks a question
+   the user already answered twelve times. A phase that *revises* the plan has produced a new
+   artifact — that goes back through the gate. Each file-changing task on its own branch → PR.
 6. Triage emergent issues by kind: **reversible/technical** → decide in-session (update the spec
    if scope changes); **product-changing/ambiguous** → stop and escalate to the human with options
-   + a recommendation, never silently decide.
-7. **Review in a fresh context.** Code review and verification run in a new session or subagent —
-   never the one that wrote the code — checking the diff against the spec's acceptance criteria and the
-   relevant `best-practices/` rules. A self-reviewing agent rubber-stamps its own work.
+   + a recommendation, never silently decide. Stop only for a question that genuinely needs an
+   answer — reporting is not the same act as asking.
+7. **Review the diff in a fresh context, BEFORE the push.** Commit locally, run the gates, send the
+   diff to a new session or subagent — never the one that wrote the code — then fix or flag every
+   finding, *then* push and open the PR. A self-reviewing agent rubber-stamps its own work, and
+   pushing first inverts the gate: the branch is already public and the fixes arrive as follow-up
+   commits. **Green CI is not a review** — it cannot see a test that passes against the bug it claims
+   to catch, a lock taken in the wrong order, or an acceptance criterion ticked with no evidence. The
+   reviewer checks the diff against the spec's acceptance criteria and the relevant `best-practices/`
+   rules. Findings are **fixed or flagged** — a rejection costs a sentence out loud, and goes in
+   writing only when it carries a lesson worth keeping.
 8. **Rotate the frame instead of adding rounds.** Cap same-frame review at two rounds, then switch
    frame: adversarial execution, whole-module fresh eyes (not the diff), concurrency, security. **One
    rotation must actually build the thing** off-repo and run the suites — it finds contradictions,
@@ -100,12 +113,20 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
    the branch. Exit when the *class* of finding stops mattering, never on a round count. Brief each
    reviewer that "this is sound" is a valid verdict, require it to cite where it looked, and tell round
    N+1 what round N fixed. Budget a round for any substantial **rewrite** a finding causes — that
-   replacement is the least-reviewed thing in the loop. Full contract and the measurements behind it:
-   `docs/process.md` §3.
+   replacement is the least-reviewed thing in the loop. **When the risk is what the change *removed*,
+   enumerate rather than review** — a reviewer samples, and a deletion leaves nothing to read; write
+   the sweep that lists the whole population, and have it report before it applies. **Spot-check a
+   negative claim** ("no test covers this", "nothing imports this") before acting on it and again
+   before writing it down. Full contract and the measurements behind it: `docs/process.md` §3.
 
 ## 3. Watch PRs and watch main
 
+- **A branch reaches the remote already reviewed** — the diff gate in §2 step 7 is the precondition
+  for the push, so a PR opens carrying findings that are already fixed or answered.
 - Watch **every** PR to completion; merge it as soon as CI is green. Never open-and-abandon.
+- **Key the watch on the current head sha**, never a bare `gh pr checks --watch` — it can exit clean
+  against the *previous* commit's checks, and a hand-rolled shell condition can invert and print
+  "settled" while a job is still running.
 - After any merge, confirm `main` went green. If `main` fails, **diagnose immediately and fix with a new
   PR before anything else** — a red `main` is top priority and blocks the next spec.
 - Re-verify `main` is green before starting the next spec.
@@ -117,7 +138,13 @@ In one pass when a spec is done:
 2. Update its one-line row in `docs/specs/INDEX.md` (status only).
 3. Write a short delivery doc at `docs/spec-delivery/SPEC-XXX-<name>.md` (< ~40 lines, no code pasted).
 4. If reusable components were added, add a one-line row to `docs/component-inventory.md`.
-5. A new architectural decision → one line in `CLAUDE.md` Key Decisions (+ pointer). Never a paragraph.
+5. A new architectural decision → full entry in `docs/decisions.md` **first**, then one line in
+   `CLAUDE.md` Key Decisions (+ pointer). Never a paragraph, and never the only home of a fact. If it
+   **supersedes** an earlier decision, add an in-place superseded marker at every doc site still
+   stating the old claim.
+6. If it changed the **shape** of the system — a piece added or removed, a boundary moved, a mechanism
+   swapped — add an append-only row to `docs/architecture.md` → *Architecture Decision Record* and fix
+   the prose section it contradicts. Most decisions do not qualify.
 
 ## spec-lint reference
 
