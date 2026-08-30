@@ -409,8 +409,9 @@ this way):
 - **Status never appears in the heading of a doc whose status can change** — an arc, an
   `architecture.md` section, a `decisions.md` entry. It rots the day the next spec lands, and a
   reader who greps the heading gets an answer that was true once. Status lives in `INDEX.md` and the
-  spec header, which are the two places gated to agree. (A delivery doc's `# Completed Spec — …`
-  title is not this: it names a finished record whose status cannot change.)
+  spec header — the two places the completion ritual keeps in step **by hand**, since `spec-lint.sh`
+  does not compare them. (A delivery doc's `# Completed Spec — …` title is not this: it names a
+  finished record whose status cannot change.)
 - **A heading in a doc read by SUBJECT names the subject, not the spec that produced it** — that is
   `architecture.md` and the rulebooks, where a reader arrives asking how a thing works, never "what
   did SPEC-168 decide". The scope is deliberate and stops there: a `decisions.md` entry IS a record

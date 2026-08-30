@@ -35,7 +35,9 @@ specify  →  plan  →  build in phases  →  review (fresh context)  →  push
 
 - **One spec in flight at a time.** You finish and merge before starting the next.
 - **Specs are fully resolved before building** — no "open questions" left to discover mid-build.
-- **Builds run off a plan you approved**, generated from the spec's phases — not improvised.
+- **Builds run off a reviewed plan**, generated from the spec's phases — not improvised. The plan and
+  the PR grouping are the two gates; past them the build runs straight through rather than stopping
+  at every phase to re-ask what you already answered.
 - **Review happens in a fresh context** (a new session or subagent), never the session that wrote the
   code, so the reviewer isn't biased by its own work — and it **gates the push, not the merge**, so a
   branch reaches the remote already reviewed rather than collecting fixes in public.
@@ -165,8 +167,8 @@ matching mode (in Claude Code you can also invoke it explicitly with `/spec-driv
 |---|---|---|
 | Set up an existing repo | "Set this repo up for spec-driven development." | Copies the scaffold in, fills `CLAUDE.md`, wires CI. |
 | Write a spec | "Draft SPEC-007 for <feature> from the spec template." | Writes a spec with no open questions; runs spec-lint; adds the INDEX row. |
-| Build a spec | "Build SPEC-007." | Reads `CLAUDE.md` + the spec, generates a plan, **asks you to confirm it**, then builds in phases on a branch/PR. |
-| Review work | "Review this branch against SPEC-007 in a fresh context." | Runs review/verification in a new session or subagent against the spec's acceptance criteria + best-practices rules. |
+| Build a spec | "Build SPEC-007." | Reads `CLAUDE.md` + the spec, generates a plan, **sends it to a fresh-context reviewer**, then builds in phases on a branch/PR. |
+| Review work | "Review this branch against SPEC-007 in a fresh context." | Runs review/verification in a new session or subagent against the spec's acceptance criteria + best-practices rules — **before the push**, so the branch reaches the remote already reviewed. |
 | Finish a spec | "Run the completion ritual for SPEC-007." | Flips status, updates INDEX, writes the delivery doc, updates the component inventory. |
 
 **Shell commands** (Claude can run these for you in-session, or you can run them yourself):
@@ -177,8 +179,9 @@ sh scripts/spec-lint.sh docs/specs # same, explicit path
 sh scripts/sync-from-skill.sh      # maintainers: mirror the skill's scaffold copy to the repo root
 ```
 
-Before Claude opens a PR it runs your project's **formatter, linter, and unit tests** locally and gets
-them green — quality gates are a pre-PR step here, not something CI discovers.
+Before Claude pushes, it runs your project's **formatter, linter, typecheck and unit tests** locally
+and gets them green, and puts the diff through the review gate — both are pre-push steps here, not
+something CI or a reviewer discovers after the branch is already public.
 
 ## The guardrails (and where they're enforced)
 
