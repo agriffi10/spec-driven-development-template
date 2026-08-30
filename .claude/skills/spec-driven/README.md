@@ -12,7 +12,8 @@ fresh-context review gate, watch PRs/main, and run the completion ritual. The fu
 - **`template/`** — the **canonical copy** of the repo scaffold (`CLAUDE.md`, `docs/`, `scripts/`,
   `.github/`). It lives here so the skill is self-contained and can scaffold a *different, pre-existing*
   repo. This is the **source of truth**; the repo root mirrors it (run `scripts/sync-from-skill.sh`
-  after editing here, and commit both).
+  after editing here, and commit both). `scripts/check-mirror.sh` fails CI if the two drift, so a
+  change committed here but not synced to the root will not merge.
 
 ## Using it
 

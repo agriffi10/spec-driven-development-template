@@ -79,6 +79,7 @@ knows how to fill and file them.
 | `docs/templates/spec-completion-template.md` | The blank a delivery doc is written from. | You + Claude |
 | `scripts/spec-lint.sh` | **POSIX** linter that fails a spec missing a required section or containing a banned "Open Questions"/"Checkpoint" heading; warns on unfilled placeholders. | CI + you |
 | `scripts/sync-from-skill.sh` | Maintenance script: regenerates the root scaffold from the skill's canonical copy (see below). | You (maintainer) |
+| `scripts/check-mirror.sh` | Maintenance script: fails if the root scaffold has drifted from the canonical copy. Runs in CI. | CI + you (maintainer) |
 | `.github/workflows/spec-lint.yml` | Runs `spec-lint.sh` on every PR and push to `main`. | CI |
 | `.github/workflows/ci.yml.example` | **Inert** GitHub Actions template (Node + Python jobs). At scaffold time it becomes a real `ci.yml` that runs your formatter/linter/types/tests; the `.example` extension means GitHub never runs it as-is. | CI (once filled in) |
 | `.github/pull_request_template.md` | PR checklist that restates the rules: maps-to-plan, no new open questions, tests/lint green, watch-to-green. | You + Claude |
@@ -105,6 +106,12 @@ sh scripts/sync-from-skill.sh   # mirrors the skill's template/ → repo root
 and commit both. (Because `.claude/` can be treated as protected by some editors/agents, in practice
 you may edit the root copy and copy it back into the skill — either way, keep the two identical and
 commit both.)
+
+**CI enforces this.** `scripts/check-mirror.sh` compares every payload file to its root counterpart
+and fails the build on any difference or missing file, on every PR and every push to `main`. It walks
+payload → root, so root-only files (`README.md`, `.gitignore`, the maintenance scripts) need no
+exclusion list. The gate exists because the two copies silently drifted two revisions apart when
+changes landed in the payload alone.
 
 ---
 
@@ -177,6 +184,7 @@ matching mode (in Claude Code you can also invoke it explicitly with `/spec-driv
 sh scripts/spec-lint.sh            # lint all specs (also runs in CI on every PR)
 sh scripts/spec-lint.sh docs/specs # same, explicit path
 sh scripts/sync-from-skill.sh      # maintainers: mirror the skill's scaffold copy to the repo root
+sh scripts/check-mirror.sh         # maintainers: fail if the root has drifted from the payload (CI runs this)
 ```
 
 Before Claude pushes, it runs your project's **formatter, linter, typecheck and unit tests** locally
@@ -199,7 +207,9 @@ something CI or a reviewer discovers after the branch is already public.
 ## Maintaining & extending
 
 - **Change the scaffold:** edit the canonical copy under `.claude/skills/spec-driven/template/`, run
-  `sh scripts/sync-from-skill.sh`, commit both copies. Keep the root and skill copies identical.
+  `sh scripts/sync-from-skill.sh`, commit both copies. Keep the root and skill copies identical —
+  `scripts/check-mirror.sh` gates this in CI, so a one-sided change fails the build rather than
+  shipping a stale scaffold.
 - **Add a best-practices domain:** create `docs/best-practices/<domain>/<domain>.md` as a
   token-efficient agent reference (a short "how to use" + an internal index + ✅/🔴 rules — match the
   existing docs), then add **one row** to `docs/best-practices/INDEX.md`. The index is a router; the

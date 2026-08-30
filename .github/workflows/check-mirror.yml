@@ -1,0 +1,22 @@
+name: Check Mirror
+
+# The repo root mirrors .claude/skills/spec-driven/template/ (the canonical
+# scaffold). Nothing but this job stops the two drifting apart — which they did,
+# for two revisions, when PRs #3 and #4 landed in the payload alone.
+#
+# Deliberately NOT path-filtered: a filter would have to list every payload path
+# to be correct, and the failure mode it must catch is a change landing in a path
+# nobody thought to list.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check-mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the root scaffold matches the skill payload
+        run: sh scripts/check-mirror.sh
