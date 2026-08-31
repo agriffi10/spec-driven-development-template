@@ -154,19 +154,28 @@ implementation plan when the build actually starts, and **two** on the diff befo
 plus the narrow pass on the PR grouping below. The diff gets two because it is the **widest**
 artifact and the last one before the branch goes public: a spec or a plan is one document a single
 reader can hold whole, while a diff spans code, tests and config *and* the criteria they are
-supposed to satisfy, and this method's own measured history (*Rotating the frame*, below) is that
-the first differently-framed pass over code finds a class the previous frame could not see. The two
-are **two frames, not two rounds** — the same frame run twice buys wording — and they are not free
-picks: one reads the diff against the spec's acceptance criteria and the `best-practices/` rules,
-and the other starts from the **system** rather than the diff, the frame that *builds* the thing and
-runs the suites being the one that has earned that slot most often. Both land **before** the push; a
-review that only happens once the branch is public does not count toward the two.
+supposed to satisfy, and this method's own measured history (*Rotating the frame*, below) is that the
+first differently-framed pass over a change finds a class the previous frame could not see. That
+evidence argues for a **different frame**, not for the number two; two is the floor because one frame
+is demonstrably not enough and a floor has to be a number.
 
-Every count here is a **floor**, not a cap. Two on a diff is the minimum before a push, and the exit
-rules below decide when to stop *above* two — "the first reviewer found nothing" never closes the
-gate on its own, because it means nothing within the frame it was given. One on a spec and one on a
-plan are floors in the same way: a revised artifact is a new artifact and goes back through the gate
-as one, which is why a phase that rewrites the plan re-enters it.
+The two are **two frames, not two rounds** — the same frame run twice buys wording — and they are not
+free picks. One starts from the **change** and reads it against what it is supposed to satisfy; the
+other starts from **something other than the change** — the system it lands in, or the document it
+claims to implement. On a code diff those are: the spec's acceptance criteria plus the
+`best-practices/` rules for the domains it touches, and a pass that **builds** the thing and runs the
+suites rather than reading it. On a diff with no code in it — a spec, a plan, a docs change — they
+are: the artifact against its own sources, and the artifact against every *other* place the same rule
+is stated. Both land **before** the push; a review that only happens once the branch is public does
+not count toward the two.
+
+Every count here is a **floor**, not a cap, but the two floors work differently and should not be
+read across. **On a diff**, two is a minimum before a push: a clean first review does not close the
+gate, because "the reviewer found nothing" means nothing within the frame it was given, and the exit
+rules below decide when to stop *above* two. **On a spec or a plan**, one review closes the gate — a
+clean review there is an answer. What makes that count a floor is **re-entry**: a revised artifact is
+a new artifact and goes back through the gate as one, which is why a phase that rewrites the plan
+sends the new plan through again.
 
 - **The gate is blocking, and what it asks for is an answer, not a filing.** A spec is not
   Draft-ready, a plan does not start code, and a branch does not reach the remote, until every
@@ -385,12 +394,15 @@ Specs are written from `docs/templates/spec-template.md`. What makes a spec *bui
   one fourteen-FR spec, and each piece earns its own reviewed plan, its own review gate and its own
   delivery doc. Cut along a seam the system already has — a layer, a surface, a switchover, the
   point where something inert goes live — never at "FR-009, because that is where the count ran
-  out." On the first specs in a repo, where there is no system yet to find a seam in, the seam is
-  the user-visible step: what has to exist before the next thing can be tried at all.
+  out." **The second spec restarts at FR-001**: IDs are spec-local, which is why a dependency cites
+  them as "SPEC-003 FR-002" and never as a number on its own. On the first specs in a repo, where
+  there is no system yet to find a seam in, the seam is the user-visible step: what has to exist
+  before the next thing can be tried at all.
 - **The ceiling is a warn, not a fail.** A genuinely indivisible spec can sit above 8, and the lint
-  says so rather than blocking. That call belongs to the reviewer and is made **out loud**, in the
-  spec — and "it is all one feature" is the claim to be most skeptical of, because it is what every
-  over-scoped spec says about itself.
+  warns rather than blocking so that it can. That call is made **out loud** — one line under
+  *Scope → In Scope* saying why the FRs cannot be cut apart — and it is the reviewer's to accept
+  or reject, not the author's to assert. "It is all one feature" is the claim to be most
+  skeptical of, because it is what every over-scoped spec says about itself.
 - **Data Model / Interface Contract** — language-native types, not prose. Explicit shapes produce
   better-typed output. Note the target path.
 - **Implementation Phases** — each phase is one session's worth of work and maps to a discrete,

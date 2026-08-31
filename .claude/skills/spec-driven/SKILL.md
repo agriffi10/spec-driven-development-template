@@ -65,9 +65,10 @@ Write from `template/docs/templates/spec-template.md`. A spec is *buildable* whe
 - **It is one slice, not a whole feature** — aim for **3–6 FRs**, and past **8** split into a second
   spec rather than growing this one, recording the pair as an arc with a build order in `INDEX.md`.
   Cut on a seam the system already has (a layer, a surface, a switchover), never at the FR where the
-  count ran out. `spec-lint.sh` **warns** above 8 rather than failing: a genuinely indivisible spec
-  may sit above the line, but say so out loud in the spec — "it is all one feature" is what every
-  over-scoped spec claims.
+  count ran out; the second spec **restarts at FR-001**, since IDs are spec-local.
+  `spec-lint.sh` **warns** above 8 rather than failing: a genuinely indivisible spec may sit above
+  the line, but say so in one line under *Scope → In Scope* and let the reviewer accept or reject
+  it — "it is all one feature" is what every over-scoped spec claims.
 - **Data Model / Interface Contract** uses language-native types, not prose.
 - **Implementation Phases** are reviewable units — the *input to the build-time plan*. Do **not** write
   per-phase checkpoints.
@@ -117,10 +118,12 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
 7. **Two fresh-context reviews of the diff, BEFORE the push.** Commit locally, run the gates, send
    the diff to **two** new sessions or subagents in **different frames** — never the one that wrote
    the code — then fix or flag every finding, *then* push and open the PR. The diff gets two because
-   it is the widest artifact and the last before the branch is public; one frame reads it against the
-   spec's criteria and the `best-practices/` rules, the other starts from the **system** rather than
-   the diff. Two frames, not two rounds, and two is the floor rather than the cap (step 8) — a clean
-   first review does not close the gate. A self-reviewing agent rubber-stamps its own work, and
+   it is the widest artifact and the last before the branch is public. One frame starts from the
+   **change** and reads it against what it must satisfy; the other starts from **something other
+   than the change** — on code, a pass that *builds* the thing and runs the suites; on a docs- or
+   spec-only diff, the other places the same rule is stated. Two frames, not two rounds, and two is
+   the floor rather than the cap (step 8) — a clean first review does not close a **diff** gate,
+   though it does close a spec's or a plan's. A self-reviewing agent rubber-stamps its own work, and
    pushing first inverts the gate: the branch is already public and the fixes arrive as follow-up
    commits. **Green CI is not a review** — it cannot see a test that passes against the bug it claims
    to catch, a lock taken in the wrong order, or an acceptance criterion ticked with no evidence. The

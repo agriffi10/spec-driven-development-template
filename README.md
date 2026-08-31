@@ -208,7 +208,8 @@ here, not something CI or a reviewer discovers after the branch is already publi
 | Specs are fully specified before build (no Open Questions) | `spec-lint.sh` (CI) + `process.md` |
 | Builds run off a reviewed plan, straight through (no per-phase checkpoints) | `process.md` + `SKILL.md` build mode |
 | Emergent issues triaged by kind: reversible → decide; product-changing → escalate to you | `process.md` + `CLAUDE.md` |
-| Review runs in a fresh context, not the authoring session, and gates the **push** — one reviewer on the spec, one on the plan, **two** on the diff | `process.md` + `CLAUDE.md` + PR template |
+| Review runs in a fresh context, not the authoring session, and gates the **push** — one reviewer on the spec, one on the plan, one on the PR grouping, **two** on the diff | `process.md` + `CLAUDE.md` |
+| The diff's two framed reviews happened before the push, and owed criteria are named | PR template (the only count it carries) |
 | Formatter / linter / typecheck / tests green **before** a push | `process.md` + `CLAUDE.md` + PR template |
 | Every PR watched and merged on green; `main` always watched; red `main` fixed first | `process.md` + `CLAUDE.md` |
 | Domain code follows the right rulebook, loading only what's needed | `best-practices/INDEX.md` + `process.md` |

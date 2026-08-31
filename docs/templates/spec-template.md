@@ -32,8 +32,13 @@ the purpose after reading this section alone.
   reference them in prompts: "implement FR-001 through FR-003 only."
 
   Size: aim for 3-6 FRs. Past 8, split into a second spec and record the
-  pair as an arc in docs/specs/INDEX.md - don't grow this one. spec-lint
-  warns above 8.
+  pair as an arc in docs/specs/INDEX.md - don't grow this one. The second
+  spec restarts at FR-001; IDs are spec-local.
+
+  spec-lint WARNS above 8 rather than failing, because a genuinely
+  indivisible spec may sit above the line. If yours does, say so in one
+  line under Scope > In Scope and let the reviewer accept or reject it -
+  "it is all one feature" is what every over-scoped spec claims.
 -->
 
 ### FR-001: [Requirement Name]

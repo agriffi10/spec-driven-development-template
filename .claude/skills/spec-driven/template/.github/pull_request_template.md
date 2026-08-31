@@ -11,12 +11,15 @@
 -
 
 ## Review (before this branch was pushed)
-- [ ] **Two** fresh-context reviews of this diff, in **different frames** — not two rounds of one
+- [ ] Reviewed in a fresh context at the count the contract sets for this artifact — **two** framed
+      reviews for a code diff, **one** for a PR that is only a spec or only a plan
+- [ ] Where two were required, they were two **different frames**, not two rounds of one
 - [ ] Every finding **fixed or flagged** out loud; nothing dropped silently
 - [ ] Any acceptance criterion that could not settle pre-push is listed under **Owed** below
 
 ### Owed (criteria that can only settle on the green run)
-<!-- One line each, or "none". These block the merge, not the push. -->
+<!-- One line each, or "none". These block the merge, not the push. Edit this line —
+     "none" is a claim you are making, not a placeholder left unfilled. -->
 - none
 
 ## Verification

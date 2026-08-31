@@ -34,6 +34,11 @@ banned_headers="Open Questions|Checkpoint"
 
 specs=$(find "$SPEC_DIR" -maxdepth 1 -type f -name 'SPEC-*.md' 2>/dev/null | sort || true)
 
+# Split the list on newlines only — an unquoted expansion on default IFS turns a
+# spec filename containing a space into two nonexistent paths and four bogus FAILs.
+IFS='
+'
+
 if [ -z "$specs" ]; then
   echo "spec-lint: no SPEC-*.md files in $SPEC_DIR (nothing to check)."
   exit 0
@@ -75,10 +80,18 @@ for f in $specs; do
   fi
 
   # --- WARN: more FRs than one spec should carry ---
-  # Level-3 headings only, matching the FR check above and the spec template — a
-  # wider pattern also catches '# FR-007' shell comments inside fenced examples.
-  # Distinct IDs, not heading lines, so a duplicated heading can't inflate the count.
-  fr_count=$(sed -n 's/^### \(FR-[0-9][0-9]*\).*/\1/p' "$f" | sort -u | wc -l | tr -d '[:space:]')
+  # Level-3 headings only (what the spec template emits, and what the check
+  # above already uses), outside fenced blocks and HTML comments, counted as
+  # distinct IDs. Without the fence/comment skips, a spec that quotes FR
+  # headings in an example — or comments some out while splitting — is told to
+  # split on requirements it does not have.
+  fr_count=$(awk '
+    /^[[:space:]]*```/ { fence = !fence; next }
+    fence                                  { next }
+    comment      { if (/-->/) comment = 0;   next }
+    /<!--/       { if (!/-->/) comment = 1;  next }
+    match($0, /^### FR-[0-9]+/) { print substr($0, RSTART + 4, RLENGTH - 4) }
+  ' "$f" | sort -u | wc -l | tr -d '[:space:]')
   if [ "${fr_count:-0}" -gt "$FR_CEILING" ]; then
     echo "WARN  $f: $fr_count FRs (over the $FR_CEILING ceiling) — split into two specs and record them as an arc"
     warn=$((warn + 1))
