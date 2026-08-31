@@ -82,15 +82,20 @@ for f in $specs; do
   # --- WARN: more FRs than one spec should carry ---
   # Level-3 headings only (what the spec template emits, and what the check
   # above already uses), outside fenced blocks and HTML comments, counted as
-  # distinct IDs. Without the fence/comment skips, a spec that quotes FR
-  # headings in an example — or comments some out while splitting — is told to
-  # split on requirements it does not have.
+  # distinct IDs. Without the skips, a spec that quotes FR headings in an
+  # example — or comments some out while splitting — is told to split on
+  # requirements it does not have. A comment is closed before a fence is
+  # opened, so a ``` inside a comment cannot swallow the rest of the file;
+  # ~~~ counts as a fence; and a one-line <!-- … --> is stripped rather than
+  # skipped, so a heading with a trailing note still counts.
   fr_count=$(awk '
-    /^[[:space:]]*```/ { fence = !fence; next }
-    fence                                  { next }
-    comment      { if (/-->/) comment = 0;   next }
-    /<!--/       { if (!/-->/) comment = 1;  next }
-    match($0, /^### FR-[0-9]+/) { print substr($0, RSTART + 4, RLENGTH - 4) }
+    { line = $0 }
+    in_comment { if (line ~ /-->/) in_comment = 0; next }
+    in_fence   { if (line ~ /^[[:space:]]*(```|~~~)/) in_fence = 0; next }
+    line ~ /^[[:space:]]*(```|~~~)/ { in_fence = 1; next }
+    { gsub(/<!--[^>]*-->/, "", line) }
+    line ~ /<!--/ { in_comment = 1; next }
+    match(line, /^### FR-[0-9]+/) { print substr(line, RSTART + 4, RLENGTH - 4) }
   ' "$f" | sort -u | wc -l | tr -d '[:space:]')
   if [ "${fr_count:-0}" -gt "$FR_CEILING" ]; then
     echo "WARN  $f: $fr_count FRs (over the $FR_CEILING ceiling) — split into two specs and record them as an arc"

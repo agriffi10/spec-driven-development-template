@@ -345,7 +345,9 @@ yields a different class of finding than any reading-based frame.*
 nothing — it finds something smaller. The honest signal is the **class** changing round over round:
 blockers → machinery introduced by the fixes → sequencing and contradictions → coin-flips no test
 would catch. Stop when a new frame's worst finding is one that would not change the built result, and
-say which finding that was.
+say which finding that was. **This governs the ceiling, never the floor** — it says when to stop
+*above* the counts in §3's reviewer contract, not that a count can be skipped, so a diff still
+gets its two frames when the first comes back with nothing that would change the built result.
 
 **An Open Question can wear a declarative sentence**
 
@@ -385,10 +387,12 @@ Specs are written from `docs/templates/spec-template.md`. What makes a spec *bui
   **Acceptance Criteria** covering happy path, error path, and edges. Sequential IDs so a prompt can
   say "implement FR-001 through FR-003 only."
 - **Size: aim for 3–6 FRs, and split above 8.** A spec is one coherent slice of behavior, not a
-  feature's whole surface. Across the 216 specs this method was built on, the median carries 6 FRs
-  and four in five carry 8 or fewer, so a spec past eight is not a big spec — it is a spec that
-  should have been two. The 3–6 aim sits at or below that median deliberately: it is where the
-  method is going, not a description of where it already is. Growing one spec is the wrong repair;
+  feature's whole surface, and a spec past eight is not a big spec — it is a spec that should have
+  been two. (Measured once, on the 216 specs this method was built on: the median carried 6 FRs
+  and four in five carried 8 or fewer. A dated observation, not a standing claim about any
+  corpus — the rule below forbids a standing rule resting on a number that rots.) The 3–6 aim
+  sits at or below that median deliberately: it is where the method is going, not a description
+  of where it already is. Growing one spec is the wrong repair;
   the right one is a second spec beside it, with the pair's build order recorded in `INDEX.md` as an
   **arc** (§2). Splitting keeps paying off past the first cut — a three-spec arc reads better than
   one fourteen-FR spec, and each piece earns its own reviewed plan, its own review gate and its own
