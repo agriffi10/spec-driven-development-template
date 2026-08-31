@@ -184,8 +184,8 @@ matching mode (in Claude Code you can also invoke it explicitly with `/spec-driv
 |---|---|---|
 | Set up an existing repo | "Set this repo up for spec-driven development." | Copies the scaffold in, fills `CLAUDE.md`, wires CI. |
 | Write a spec | "Draft SPEC-007 for <feature> from the spec template." | Writes a spec with no open questions; runs spec-lint; adds the INDEX row. |
-| Build a spec | "Build SPEC-007." | Reads `CLAUDE.md` + the spec, generates a plan, **sends it to a fresh-context reviewer**, then builds in phases on a branch/PR. |
-| Review work | "Review this branch against SPEC-007 in a fresh context." | Runs review/verification in a new session or subagent against the spec's acceptance criteria + best-practices rules — **before the push**, so the branch reaches the remote already reviewed. |
+| Build a spec | "Build SPEC-007." | Reads `CLAUDE.md` + the spec, generates a plan, **sends it to one fresh-context reviewer**, then builds in phases on a branch/PR. |
+| Review work | "Review this branch against SPEC-007 in a fresh context." | Runs **two** reviews in **different frames**, each in a new session or subagent, against the spec's acceptance criteria + best-practices rules — **before the push**, so the branch reaches the remote already reviewed. |
 | Finish a spec | "Run the completion ritual for SPEC-007." | Flips status, updates INDEX, writes the delivery doc, updates the component inventory. |
 
 **Shell commands** (Claude can run these for you in-session, or you can run them yourself):
@@ -198,8 +198,8 @@ sh scripts/check-mirror.sh         # maintainers: fail if the root has drifted f
 ```
 
 Before Claude pushes, it runs your project's **formatter, linter, typecheck and unit tests** locally
-and gets them green, and puts the diff through the review gate — both are pre-push steps here, not
-something CI or a reviewer discovers after the branch is already public.
+and gets them green, and puts the diff through **two** framed reviews — both are pre-push steps
+here, not something CI or a reviewer discovers after the branch is already public.
 
 ## The guardrails (and where they're enforced)
 
@@ -208,7 +208,7 @@ something CI or a reviewer discovers after the branch is already public.
 | Specs are fully specified before build (no Open Questions) | `spec-lint.sh` (CI) + `process.md` |
 | Builds run off a reviewed plan, straight through (no per-phase checkpoints) | `process.md` + `SKILL.md` build mode |
 | Emergent issues triaged by kind: reversible → decide; product-changing → escalate to you | `process.md` + `CLAUDE.md` |
-| Review runs in a fresh context, not the authoring session, and gates the **push** | `process.md` + `CLAUDE.md` |
+| Review runs in a fresh context, not the authoring session, and gates the **push** — one reviewer on the spec, one on the plan, **two** on the diff | `process.md` + `CLAUDE.md` |
 | Formatter / linter / typecheck / tests green **before** a push | `process.md` + `CLAUDE.md` + PR template |
 | Every PR watched and merged on green; `main` always watched; red `main` fixed first | `process.md` + `CLAUDE.md` |
 | Domain code follows the right rulebook, loading only what's needed | `best-practices/INDEX.md` + `process.md` |

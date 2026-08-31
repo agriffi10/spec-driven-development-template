@@ -93,15 +93,16 @@ grouping have each been answered, the build runs to completion without checking 
 confirmed the work when they set the spec going; a per-phase check-in re-asks a question already
 answered, and on a twelve-phase spec it asks it twelve times. This does **not** retire the diff
 review — that one gates the push, at the other end of the build, and it is blocking too (*The
-reviewer contract*, below). Three artifacts are reviewed on the way to a merge: the plan and the
-grouping before the first line of code, the diff before the first push.
+reviewer contract*, below). Four reviews stand between starting a build and merging it: one on the
+plan and one on the grouping before the first line of code, and two on the diff before the first
+push.
 
 **During the build — one spec, in phases**
 - Every file-changing task is done on its **own branch** and opened as a **PR** — automatically, without
   waiting to be asked. Never commit to `main` directly.
-- **The diff review runs BEFORE the push, not before the merge.** Commit locally, run the gates, send
-  the diff to a fresh-context reviewer, fix or explicitly reject every finding — *then* push and open
-  the PR. Pushing first and reviewing after inverts the gate: the branch is already public, the fixes
+- **The diff reviews run BEFORE the push, not before the merge — and there are two of them.** Commit
+  locally, run the gates, send the diff to **two** fresh-context reviewers in **different frames**,
+  fix or explicitly reject every finding — *then* push and open the PR. Pushing first and reviewing after inverts the gate: the branch is already public, the fixes
   arrive as follow-up commits, and the review reads as commentary on something that has already
   happened rather than as the thing that decides whether it should. Rotating the frame (below) happens
   in the same window. A push is the point of no return for the review, the same way the merge is the
@@ -144,6 +145,16 @@ and a **diff** each go to a reviewer in a **fresh context** — a subagent or a 
 context that produced the artifact. An author reviewing their own work assumes its output was
 intended and rubber-stamps it; that is as true of a plan as of code, and a wrong plan is the more
 expensive of the two because the code that follows will faithfully implement it.
+
+**How many reviewers, and where.** **One** on the spec when it is written, **one** on the
+implementation plan when the build actually starts, and **two** on the diff before it is pushed —
+plus the narrow pass on the PR grouping described below. The diff gets two because it is the only
+one of the three whose defects reach `main`: a spec or a plan found wrong is still cheap to change,
+and a second reader on either mostly re-reads the first one's ground. The two diff reviews are **two
+frames, not two rounds** — the second is briefed for what the first could not see (*Rotating the
+frame*, below), and the same frame run twice buys wording. Both land **before** the push: a second
+review that arrives after the branch is public is commentary, not a gate. Two is the **floor** on a
+diff, not the cap — the rotation rules decide when to stop above it.
 
 - **The gate is blocking, and what it asks for is an answer, not a filing.** A spec is not
   Draft-ready, a plan does not start code, and a branch does not reach the remote, until every

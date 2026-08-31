@@ -73,8 +73,8 @@ Write from `template/docs/templates/spec-template.md`. A spec is *buildable* whe
   resolved, that means the spec isn't Draft-ready — get the answer, don't park it. A sentence that
   *promises* a decision ("the spec states which") is an Open Question in declarative clothes, and the
   lint cannot see it.
-- **It has been through the reviewer gate.** A freshly-authored spec goes to a fresh-context reviewer
-  before it is Draft-ready; findings are **fixed or flagged** — a rejection said out loud costs a
+- **It has been through the reviewer gate.** A freshly-authored spec goes to **one** fresh-context
+  reviewer before it is Draft-ready; findings are **fixed or flagged** — a rejection said out loud costs a
   sentence, and only goes in writing when it carries a lesson worth keeping. What this catches is
   rarely a wrong requirement — it is an acceptance criterion that cannot fail, and an Out of Scope
   bullet an FR quietly needs. Give the reviewer the spec, its build-order entry, and its dependencies
@@ -95,7 +95,7 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
 3. Branch from fresh `main`, and set the spec's `Status: In Progress` + its `INDEX.md` row in that
    first commit — nothing gates that transition, so it is missed by being skipped.
 4. **Generate an implementation plan from the spec's phases and validate it against the spec** — every
-   FR + acceptance criterion covered, reuse used, nothing out of scope. **Then send the plan to a
+   FR + acceptance criterion covered, reuse used, nothing out of scope. **Then send the plan to exactly one
    fresh-context reviewer before the first line of code.** A wrong plan is more expensive than wrong
    code, because the code will faithfully implement it. This reviewed plan replaces per-phase
    checkpoints.
@@ -111,9 +111,11 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
    if scope changes); **product-changing/ambiguous** → stop and escalate to the human with options
    + a recommendation, never silently decide. Stop only for a question that genuinely needs an
    answer — reporting is not the same act as asking.
-7. **Review the diff in a fresh context, BEFORE the push.** Commit locally, run the gates, send the
-   diff to a new session or subagent — never the one that wrote the code — then fix or flag every
-   finding, *then* push and open the PR. A self-reviewing agent rubber-stamps its own work, and
+7. **Two fresh-context reviews of the diff, BEFORE the push.** Commit locally, run the gates, send
+   the diff to **two** new sessions or subagents in **different frames** — never the one that wrote
+   the code — then fix or flag every finding, *then* push and open the PR. The diff is the only
+   artifact of the three whose defects reach `main`, which is why it gets two and the spec and the
+   plan get one; two frames, not two rounds, and two is the floor rather than the cap (step 8). A self-reviewing agent rubber-stamps its own work, and
    pushing first inverts the gate: the branch is already public and the fixes arrive as follow-up
    commits. **Green CI is not a review** — it cannot see a test that passes against the bug it claims
    to catch, a lock taken in the wrong order, or an acceptance criterion ticked with no evidence. The
