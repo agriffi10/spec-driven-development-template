@@ -13,7 +13,11 @@
 ## Review (before this branch was pushed)
 - [ ] **Two** fresh-context reviews of this diff, in **different frames** — not two rounds of one
 - [ ] Every finding **fixed or flagged** out loud; nothing dropped silently
-- [ ] Any acceptance criterion that could not settle pre-push is named below as **owed**
+- [ ] Any acceptance criterion that could not settle pre-push is listed under **Owed** below
+
+### Owed (criteria that can only settle on the green run)
+<!-- One line each, or "none". These block the merge, not the push. -->
+- none
 
 ## Verification
 - [ ] Lint / typecheck pass
@@ -21,5 +25,5 @@
 - [ ] `sh scripts/spec-lint.sh` passes
 
 ## Landing
-- [ ] Watching this PR to green — will merge as soon as CI passes
+- [ ] Watching this PR to green — will merge once CI passes **and** every Owed item above is settled
 - [ ] Will confirm `main` is green after merge (and fix immediately with a new PR if it isn't)

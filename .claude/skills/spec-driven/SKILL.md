@@ -65,7 +65,9 @@ Write from `template/docs/templates/spec-template.md`. A spec is *buildable* whe
 - **It is one slice, not a whole feature** — aim for **3–6 FRs**, and past **8** split into a second
   spec rather than growing this one, recording the pair as an arc with a build order in `INDEX.md`.
   Cut on a seam the system already has (a layer, a surface, a switchover), never at the FR where the
-  count ran out. `spec-lint.sh` warns above 8.
+  count ran out. `spec-lint.sh` **warns** above 8 rather than failing: a genuinely indivisible spec
+  may sit above the line, but say so out loud in the spec — "it is all one feature" is what every
+  over-scoped spec claims.
 - **Data Model / Interface Contract** uses language-native types, not prose.
 - **Implementation Phases** are reviewable units — the *input to the build-time plan*. Do **not** write
   per-phase checkpoints.
@@ -95,8 +97,9 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
 3. Branch from fresh `main`, and set the spec's `Status: In Progress` + its `INDEX.md` row in that
    first commit — nothing gates that transition, so it is missed by being skipped.
 4. **Generate an implementation plan from the spec's phases and validate it against the spec** — every
-   FR + acceptance criterion covered, reuse used, nothing out of scope. **Then send the plan to exactly one
-   fresh-context reviewer before the first line of code.** A wrong plan is more expensive than wrong
+   FR + acceptance criterion covered, reuse used, nothing out of scope. **Then send the plan to one
+   fresh-context reviewer before the first line of code** (one is the floor — a phase that revises
+   the plan sends the new plan back through). A wrong plan is more expensive than wrong
    code, because the code will faithfully implement it. This reviewed plan replaces per-phase
    checkpoints.
 5. **Send the PR grouping to a reviewer too**, before the first push — as few PRs as the dependencies
@@ -113,9 +116,11 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
    answer — reporting is not the same act as asking.
 7. **Two fresh-context reviews of the diff, BEFORE the push.** Commit locally, run the gates, send
    the diff to **two** new sessions or subagents in **different frames** — never the one that wrote
-   the code — then fix or flag every finding, *then* push and open the PR. The diff is the only
-   artifact of the three whose defects reach `main`, which is why it gets two and the spec and the
-   plan get one; two frames, not two rounds, and two is the floor rather than the cap (step 8). A self-reviewing agent rubber-stamps its own work, and
+   the code — then fix or flag every finding, *then* push and open the PR. The diff gets two because
+   it is the widest artifact and the last before the branch is public; one frame reads it against the
+   spec's criteria and the `best-practices/` rules, the other starts from the **system** rather than
+   the diff. Two frames, not two rounds, and two is the floor rather than the cap (step 8) — a clean
+   first review does not close the gate. A self-reviewing agent rubber-stamps its own work, and
    pushing first inverts the gate: the branch is already public and the fixes arrive as follow-up
    commits. **Green CI is not a review** — it cannot see a test that passes against the bug it claims
    to catch, a lock taken in the wrong order, or an acceptance criterion ticked with no evidence. The

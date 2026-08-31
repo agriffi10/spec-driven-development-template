@@ -72,7 +72,7 @@ knows how to fill and file them.
 | `docs/best-practices/react/react.md` | React 18/19 rulebook (✅/🔴, numbered internal index). | Claude (on demand) |
 | `docs/best-practices/accessibility/accessibility.md` | WCAG 2.2 rulebook (Task Index → Perceivable / Operable / Understandable / Robust). | Claude (on demand) |
 | `docs/best-practices/python/python.md` | Python / PEP 8 rulebook (numbered internal index). | Claude (on demand) |
-| `docs/specs/INDEX.md` | The **spec index + status** (one row per spec; optional build-order "arcs"). | You + Claude |
+| `docs/specs/INDEX.md` | The **spec index + status** (one row per spec, plus the build-order "arcs" a size split records). | You + Claude |
 | `docs/specs/SPEC-XXX-*.md` | An individual **spec** — the unit of work. You author these. | You + Claude |
 | `docs/spec-delivery/SPEC-XXX-*.md` | Short **"what shipped"** note written when a spec completes. Pulled only when a later spec depends on it. | Claude (on demand) |
 | `docs/templates/spec-template.md` | The blank a new spec is written from. | You |
@@ -82,7 +82,7 @@ knows how to fill and file them.
 | `scripts/check-mirror.sh` | Maintenance script: fails if the root scaffold has drifted from the canonical copy, in either direction. Runs in CI. | CI + you (maintainer) |
 | `.github/workflows/spec-lint.yml` | Runs `spec-lint.sh` on every PR and push to `main`. | CI |
 | `.github/workflows/ci.yml.example` | **Inert** GitHub Actions template (Node + Python jobs). At scaffold time it becomes a real `ci.yml` that runs your formatter/linter/types/tests; the `.example` extension means GitHub never runs it as-is. | CI (once filled in) |
-| `.github/pull_request_template.md` | PR checklist that restates the rules: maps-to-plan, no new open questions, tests/lint green, watch-to-green. | You + Claude |
+| `.github/pull_request_template.md` | PR checklist that restates the rules: maps-to-plan, no new open questions, **two framed pre-push reviews**, tests/lint green, owed criteria named, watch-to-green. | You + Claude |
 | `.claude/skills/spec-driven/SKILL.md` | The **skill** — the workflow Claude follows. Claude Code discovers it here automatically. | Claude Code (auto) |
 | `.claude/skills/spec-driven/template/` | The **canonical copy** of the entire scaffold (see "Why two copies"). | the skill |
 | `.gitignore` | Ignores OS/editor cruft and common Python/Node build artifacts. | Git |
@@ -208,7 +208,7 @@ here, not something CI or a reviewer discovers after the branch is already publi
 | Specs are fully specified before build (no Open Questions) | `spec-lint.sh` (CI) + `process.md` |
 | Builds run off a reviewed plan, straight through (no per-phase checkpoints) | `process.md` + `SKILL.md` build mode |
 | Emergent issues triaged by kind: reversible → decide; product-changing → escalate to you | `process.md` + `CLAUDE.md` |
-| Review runs in a fresh context, not the authoring session, and gates the **push** — one reviewer on the spec, one on the plan, **two** on the diff | `process.md` + `CLAUDE.md` |
+| Review runs in a fresh context, not the authoring session, and gates the **push** — one reviewer on the spec, one on the plan, **two** on the diff | `process.md` + `CLAUDE.md` + PR template |
 | Formatter / linter / typecheck / tests green **before** a push | `process.md` + `CLAUDE.md` + PR template |
 | Every PR watched and merged on green; `main` always watched; red `main` fixed first | `process.md` + `CLAUDE.md` |
 | Domain code follows the right rulebook, loading only what's needed | `best-practices/INDEX.md` + `process.md` |
