@@ -55,7 +55,9 @@ Specs move **Draft → In Progress → Completed** (the status in each spec's he
 top, so a session can load only the arc it's in. Structure it that way from the first entry —
 retrofitting headings onto grown prose is far more work. The heading names the **arc**, never its
 status: status rots the day the next spec lands, and it belongs in the arc's body or its `INDEX.md`
-rows (see §5).
+rows (see §5). An arc is also what an over-scoped spec *becomes*: a spec that runs past the size
+ceiling in §4 is cured by a second spec beside it and an arc entry holding the order, never by a
+longer spec.
 
 ---
 
@@ -347,6 +349,15 @@ Specs are written from `docs/templates/spec-template.md`. What makes a spec *bui
 - **Functional Requirements** — one FR per discrete, testable behavior, with binary pass/fail
   **Acceptance Criteria** covering happy path, error path, and edges. Sequential IDs so a prompt can
   say "implement FR-001 through FR-003 only."
+- **Size: aim for 3–6 FRs, and split above 8.** A spec is one coherent slice of behavior, not a
+  feature's whole surface. Across the 216 specs this method was built on, the median carries 6 FRs
+  and three quarters carry 8 or fewer, so a spec past eight is not a big spec — it is a spec that
+  should have been two. Growing one is the wrong repair; the right one is a second spec beside it,
+  with the pair recorded as an **arc** with a build order in `INDEX.md` (§2). Splitting keeps paying
+  off past the first cut — a three-spec arc reads better than one fourteen-FR spec, and each piece
+  earns its own reviewed plan, its own diff review and its own delivery doc. Cut along a seam the
+  system already has — a layer, a surface, a switchover, the point where something inert goes live —
+  never at "FR-009, because that is where the count ran out."
 - **Data Model / Interface Contract** — language-native types, not prose. Explicit shapes produce
   better-typed output. Note the target path.
 - **Implementation Phases** — each phase is one session's worth of work and maps to a discrete,
@@ -363,8 +374,9 @@ Specs are written from `docs/templates/spec-template.md`. What makes a spec *bui
 
 `scripts/spec-lint.sh` enforces the structural side of this in CI: it **fails** a spec that is missing
 a required section or that contains an "Open Questions" / "Checkpoint" heading, and **warns** on
-unfilled placeholders or FRs without acceptance criteria. It cannot see a vacuous acceptance criterion
-or a decision promised in a declarative sentence — that is what the reviewer gate is for.
+unfilled placeholders, FRs without acceptance criteria, and a spec carrying more than 8 FRs. It
+cannot see a vacuous acceptance criterion or a decision promised in a declarative sentence — that
+is what the reviewer gate is for.
 
 ---
 

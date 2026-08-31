@@ -5,7 +5,10 @@
 #   - a spec is missing a required top-level section, OR
 #   - a spec contains a banned "Open Questions" / "Checkpoint" header
 #     (these are resolved during authoring or in-session, never parked in the spec).
-# WARN (exit 0): soft issues — unfilled template placeholders, FRs with no acceptance criteria.
+# WARN (exit 0): soft issues — unfilled template placeholders, FRs with no acceptance
+#   criteria, and a spec carrying more FRs than one buildable slice should (see
+#   FR_CEILING below). The ceiling is a warn, not a fail: an indivisible spec can
+#   legitimately sit above it, and that call belongs to the reviewer, not the lint.
 #
 # Usage: scripts/spec-lint.sh [spec-dir]     (default: docs/specs)
 # POSIX sh — no bashisms; runs anywhere /bin/sh exists.
@@ -13,6 +16,10 @@
 set -eu
 
 SPEC_DIR="${1:-docs/specs}"
+
+# Above this many FRs, a spec has usually stopped being one buildable slice and
+# wants splitting into two specs recorded as an arc (docs/process.md §4).
+FR_CEILING=8
 fail=0
 warn=0
 
@@ -64,6 +71,13 @@ for f in $specs; do
   # --- WARN: FRs present but no acceptance criteria ---
   if grep -qE '^### FR-' "$f" && ! grep -qiE 'Acceptance Criteria' "$f"; then
     echo "WARN  $f: has FR-* requirements but no 'Acceptance Criteria'"
+    warn=$((warn + 1))
+  fi
+
+  # --- WARN: more FRs than one spec should carry ---
+  fr_count=$(grep -cE '^#{1,6}[[:space:]]+FR-[0-9]' "$f" || true)
+  if [ "$fr_count" -gt "$FR_CEILING" ]; then
+    echo "WARN  $f: $fr_count FRs (over the $FR_CEILING ceiling) — split into two specs and record them as an arc"
     warn=$((warn + 1))
   fi
 

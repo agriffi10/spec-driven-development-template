@@ -62,6 +62,10 @@ Write from `template/docs/templates/spec-template.md`. A spec is *buildable* whe
 - **Scope** lists In and **Out** explicitly (especially things a reader would assume are in).
 - **Functional Requirements** are granular, each with binary pass/fail **Acceptance Criteria** covering
   happy/error/edge paths, sequential IDs.
+- **It is one slice, not a whole feature** — aim for **3–6 FRs**, and past **8** split into a second
+  spec rather than growing this one, recording the pair as an arc with a build order in `INDEX.md`.
+  Cut on a seam the system already has (a layer, a surface, a switchover), never at the FR where the
+  count ran out. `spec-lint.sh` warns above 8.
 - **Data Model / Interface Contract** uses language-native types, not prose.
 - **Implementation Phases** are reviewable units — the *input to the build-time plan*. Do **not** write
   per-phase checkpoints.

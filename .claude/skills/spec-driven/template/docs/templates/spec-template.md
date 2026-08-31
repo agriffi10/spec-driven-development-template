@@ -30,6 +30,10 @@ the purpose after reading this section alone.
   One FR per discrete behavior. Keep them granular enough that each one
   maps to a single unit of testable work. Use sequential IDs so you can
   reference them in prompts: "implement FR-001 through FR-003 only."
+
+  Size: aim for 3-6 FRs. Past 8, split into a second spec and record the
+  pair as an arc in docs/specs/INDEX.md - don't grow this one. spec-lint
+  warns above 8.
 -->
 
 ### FR-001: [Requirement Name]
