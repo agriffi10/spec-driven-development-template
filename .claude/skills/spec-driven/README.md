@@ -12,7 +12,9 @@ fresh-context review gate, watch PRs/main, and run the completion ritual. The fu
 - **`template/`** — the **canonical copy** of the repo scaffold (`CLAUDE.md`, `docs/`, `scripts/`,
   `.github/`). It lives here so the skill is self-contained and can scaffold a *different, pre-existing*
   repo. This is the **source of truth**; the repo root mirrors it (run `scripts/sync-from-skill.sh`
-  after editing here, and commit both).
+  after editing here, and commit both). `scripts/check-mirror.sh` runs in CI and goes red if the two
+  drift in either direction — including the orphan a payload *deletion* leaves at the root, which the
+  sync cannot clean up. It is not a required status check yet, so red does not block a merge.
 
 ## Using it
 
