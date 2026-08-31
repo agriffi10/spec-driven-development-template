@@ -71,6 +71,10 @@ just answer questions in a chat window. Two products run this template:
 - **Claude Code** — the command-line tool you run inside a project directory.
 - **Cowork** — the desktop application.
 
+Both are installed separately from this repository; see Anthropic's Claude Code documentation at
+<https://docs.claude.com/en/docs/claude-code> to get set up. Everything below assumes you have one of
+them running in your project directory.
+
 **Session.** One continuous conversation with an agent. It starts fresh with no memory of previous
 sessions, which is why the important rules live in files rather than in your chat history.
 
@@ -101,8 +105,8 @@ requirements each with pass/fail acceptance criteria, data shapes, and the phase
 at `docs/specs/SPEC-XXX-<name>.md` and are the unit of work here.
 
 A spec is one coherent slice of behavior, not a feature's entire surface. Aim for three to six
-functional requirements; past eight, the repair is a second spec beside it recorded as an arc, not a
-longer first one. Requirement IDs are spec-local, so the second spec restarts at FR-001 and
+functional requirements; past eight, the repair is a second spec beside it, recorded as an *arc*
+(defined below), not a longer first one. Requirement IDs are spec-local, so the second spec restarts at FR-001 and
 dependencies are cited as "SPEC-003 FR-002" rather than by a bare number.
 
 **Fresh-context review.** Handing an artifact to a Claude session that has not seen it being made,
@@ -118,6 +122,12 @@ one frame again buys wording changes, while changing the frame finds a new class
 **Arc.** Two or more related specs with an explicit build order recorded in `docs/specs/INDEX.md`.
 Arcs are how a feature too big for one spec gets built: a second spec beside the first, not a longer
 first one.
+
+**PR grouping.** The decision about how one spec's phases get split across pull requests. A phase is
+a unit of work, not automatically a unit of PR, so the aim is as few pull requests as the
+dependencies allow — the useful boundaries are things like either side of a switchover, or
+infrastructure that has to land before what depends on it. It gets its own narrow review, which asks
+only whether the split is the fewest possible and whether any boundary would leave `main` half-built.
 
 **spec-lint.** A small shell script (`scripts/spec-lint.sh`) that checks specs mechanically. It
 **fails** a spec missing a required section or carrying an "Open Questions"/"Checkpoint" heading, and
@@ -158,11 +168,11 @@ to just build something:
 **One spec in flight at a time.** You finish and merge before starting the next. Parallel specs
 produce conflicting assumptions about the same code.
 
-**Two gates on starting, two reviews before pushing — and in between, it runs.** The plan and the PR
-grouping are reviewed before the first line of code; the diff gets its two framed reviews before the
-first push. Between those bookends the build runs straight through rather than stopping after every
-phase to re-ask a question you already answered. On a twelve-phase spec, per-phase check-ins ask it
-twelve times.
+**Two gates on starting, two reviews before pushing — and in between, it runs.** The plan is reviewed
+before the first line of code, and the PR grouping and the diff are both reviewed before the first
+push. Between those bookends the build runs straight through rather than stopping after every phase
+to re-ask a question you already answered. On a twelve-phase spec, per-phase check-ins ask it twelve
+times.
 
 **How many reviews, and why those numbers.** The spec gets **one**, when it is written. Then **four**
 more stand between that spec starting and its pull request merging: one on the implementation plan,
@@ -187,7 +197,7 @@ Claude reads it every session.
 ### A) Starting a new project
 
 1. On GitHub, click **Use this template** to create your repository. (This copies the files, not the
-   repository settings or history — you'll set protections up in step 6.)
+   repository settings or history — you'll set protections up in step 7.)
 2. Fill in the placeholders in **`CLAUDE.md`**: Project Overview, Layout, Tech Stack, Code
    Conventions, Common Commands. Describe your actual project and keep it short — this file is loaded
    in full on every session.
@@ -196,7 +206,8 @@ Claude reads it every session.
 4. **Set up language CI.** Copy `.github/workflows/ci.yml.example` to `.github/workflows/ci.yml`,
    keep only the job for your language, replace the placeholder commands with your real ones, then
    delete the `.example` file. GitHub Actions only runs workflow files ending in `.yml` or `.yaml`,
-   which is why the shipped copy is inert. Without this step, "green CI" means only that spec-lint passed.
+   which is why the shipped copy is inert. Until you do this, "green CI" in your project means only
+   that spec-lint passed — and spec-lint knows nothing about your code.
 5. **Delete the mirror machinery.** Remove `scripts/check-mirror.sh`, `scripts/sync-from-skill.sh`
    and `.github/workflows/check-mirror.yml`. They keep *this* template's two copies of the scaffold
    in step, and in your project they will fail: the check compares the root files against the copy
@@ -345,9 +356,9 @@ from the template don't need them.
 | `docs/specs/INDEX.md` | The **spec index**: one status row per spec, plus the build-order "arcs" that record related specs. Keep the arcs section — a spec split for size always leaves an entry there. | You + Claude |
 | `docs/specs/SPEC-XXX-*.md` | An individual **spec** — the unit of work. | You + Claude |
 | `docs/spec-delivery/SPEC-XXX-*.md` | A short **"what shipped"** note written at completion. Read only when a later spec depends on that one. | Claude (on demand) |
-| `docs/templates/spec-template.md` | The blank a new spec is written from. | You |
+| `docs/templates/spec-template.md` | The blank a new spec is written from. | You + Claude |
 | `docs/templates/spec-completion-template.md` | The blank a delivery note is written from. | You + Claude |
-| `scripts/spec-lint.sh` | **POSIX** shell linter. Fails a spec that's missing a required section or contains an "Open Questions"/"Checkpoint" heading; warns on unfilled placeholders, on requirements with no acceptance criteria anywhere in the file, and on a spec carrying more than eight requirements. No dependencies. | CI + you |
+| `scripts/spec-lint.sh` | **POSIX** shell linter. Fails a spec that's missing a required section or contains an "Open Questions"/"Checkpoint" heading; warns on unfilled placeholders, on requirements with no acceptance criteria anywhere in the file, and on a spec carrying more than eight requirements. No dependencies. | CI + you + Claude |
 | `scripts/sync-from-skill.sh` | Maintenance for **this template repo only** — regenerates the root scaffold from the skill's canonical copy. Delete it in a derived project. | Maintainers of this template |
 | `scripts/check-mirror.sh` | Maintenance for **this template repo only** — fails if the root scaffold has drifted from the canonical copy, in either direction. Delete it in a derived project, where customizing `CLAUDE.md` makes it fail by design. | CI + maintainers |
 | `.github/workflows/spec-lint.yml` | Runs spec-lint on pushes to `main`, and on pull requests that touch `docs/specs/`, the lint script, or the workflow itself. | CI |
@@ -472,7 +483,9 @@ skeptical of, since it's what every over-scoped spec says about itself.
 payload and didn't sync: run `sh scripts/sync-from-skill.sh`, review the diff, commit both copies.
 `ORPHAN` means a root file has no counterpart in the payload, usually left behind by a deletion —
 remove it by hand, restore it to the payload if the deletion was a mistake, or add it to `ROOT_ONLY`
-in the script if it's genuinely root-only.
+in the script if it's genuinely root-only. Two rarer types: `DELETED` means a payload file is still
+tracked by git but gone from your working copy, so stage the deletion; `STALE EXEMPTION` means the
+script's `ROOT_ONLY` list names a file that no longer exists, so drop that entry.
 
 **`check-mirror` fails in a project I created from this template.** It's meant to, and the fix is to
 delete it. That check exists to keep the template's own two copies of the scaffold identical; your
@@ -482,11 +495,16 @@ bundled in the skill. Remove `scripts/check-mirror.sh`, `scripts/sync-from-skill
 
 **My edits to `docs/` keep disappearing.** In *this* template repository, the root `docs/`,
 `CLAUDE.md` and `.github/` are generated from the skill's payload, and the sync overwrites them. Edit
-the payload. In a project created from the template, this doesn't apply — there is no payload to sync
-from, and the root files are yours.
+the payload instead.
+
+In a project created from the template the root files are yours, and nothing should overwrite them —
+provided you deleted `scripts/sync-from-skill.sh` at setup. If you kept it, don't run it: your
+project still carries the bundled payload copy, and the script's `cp -R` would overwrite your
+customized `CLAUDE.md`, `docs/` and `.github/` with the blank template versions, then report success.
 
 **CI is green but nothing was really checked.** Until you turn `ci.yml.example` into a real `ci.yml`,
-the only checks running are spec-lint and the mirror check. Neither knows anything about your code.
+the only check running in your project is spec-lint, which knows nothing about your code. (In this
+template repository itself, the mirror check runs too — it also knows nothing about your code.)
 
 **A review keeps finding more things.** Two rounds in the same frame is the cap. After that, change
 the angle rather than iterating — have a reviewer try to *build* the thing, or read the whole module
