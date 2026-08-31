@@ -50,12 +50,16 @@ Specs move **Draft → In Progress → Completed** (the status in each spec's he
 - **Completed** — merged on green CI, delivery doc written (see §5).
 
 **Arcs.** Related specs can be grouped into *arcs* with an explicit **build order** documented in
-`INDEX.md`. Build in that order; arcs can have non-obvious dependencies. If arc narrative outgrows an
+`INDEX.md`. Grouping is a choice; recording the order of a **size split** (§4) is not — a spec cut
+for size always leaves an arc entry behind, so keep the section even if you group nothing else.
+Build in that order; arcs can have non-obvious dependencies. If arc narrative outgrows an
 `INDEX.md` row, move it to a `docs/specs/ARCS.md` with **one `##` heading per arc** and a TOC at the
 top, so a session can load only the arc it's in. Structure it that way from the first entry —
 retrofitting headings onto grown prose is far more work. The heading names the **arc**, never its
 status: status rots the day the next spec lands, and it belongs in the arc's body or its `INDEX.md`
-rows (see §5).
+rows (see §5). An arc is also what an over-scoped spec *becomes*: a spec that runs past the size
+ceiling in §4 is cured by a second spec beside it and an arc entry holding the order, rather than
+by a longer spec.
 
 ---
 
@@ -91,15 +95,17 @@ grouping have each been answered, the build runs to completion without checking 
 confirmed the work when they set the spec going; a per-phase check-in re-asks a question already
 answered, and on a twelve-phase spec it asks it twelve times. This does **not** retire the diff
 review — that one gates the push, at the other end of the build, and it is blocking too (*The
-reviewer contract*, below). Three artifacts are reviewed on the way to a merge: the plan and the
-grouping before the first line of code, the diff before the first push.
+reviewer contract*, below). Four reviews stand between a spec going In Progress and its PR merging:
+one on the plan before the first line of code, one on the PR grouping, and two on the diff — all
+four before the first push.
 
 **During the build — one spec, in phases**
 - Every file-changing task is done on its **own branch** and opened as a **PR** — automatically, without
   waiting to be asked. Never commit to `main` directly.
-- **The diff review runs BEFORE the push, not before the merge.** Commit locally, run the gates, send
-  the diff to a fresh-context reviewer, fix or explicitly reject every finding — *then* push and open
-  the PR. Pushing first and reviewing after inverts the gate: the branch is already public, the fixes
+- **The diff reviews run BEFORE the push, not before the merge — and there are two of them.** Commit
+  locally, run the gates, send the diff to **two** fresh-context reviewers in **different frames**,
+  fix or explicitly reject every finding — *then* push and open the PR. Pushing first and reviewing
+  after inverts the gate: the branch is already public, the fixes
   arrive as follow-up commits, and the review reads as commentary on something that has already
   happened rather than as the thing that decides whether it should. Rotating the frame (below) happens
   in the same window. A push is the point of no return for the review, the same way the merge is the
@@ -141,7 +147,35 @@ Nothing reaches the next stage on its author's own judgement. A **spec**, an **i
 and a **diff** each go to a reviewer in a **fresh context** — a subagent or a new session, never the
 context that produced the artifact. An author reviewing their own work assumes its output was
 intended and rubber-stamps it; that is as true of a plan as of code, and a wrong plan is the more
-expensive of the two because the code that follows will faithfully implement it.
+expensive one to leave *undetected*, because the code that follows will faithfully implement it.
+
+**How many reviewers, and where.** **One** on the spec when it is written, **one** on the
+implementation plan when the build actually starts, and **two** on the diff before it is pushed —
+plus the narrow pass on the PR grouping below. The diff gets two because it is the **widest**
+artifact and the last one before the branch goes public: a spec or a plan is one document a single
+reader can hold whole, while a diff spans code, tests and config *and* the criteria they are
+supposed to satisfy, and this method's own measured history (*Rotating the frame*, below) is that the
+first differently-framed pass over a change finds a class the previous frame could not see. That
+evidence argues for a **different frame**, not for the number two; two is the floor because one frame
+is demonstrably not enough and a floor has to be a number.
+
+The two are **two frames, not two rounds** — the same frame run twice buys wording — and they are not
+free picks. One starts from the **change** and reads it against what it is supposed to satisfy; the
+other starts from **something other than the change** — the system it lands in, or the document it
+claims to implement. On a code diff those are: the spec's acceptance criteria plus the
+`best-practices/` rules for the domains it touches, and a pass that **builds** the thing and runs the
+suites rather than reading it. On a diff with no code in it — a spec, a plan, a docs change — they
+are: the artifact against its own sources, and the artifact against every *other* place the same rule
+is stated. Both land **before** the push; a review that only happens once the branch is public does
+not count toward the two.
+
+Every count here is a **floor**, not a cap, but the two floors work differently and should not be
+read across. **On a diff**, two is a minimum before a push: a clean first review does not close the
+gate, because "the reviewer found nothing" means nothing within the frame it was given, and the exit
+rules below decide when to stop *above* two. **On a spec or a plan**, one review closes the gate — a
+clean review there is an answer. What makes that count a floor is **re-entry**: a revised artifact is
+a new artifact and goes back through the gate as one, which is why a phase that rewrites the plan
+sends the new plan through again.
 
 - **The gate is blocking, and what it asks for is an answer, not a filing.** A spec is not
   Draft-ready, a plan does not start code, and a branch does not reach the remote, until every
@@ -190,6 +224,9 @@ So the loop rotates the frame instead of adding rounds:
   expensive to skip (concurrency, security, accessibility, data loss).
 - **Exit on a new frame finding nothing**, not on the current frame converging. "The reviewer found
   nothing" means "nothing within the frame I gave it."
+- **The exit rules govern the ceiling, never the floor.** "Never exit on a round count" is about when
+  to *stop*; it does not license stopping below the counts in *The reviewer contract*. A diff still
+  gets its two frames even when the first one comes back clean.
 - **Every frame is entered at most twice, and when they are exhausted, stop.** One requirement ran to
   **eleven** rounds — six same-frame (the cap above, ignored five times over), then rotations that did
   find real holes. So the rule is not "stop sooner regardless": a *third* round in one frame is
@@ -347,6 +384,25 @@ Specs are written from `docs/templates/spec-template.md`. What makes a spec *bui
 - **Functional Requirements** — one FR per discrete, testable behavior, with binary pass/fail
   **Acceptance Criteria** covering happy path, error path, and edges. Sequential IDs so a prompt can
   say "implement FR-001 through FR-003 only."
+- **Size: aim for 3–6 FRs, and split above 8.** A spec is one coherent slice of behavior, not a
+  feature's whole surface. Across the 216 specs this method was built on, the median carries 6 FRs
+  and four in five carry 8 or fewer, so a spec past eight is not a big spec — it is a spec that
+  should have been two. The 3–6 aim sits at or below that median deliberately: it is where the
+  method is going, not a description of where it already is. Growing one spec is the wrong repair;
+  the right one is a second spec beside it, with the pair's build order recorded in `INDEX.md` as an
+  **arc** (§2). Splitting keeps paying off past the first cut — a three-spec arc reads better than
+  one fourteen-FR spec, and each piece earns its own reviewed plan, its own review gate and its own
+  delivery doc. Cut along a seam the system already has — a layer, a surface, a switchover, the
+  point where something inert goes live — never at "FR-009, because that is where the count ran
+  out." **The second spec restarts at FR-001**: IDs are spec-local, which is why a dependency cites
+  them as "SPEC-003 FR-002" and never as a number on its own. On the first specs in a repo, where
+  there is no system yet to find a seam in, the seam is the user-visible step: what has to exist
+  before the next thing can be tried at all.
+- **The ceiling is a warn, not a fail.** A genuinely indivisible spec can sit above 8, and the lint
+  warns rather than blocking so that it can. That call is made **out loud** — one line under
+  *Scope → In Scope* saying why the FRs cannot be cut apart — and it is the reviewer's to accept
+  or reject, not the author's to assert. "It is all one feature" is the claim to be most
+  skeptical of, because it is what every over-scoped spec says about itself.
 - **Data Model / Interface Contract** — language-native types, not prose. Explicit shapes produce
   better-typed output. Note the target path.
 - **Implementation Phases** — each phase is one session's worth of work and maps to a discrete,
@@ -363,8 +419,10 @@ Specs are written from `docs/templates/spec-template.md`. What makes a spec *bui
 
 `scripts/spec-lint.sh` enforces the structural side of this in CI: it **fails** a spec that is missing
 a required section or that contains an "Open Questions" / "Checkpoint" heading, and **warns** on
-unfilled placeholders or FRs without acceptance criteria. It cannot see a vacuous acceptance criterion
-or a decision promised in a declarative sentence — that is what the reviewer gate is for.
+unfilled placeholders, a spec with FRs but no acceptance criteria anywhere in it, and a spec
+carrying more than 8 FRs. It cannot see a vacuous acceptance criterion, an acceptance criterion
+missing from one FR while its neighbours have them, or a decision promised in a declarative
+sentence — that is what the reviewer gate is for.
 
 ---
 

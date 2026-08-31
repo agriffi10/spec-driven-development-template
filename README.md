@@ -72,17 +72,17 @@ knows how to fill and file them.
 | `docs/best-practices/react/react.md` | React 18/19 rulebook (✅/🔴, numbered internal index). | Claude (on demand) |
 | `docs/best-practices/accessibility/accessibility.md` | WCAG 2.2 rulebook (Task Index → Perceivable / Operable / Understandable / Robust). | Claude (on demand) |
 | `docs/best-practices/python/python.md` | Python / PEP 8 rulebook (numbered internal index). | Claude (on demand) |
-| `docs/specs/INDEX.md` | The **spec index + status** (one row per spec; optional build-order "arcs"). | You + Claude |
+| `docs/specs/INDEX.md` | The **spec index + status** (one row per spec, plus the build-order "arcs" a size split records). | You + Claude |
 | `docs/specs/SPEC-XXX-*.md` | An individual **spec** — the unit of work. You author these. | You + Claude |
 | `docs/spec-delivery/SPEC-XXX-*.md` | Short **"what shipped"** note written when a spec completes. Pulled only when a later spec depends on it. | Claude (on demand) |
 | `docs/templates/spec-template.md` | The blank a new spec is written from. | You |
 | `docs/templates/spec-completion-template.md` | The blank a delivery doc is written from. | You + Claude |
-| `scripts/spec-lint.sh` | **POSIX** linter that fails a spec missing a required section or containing a banned "Open Questions"/"Checkpoint" heading; warns on unfilled placeholders. | CI + you |
+| `scripts/spec-lint.sh` | **POSIX** linter that fails a spec missing a required section or containing a banned "Open Questions"/"Checkpoint" heading; warns on unfilled placeholders, on FRs with no acceptance criteria anywhere in the file, and on specs carrying more than 8 FRs. | CI + you |
 | `scripts/sync-from-skill.sh` | Maintenance script: regenerates the root scaffold from the skill's canonical copy (see below). | You (maintainer) |
 | `scripts/check-mirror.sh` | Maintenance script: fails if the root scaffold has drifted from the canonical copy, in either direction. Runs in CI. | CI + you (maintainer) |
 | `.github/workflows/spec-lint.yml` | Runs `spec-lint.sh` on every PR and push to `main`. | CI |
 | `.github/workflows/ci.yml.example` | **Inert** GitHub Actions template (Node + Python jobs). At scaffold time it becomes a real `ci.yml` that runs your formatter/linter/types/tests; the `.example` extension means GitHub never runs it as-is. | CI (once filled in) |
-| `.github/pull_request_template.md` | PR checklist that restates the rules: maps-to-plan, no new open questions, tests/lint green, watch-to-green. | You + Claude |
+| `.github/pull_request_template.md` | PR checklist that restates the rules: maps-to-plan, no new open questions, **two framed pre-push reviews**, tests/lint green, owed criteria named, watch-to-green. | You + Claude |
 | `.claude/skills/spec-driven/SKILL.md` | The **skill** — the workflow Claude follows. Claude Code discovers it here automatically. | Claude Code (auto) |
 | `.claude/skills/spec-driven/template/` | The **canonical copy** of the entire scaffold (see "Why two copies"). | the skill |
 | `.gitignore` | Ignores OS/editor cruft and common Python/Node build artifacts. | Git |
@@ -184,8 +184,8 @@ matching mode (in Claude Code you can also invoke it explicitly with `/spec-driv
 |---|---|---|
 | Set up an existing repo | "Set this repo up for spec-driven development." | Copies the scaffold in, fills `CLAUDE.md`, wires CI. |
 | Write a spec | "Draft SPEC-007 for <feature> from the spec template." | Writes a spec with no open questions; runs spec-lint; adds the INDEX row. |
-| Build a spec | "Build SPEC-007." | Reads `CLAUDE.md` + the spec, generates a plan, **sends it to a fresh-context reviewer**, then builds in phases on a branch/PR. |
-| Review work | "Review this branch against SPEC-007 in a fresh context." | Runs review/verification in a new session or subagent against the spec's acceptance criteria + best-practices rules — **before the push**, so the branch reaches the remote already reviewed. |
+| Build a spec | "Build SPEC-007." | Reads `CLAUDE.md` + the spec, generates a plan, **sends it to one fresh-context reviewer**, then builds in phases on a branch/PR. |
+| Review work | "Review this branch against SPEC-007 in a fresh context." | Runs **two** reviews in **different frames**, each in a new session or subagent, against the spec's acceptance criteria + best-practices rules — **before the push**, so the branch reaches the remote already reviewed. |
 | Finish a spec | "Run the completion ritual for SPEC-007." | Flips status, updates INDEX, writes the delivery doc, updates the component inventory. |
 
 **Shell commands** (Claude can run these for you in-session, or you can run them yourself):
@@ -198,8 +198,8 @@ sh scripts/check-mirror.sh         # maintainers: fail if the root has drifted f
 ```
 
 Before Claude pushes, it runs your project's **formatter, linter, typecheck and unit tests** locally
-and gets them green, and puts the diff through the review gate — both are pre-push steps here, not
-something CI or a reviewer discovers after the branch is already public.
+and gets them green, and puts the diff through **two** framed reviews — both are pre-push steps
+here, not something CI or a reviewer discovers after the branch is already public.
 
 ## The guardrails (and where they're enforced)
 
@@ -208,7 +208,8 @@ something CI or a reviewer discovers after the branch is already public.
 | Specs are fully specified before build (no Open Questions) | `spec-lint.sh` (CI) + `process.md` |
 | Builds run off a reviewed plan, straight through (no per-phase checkpoints) | `process.md` + `SKILL.md` build mode |
 | Emergent issues triaged by kind: reversible → decide; product-changing → escalate to you | `process.md` + `CLAUDE.md` |
-| Review runs in a fresh context, not the authoring session, and gates the **push** | `process.md` + `CLAUDE.md` |
+| Review runs in a fresh context, not the authoring session, and gates the **push** — one reviewer on the spec, one on the plan, one on the PR grouping, **two** on the diff | `process.md` + `CLAUDE.md` |
+| The diff's two framed reviews happened before the push, and owed criteria are named | PR template (the only count it carries) |
 | Formatter / linter / typecheck / tests green **before** a push | `process.md` + `CLAUDE.md` + PR template |
 | Every PR watched and merged on green; `main` always watched; red `main` fixed first | `process.md` + `CLAUDE.md` |
 | Domain code follows the right rulebook, loading only what's needed | `best-practices/INDEX.md` + `process.md` |

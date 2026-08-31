@@ -62,6 +62,13 @@ Write from `template/docs/templates/spec-template.md`. A spec is *buildable* whe
 - **Scope** lists In and **Out** explicitly (especially things a reader would assume are in).
 - **Functional Requirements** are granular, each with binary pass/fail **Acceptance Criteria** covering
   happy/error/edge paths, sequential IDs.
+- **It is one slice, not a whole feature** — aim for **3–6 FRs**, and past **8** split into a second
+  spec rather than growing this one, recording the pair as an arc with a build order in `INDEX.md`.
+  Cut on a seam the system already has (a layer, a surface, a switchover), never at the FR where the
+  count ran out; the second spec **restarts at FR-001**, since IDs are spec-local.
+  `spec-lint.sh` **warns** above 8 rather than failing: a genuinely indivisible spec may sit above
+  the line, but say so in one line under *Scope → In Scope* and let the reviewer accept or reject
+  it — "it is all one feature" is what every over-scoped spec claims.
 - **Data Model / Interface Contract** uses language-native types, not prose.
 - **Implementation Phases** are reviewable units — the *input to the build-time plan*. Do **not** write
   per-phase checkpoints.
@@ -69,8 +76,8 @@ Write from `template/docs/templates/spec-template.md`. A spec is *buildable* whe
   resolved, that means the spec isn't Draft-ready — get the answer, don't park it. A sentence that
   *promises* a decision ("the spec states which") is an Open Question in declarative clothes, and the
   lint cannot see it.
-- **It has been through the reviewer gate.** A freshly-authored spec goes to a fresh-context reviewer
-  before it is Draft-ready; findings are **fixed or flagged** — a rejection said out loud costs a
+- **It has been through the reviewer gate.** A freshly-authored spec goes to **one** fresh-context
+  reviewer before it is Draft-ready; findings are **fixed or flagged** — a rejection said out loud costs a
   sentence, and only goes in writing when it carries a lesson worth keeping. What this catches is
   rarely a wrong requirement — it is an acceptance criterion that cannot fail, and an Out of Scope
   bullet an FR quietly needs. Give the reviewer the spec, its build-order entry, and its dependencies
@@ -91,8 +98,9 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
 3. Branch from fresh `main`, and set the spec's `Status: In Progress` + its `INDEX.md` row in that
    first commit — nothing gates that transition, so it is missed by being skipped.
 4. **Generate an implementation plan from the spec's phases and validate it against the spec** — every
-   FR + acceptance criterion covered, reuse used, nothing out of scope. **Then send the plan to a
-   fresh-context reviewer before the first line of code.** A wrong plan is more expensive than wrong
+   FR + acceptance criterion covered, reuse used, nothing out of scope. **Then send the plan to one
+   fresh-context reviewer before the first line of code** (one is the floor — a phase that revises
+   the plan sends the new plan back through). A wrong plan is more expensive than wrong
    code, because the code will faithfully implement it. This reviewed plan replaces per-phase
    checkpoints.
 5. **Send the PR grouping to a reviewer too**, before the first push — as few PRs as the dependencies
@@ -107,9 +115,15 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
    if scope changes); **product-changing/ambiguous** → stop and escalate to the human with options
    + a recommendation, never silently decide. Stop only for a question that genuinely needs an
    answer — reporting is not the same act as asking.
-7. **Review the diff in a fresh context, BEFORE the push.** Commit locally, run the gates, send the
-   diff to a new session or subagent — never the one that wrote the code — then fix or flag every
-   finding, *then* push and open the PR. A self-reviewing agent rubber-stamps its own work, and
+7. **Two fresh-context reviews of the diff, BEFORE the push.** Commit locally, run the gates, send
+   the diff to **two** new sessions or subagents in **different frames** — never the one that wrote
+   the code — then fix or flag every finding, *then* push and open the PR. The diff gets two because
+   it is the widest artifact and the last before the branch is public. One frame starts from the
+   **change** and reads it against what it must satisfy; the other starts from **something other
+   than the change** — on code, a pass that *builds* the thing and runs the suites; on a docs- or
+   spec-only diff, the other places the same rule is stated. Two frames, not two rounds, and two is
+   the floor rather than the cap (step 8) — a clean first review does not close a **diff** gate,
+   though it does close a spec's or a plan's. A self-reviewing agent rubber-stamps its own work, and
    pushing first inverts the gate: the branch is already public and the fixes arrive as follow-up
    commits. **Green CI is not a review** — it cannot see a test that passes against the bug it claims
    to catch, a lock taken in the wrong order, or an acceptance criterion ticked with no evidence. The
@@ -161,5 +175,6 @@ In one pass when a spec is done:
 
 `scripts/spec-lint.sh [dir]` (default `docs/specs`). **FAIL** (exit 1): a spec missing a required
 section (`## Overview`, `## Scope`, `## Functional Requirements`, `## Implementation Phases`), or
-containing an `Open Questions` / `Checkpoint` heading. **WARN** (exit 0): unfilled placeholders, FRs
-without acceptance criteria. POSIX `sh` — no runtime dependency.
+containing an `Open Questions` / `Checkpoint` heading. **WARN** (exit 0): unfilled placeholders, a
+spec with FRs but no acceptance criteria anywhere in it, and a spec carrying more than
+`FR_CEILING` (8) distinct FRs. POSIX `sh` — no runtime dependency.

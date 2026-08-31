@@ -5,7 +5,10 @@
 #   - a spec is missing a required top-level section, OR
 #   - a spec contains a banned "Open Questions" / "Checkpoint" header
 #     (these are resolved during authoring or in-session, never parked in the spec).
-# WARN (exit 0): soft issues — unfilled template placeholders, FRs with no acceptance criteria.
+# WARN (exit 0): soft issues — unfilled template placeholders, FRs with no acceptance
+#   criteria, and a spec carrying more FRs than one buildable slice should (see
+#   FR_CEILING below). The ceiling is a warn, not a fail: an indivisible spec can
+#   legitimately sit above it, and that call belongs to the reviewer, not the lint.
 #
 # Usage: scripts/spec-lint.sh [spec-dir]     (default: docs/specs)
 # POSIX sh — no bashisms; runs anywhere /bin/sh exists.
@@ -13,6 +16,10 @@
 set -eu
 
 SPEC_DIR="${1:-docs/specs}"
+
+# Above this many FRs, a spec has usually stopped being one buildable slice and
+# wants splitting into two specs recorded as an arc (docs/process.md §4).
+FR_CEILING=8
 fail=0
 warn=0
 
@@ -26,6 +33,11 @@ required_sections="## Overview
 banned_headers="Open Questions|Checkpoint"
 
 specs=$(find "$SPEC_DIR" -maxdepth 1 -type f -name 'SPEC-*.md' 2>/dev/null | sort || true)
+
+# Split the list on newlines only — an unquoted expansion on default IFS turns a
+# spec filename containing a space into two nonexistent paths and four bogus FAILs.
+IFS='
+'
 
 if [ -z "$specs" ]; then
   echo "spec-lint: no SPEC-*.md files in $SPEC_DIR (nothing to check)."
@@ -64,6 +76,24 @@ for f in $specs; do
   # --- WARN: FRs present but no acceptance criteria ---
   if grep -qE '^### FR-' "$f" && ! grep -qiE 'Acceptance Criteria' "$f"; then
     echo "WARN  $f: has FR-* requirements but no 'Acceptance Criteria'"
+    warn=$((warn + 1))
+  fi
+
+  # --- WARN: more FRs than one spec should carry ---
+  # Level-3 headings only (what the spec template emits, and what the check
+  # above already uses), outside fenced blocks and HTML comments, counted as
+  # distinct IDs. Without the fence/comment skips, a spec that quotes FR
+  # headings in an example — or comments some out while splitting — is told to
+  # split on requirements it does not have.
+  fr_count=$(awk '
+    /^[[:space:]]*```/ { fence = !fence; next }
+    fence                                  { next }
+    comment      { if (/-->/) comment = 0;   next }
+    /<!--/       { if (!/-->/) comment = 1;  next }
+    match($0, /^### FR-[0-9]+/) { print substr($0, RSTART + 4, RLENGTH - 4) }
+  ' "$f" | sort -u | wc -l | tr -d '[:space:]')
+  if [ "${fr_count:-0}" -gt "$FR_CEILING" ]; then
+    echo "WARN  $f: $fr_count FRs (over the $FR_CEILING ceiling) — split into two specs and record them as an arc"
     warn=$((warn + 1))
   fi
 
