@@ -77,7 +77,7 @@ knows how to fill and file them.
 | `docs/spec-delivery/SPEC-XXX-*.md` | Short **"what shipped"** note written when a spec completes. Pulled only when a later spec depends on it. | Claude (on demand) |
 | `docs/templates/spec-template.md` | The blank a new spec is written from. | You |
 | `docs/templates/spec-completion-template.md` | The blank a delivery doc is written from. | You + Claude |
-| `scripts/spec-lint.sh` | **POSIX** linter that fails a spec missing a required section or containing a banned "Open Questions"/"Checkpoint" heading; warns on unfilled placeholders and on specs carrying more than 8 FRs. | CI + you |
+| `scripts/spec-lint.sh` | **POSIX** linter that fails a spec missing a required section or containing a banned "Open Questions"/"Checkpoint" heading; warns on unfilled placeholders, on FRs with no acceptance criteria anywhere in the file, and on specs carrying more than 8 FRs. | CI + you |
 | `scripts/sync-from-skill.sh` | Maintenance script: regenerates the root scaffold from the skill's canonical copy (see below). | You (maintainer) |
 | `scripts/check-mirror.sh` | Maintenance script: fails if the root scaffold has drifted from the canonical copy, in either direction. Runs in CI. | CI + you (maintainer) |
 | `.github/workflows/spec-lint.yml` | Runs `spec-lint.sh` on every PR and push to `main`. | CI |

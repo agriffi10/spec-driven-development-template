@@ -75,8 +75,11 @@ for f in $specs; do
   fi
 
   # --- WARN: more FRs than one spec should carry ---
-  fr_count=$(grep -cE '^#{1,6}[[:space:]]+FR-[0-9]' "$f" || true)
-  if [ "$fr_count" -gt "$FR_CEILING" ]; then
+  # Level-3 headings only, matching the FR check above and the spec template — a
+  # wider pattern also catches '# FR-007' shell comments inside fenced examples.
+  # Distinct IDs, not heading lines, so a duplicated heading can't inflate the count.
+  fr_count=$(sed -n 's/^### \(FR-[0-9][0-9]*\).*/\1/p' "$f" | sort -u | wc -l | tr -d '[:space:]')
+  if [ "${fr_count:-0}" -gt "$FR_CEILING" ]; then
     echo "WARN  $f: $fr_count FRs (over the $FR_CEILING ceiling) — split into two specs and record them as an arc"
     warn=$((warn + 1))
   fi

@@ -351,8 +351,9 @@ Specs are written from `docs/templates/spec-template.md`. What makes a spec *bui
   say "implement FR-001 through FR-003 only."
 - **Size: aim for 3–6 FRs, and split above 8.** A spec is one coherent slice of behavior, not a
   feature's whole surface. Across the 216 specs this method was built on, the median carries 6 FRs
-  and three quarters carry 8 or fewer, so a spec past eight is not a big spec — it is a spec that
-  should have been two. Growing one is the wrong repair; the right one is a second spec beside it,
+  and four in five carry 8 or fewer, so a spec past eight is not a big spec — it is a spec that
+  should have been two. The 3–6 aim sits deliberately below that median: it is where the method
+  is going, not a description of where it already is. Growing one is the wrong repair; the right one is a second spec beside it,
   with the pair recorded as an **arc** with a build order in `INDEX.md` (§2). Splitting keeps paying
   off past the first cut — a three-spec arc reads better than one fourteen-FR spec, and each piece
   earns its own reviewed plan, its own diff review and its own delivery doc. Cut along a seam the
@@ -374,9 +375,10 @@ Specs are written from `docs/templates/spec-template.md`. What makes a spec *bui
 
 `scripts/spec-lint.sh` enforces the structural side of this in CI: it **fails** a spec that is missing
 a required section or that contains an "Open Questions" / "Checkpoint" heading, and **warns** on
-unfilled placeholders, FRs without acceptance criteria, and a spec carrying more than 8 FRs. It
-cannot see a vacuous acceptance criterion or a decision promised in a declarative sentence — that
-is what the reviewer gate is for.
+unfilled placeholders, a spec with FRs but no acceptance criteria anywhere in it, and a spec
+carrying more than 8 FRs. It cannot see a vacuous acceptance criterion, an acceptance criterion
+missing from one FR while its neighbours have them, or a decision promised in a declarative
+sentence — that is what the reviewer gate is for.
 
 ---
 

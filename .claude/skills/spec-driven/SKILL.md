@@ -165,5 +165,6 @@ In one pass when a spec is done:
 
 `scripts/spec-lint.sh [dir]` (default `docs/specs`). **FAIL** (exit 1): a spec missing a required
 section (`## Overview`, `## Scope`, `## Functional Requirements`, `## Implementation Phases`), or
-containing an `Open Questions` / `Checkpoint` heading. **WARN** (exit 0): unfilled placeholders, FRs
-without acceptance criteria. POSIX `sh` — no runtime dependency.
+containing an `Open Questions` / `Checkpoint` heading. **WARN** (exit 0): unfilled placeholders, a
+spec with FRs but no acceptance criteria anywhere in it, and a spec carrying more than
+`FR_CEILING` (8) distinct FRs. POSIX `sh` — no runtime dependency.
