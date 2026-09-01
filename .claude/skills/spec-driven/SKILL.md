@@ -2,15 +2,15 @@
 name: spec-driven
 description: >-
   Spec-driven development workflow with guardrails. Use when (a) setting up / bootstrapping a repo for
-  spec-driven work, (b) authoring or refining a spec, (c) starting to build a spec, or (d) completing a
-  spec. Provides a template repo layout (CLAUDE.md, layered docs/, spec + completion templates), a
+  spec-driven work, (b) authoring or refining a spec, (c) starting to build a spec, (d) completing a
+  spec, or (e) running several agent sessions against one repo at once. Provides a template repo layout (CLAUDE.md, layered docs/, spec + completion templates), a
   POSIX spec-lint, and a CI workflow + PR template. Enforces: specs are fully specified before build
   (no Open Questions), spec/plan/diff each pass a blocking fresh-context review gate, the diff review
   gates the push rather than the merge, builds run off a reviewed plan straight to completion (no
   per-phase checkpoints), every PR is watched and merged on green, and main is always watched.
   Triggers on phrases like "set up
   spec-driven", "scaffold the docs structure", "write a spec", "start SPEC-XXX", "build this spec",
-  "complete the spec / run the completion ritual".
+  "complete the spec / run the completion ritual", "run several agents at once".
 ---
 
 # Spec-Driven Development
@@ -22,7 +22,7 @@ goal is a small always-loaded context (`CLAUDE.md`) backed by layered, on-demand
 `template/docs/process.md` is the **pristine** copy of the method, for scaffolding. In a repo that
 has already been scaffolded, read that repo's own **`docs/process.md`** instead, every session — it
 is the contract `CLAUDE.md` summarises, and its *Operational traps* and *Project ground rules*
-sections are filled in per project and exist nowhere else. The four jobs below are the operating modes.
+sections are filled in per project and exist nowhere else. The jobs below are the operating modes.
 
 ## 0. Scaffold a repo (bootstrap)
 
@@ -35,7 +35,7 @@ When a repo has no spec-driven docs yet:
    mirror of `template/`, `scripts/sync-from-skill.sh` regenerates it, and edits belong in `template/`
    followed by a sync. Steps 3 and 6 below would fill in the mirror and delete `ci.yml.example`, which
    must survive there.
-2. `chmod +x scripts/spec-lint.sh`.
+2. `chmod +x scripts/spec-lint.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh`.
 3. Fill in the placeholders in `CLAUDE.md` (Project Overview, Layout, Tech Stack, Code Conventions,
    Common Commands) from what the repo actually is — detect the language/build/test/lint tooling from
    the manifest (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, …) rather than guessing.
@@ -170,6 +170,43 @@ In one pass when a spec is done:
 6. If it changed the **shape** of the system — a piece added or removed, a boundary moved, a mechanism
    swapped — add an append-only row to `docs/architecture.md` → *Architecture Decision Record* and fix
    the prose section it contradicts. Most decisions do not qualify.
+
+## 5. Running several agents on one repo
+
+Only when the user asks for it. The default is one spec in flight; this is the deliberate exception.
+
+N sessions, one repo, one `main`. Each works in its own worktree so their trees never collide, but
+the remote is still shared: two PRs open at once means each is tested against a `main` the other is
+about to move, and a merge race turns a green PR red for a reason neither agent caused. **Serialise
+the remote, parallelise the work.**
+
+1. **Install the queue once, before launching anyone:** `sh scripts/pr-queue/install.sh '<branch-regex>'`
+   (default `^spec-`). **That regex is the setting that silently disables everything** — the hook
+   enforces only against branches matching it and allows every other push, so it must match the
+   branch names you hand out in step 2, and nothing reports the mismatch if it does not.
+   It copies `queue.sh`, `pre-push` and `PROTOCOL.md` to a shared directory under `$HOME` — outside
+   every worktree and outside the repo, because a lock inside a worktree is invisible to peers and a
+   lock inside the repo is a file that itself conflicts — and points a `.git/hooks/pre-push` wrapper
+   at the copy there. It exits **3**, having installed everything else, if another `pre-push` hook is
+   already in the way; the message says what to add by hand.
+2. **Brief every session from `docs/templates/multi-agent-briefing.md`** — its own worktree off fresh
+   `origin/main`, who else is running and on what, the local gates and diff reviews that come *before*
+   the queue, the four commands, and the files two agents will both edit. Tell them plainly that a
+   rebase conflict is never resolved by discarding a peer's work. An unbriefed session does the
+   reasonable thing for a session working alone, which is exactly what breaks a parallel run.
+3. **Each session, when its gates and reviews are green:** `queue.sh ticket SPEC-XXX` to get in line,
+   poll `queue.sh turn SPEC-XXX` with the Monitor tool's until-loop (blocking `sleep` is unavailable
+   in the Bash tool, and each `turn` call is the heartbeat that keeps its place), `queue.sh acquire`
+   once that exits 0, then `queue.sh release` on **every** exit path including failure. The lock
+   covers the whole PR lifecycle — rebase, push, open, watch to green, merge, confirm `main` — not
+   just the push, and it is one ticket per PR so a multi-PR spec does not hold the line throughout.
+4. **If `turn` reports the trunk `IS RED`, stop and escalate.** A red `main` is fixed before anything
+   else merges.
+5. **Do not hand-roll the shell.** Every remote check fails closed on purpose (a `gh` that *errors*
+   returns empty output, which reads as "no PRs open"), and enforcement fails open on purpose (linked
+   worktrees share `.git/hooks`, so the hook fires for sessions that never agreed to the queue).
+   Reimplementing this by hand gets one of those backwards. Full protocol and the configuration
+   seams for non-GitHub projects: `scripts/pr-queue/PROTOCOL.md`.
 
 ## spec-lint reference
 

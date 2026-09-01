@@ -26,6 +26,7 @@ concept before it's used.
 - [The workflow](#the-workflow)
 - [Quick start](#quick-start)
 - [Your first feature, end to end](#your-first-feature-end-to-end)
+- [Running several agents at once](#running-several-agents-at-once)
 - [What to say to Claude](#what-to-say-to-claude)
 - [What every file does](#what-every-file-does)
 - [Why the scaffold exists in two places](#why-the-scaffold-exists-in-two-places)
@@ -77,6 +78,10 @@ them running in your project directory.
 
 **Session.** One continuous conversation with an agent. It starts fresh with no memory of previous
 sessions, which is why the important rules live in files rather than in your chat history.
+
+**Worktree.** A second working directory for the same repository, checked out on its own branch
+(`git worktree add`). Two sessions in one directory fight over the files; two sessions in two
+worktrees of the same repository do not. It is how several agents work at once without colliding.
 
 **Context.** Everything the agent currently has in front of it — your instructions, the files it has
 opened, the output of commands it ran. It is finite, and a session that has read fifteen documents
@@ -307,6 +312,51 @@ The spec's status becomes `Completed`, the index row updates, a short delivery n
 `docs/spec-delivery/`, and anything reusable gets a one-line row in `docs/component-inventory.md` so
 the next spec reuses it instead of rebuilding it.
 
+## Running several agents at once
+
+The default is one spec at a time. You can also run several sessions in parallel, each building a
+different spec — but not by simply opening more windows.
+
+**What goes wrong without help.** Give each session its own worktree and their *files* stop
+colliding. The **remote** still doesn't. Two pull requests open at once means each is tested against a
+`main` the other is about to move, and whichever merges second turns red for a reason neither agent
+caused. You then spend the time you saved diagnosing failures that are artifacts of the parallelism.
+
+**What this template does about it.** It serializes the *remote* while leaving the *work* parallel.
+The rule is: **one pull request open at a time, taken in the order the agents asked for it, with
+`main` settled and green before the next one goes up.** The tool that enforces it ships in
+`scripts/pr-queue/`: a lock plus a first-come-first-served line. Installing it copies it *out* of the
+repository, because a lock inside one working directory is invisible to sessions in the others.
+
+**Setting it up**, once, before you launch anyone:
+
+```bash
+sh scripts/pr-queue/install.sh '^spec-'
+```
+
+The argument is the branch-name pattern the queue applies to, and it defaults to `^spec-`. Branches
+outside it push freely, so the pattern has to match the branch names you give the agents — nothing
+warns you if it doesn't. The script copies the queue somewhere shared under your home directory and
+installs a `pre-push` hook, so a session that tries to push out of turn is stopped rather than
+reminded. If you already have a `pre-push` hook of your own, it says so and prints the line to add.
+
+**Briefing each session.** Fill in `docs/templates/multi-agent-briefing.md` per session and paste it
+as that session's first message. It covers what a session cannot work out for itself: to work in its
+own worktree off a fresh `main`, who else is running and on what, which files two of them will both
+edit, that its own tests and reviews come before the queue rather than instead of it — and that a
+conflict is never resolved by deleting a peer's work. A session that isn't told does the sensible
+thing for a session working alone, which is precisely what breaks a parallel run.
+
+**What you'll see.** Each agent builds normally, and at the end — after its own tests and its two
+reviews, which the queue does *not* replace — it gets in line and waits its turn to push. `queue.sh
+status` shows who holds the lock, who's waiting, and what's actually open on GitHub. A *waiting*
+session that stops responding loses its place after half an hour, so a crashed agent doesn't hold up
+the line; a session that crashes while it *holds* the lock is the expensive case, and takes 90
+minutes to clear — see the troubleshooting entry below.
+
+Full detail, including how to point the queue at something other than GitHub Actions, is in
+`scripts/pr-queue/PROTOCOL.md`.
+
 ## What to say to Claude
 
 You drive this by describing what you want. These phrases trigger the matching mode of the skill; in
@@ -319,6 +369,7 @@ Claude Code you can also invoke it directly with `/spec-driven`.
 | Build a spec | "Build SPEC-007." | Plans from the spec's phases, gets the plan and the PR grouping reviewed, then builds on a branch straight through. |
 | Review work | "Review this branch against SPEC-007 in a fresh context." | Runs **two** reviews in **different frames**, each in its own session or subagent, against the acceptance criteria and the relevant rulebooks — before the push, so the branch reaches GitHub already reviewed. |
 | Finish a spec | "Run the completion ritual for SPEC-007." | Sets the status, updates the index, writes the delivery note, updates the component inventory. |
+| Run several at once | "Set up the PR queue and brief three agents for SPEC-007, SPEC-008 and SPEC-009." | Installs the queue, writes a briefing per session from the template, and tells each one to take its turn on the remote rather than push when ready. |
 
 The scripts, which Claude runs for you or you can run yourself:
 
@@ -358,7 +409,12 @@ from the template don't need them.
 | `docs/spec-delivery/SPEC-XXX-*.md` | A short **"what shipped"** note written at completion. Read only when a later spec depends on that one. | Claude (on demand) |
 | `docs/templates/spec-template.md` | The blank a new spec is written from. | You + Claude |
 | `docs/templates/spec-completion-template.md` | The blank a delivery note is written from. | You + Claude |
+| `docs/templates/multi-agent-briefing.md` | The blank a launch briefing is written from, when several agents run at once. One per session. | You + Claude |
 | `scripts/spec-lint.sh` | **POSIX** shell linter. Fails a spec that's missing a required section or contains an "Open Questions"/"Checkpoint" heading; warns on unfilled placeholders, on requirements with no acceptance criteria anywhere in the file, and on a spec carrying more than eight requirements. No dependencies. | CI + you + Claude |
+| `scripts/pr-queue/queue.sh` | The **PR queue**: a lock and a first-come-first-served line that keeps one pull request open at a time when several agents share the repo. Runs from outside the repo — `install.sh` puts it there. | Claude (multi-agent runs) |
+| `scripts/pr-queue/pre-push` | The git hook that makes the queue binding rather than advisory. Refuses a push from a participating branch that doesn't hold the lock, and allows everything else. | Git |
+| `scripts/pr-queue/install.sh` | One-time setup for a multi-agent run: places the queue outside the repo and installs the hook wrapper. | You + Claude |
+| `scripts/pr-queue/PROTOCOL.md` | The protocol the agents read: the four commands, what the lock covers, the configuration seams, and the stale-entry rules. | Claude (multi-agent runs) |
 | `scripts/sync-from-skill.sh` | Maintenance for **this template repo only** — regenerates the root scaffold from the skill's canonical copy. Delete it in a derived project. | Maintainers of this template |
 | `scripts/check-mirror.sh` | Maintenance for **this template repo only** — fails if the root scaffold has drifted from the canonical copy, in either direction. Delete it in a derived project, where customizing `CLAUDE.md` makes it fail by design. | CI + maintainers |
 | `.github/workflows/spec-lint.yml` | Runs spec-lint on pushes to `main`, and on pull requests that touch `docs/specs/`, the lint script, or the workflow itself. | CI |
@@ -431,6 +487,7 @@ which is which tells you what breaks silently if you skip a step.
 | Every PR watched and merged on green; `main` watched; red `main` fixed first | `process.md` + `CLAUDE.md` + PR template |
 | Domain code follows the right rulebook, loading only what's needed | `best-practices/INDEX.md` + `process.md` |
 | The always-loaded tier stays lean | the completion ritual in `process.md` |
+| One pull request open at a time when several agents share the repo | `scripts/pr-queue/` (the `pre-push` hook) |
 | The root scaffold matches the skill's canonical copy | `check-mirror.sh` (CI) |
 | Your language's own quality gates | the `ci.yml` you create from `ci.yml.example` |
 
@@ -505,6 +562,18 @@ customized `CLAUDE.md`, `docs/` and `.github/` with the blank template versions,
 **CI is green but nothing was really checked.** Until you turn `ci.yml.example` into a real `ci.yml`,
 the only check running in your project is spec-lint, which knows nothing about your code. (In this
 template repository itself, the mirror check runs too — it also knows nothing about your code.)
+
+**A push was refused with "PUSH REFUSED — you do not hold the PR queue lock".** The PR queue is
+installed and that branch is in a multi-agent run, so it has to take its turn: `queue.sh ticket`,
+poll `queue.sh turn`, then `queue.sh acquire`. If the branch isn't part of such a run at all, the
+enforced pattern is too broad — it's the argument you gave `install.sh`, kept in `enforce-branches`
+in the queue directory. `PR_QUEUE_BYPASS=1 git push …` overrides it for one push.
+
+**An agent has been waiting in the queue for a long time.** Run `queue.sh status`. If a session holds
+the lock and has stopped, the queue breaks that lock on its own after 90 minutes — but only once
+there's also no pull request open and `main` is green, since age alone doesn't prove a session is
+dead. If it says it could not read the remote, that's `gh` failing rather than the queue stalling:
+every remote check deliberately waits instead of guessing, so a check that can't run holds the line.
 
 **A review keeps finding more things.** Two rounds in the same frame is the cap. After that, change
 the angle rather than iterating — have a reviewer try to *build* the thing, or read the whole module
