@@ -2,14 +2,13 @@
 name: spec-driven
 description: >-
   Spec-driven development workflow with guardrails. Use when (a) setting up / bootstrapping a repo for
-  spec-driven work, (b) authoring or refining a spec, (c) starting to build a spec, or (d) completing a
-  spec. Provides a template repo layout (CLAUDE.md, layered docs/, spec + completion templates), a
+  spec-driven work, (b) authoring or refining a spec, (c) starting to build a spec, (d) completing a
+  spec, or (e) running several agent sessions against one repo at once. Provides a template repo layout (CLAUDE.md, layered docs/, spec + completion templates), a
   POSIX spec-lint, and a CI workflow + PR template. Enforces: specs are fully specified before build
   (no Open Questions), spec/plan/diff each pass a blocking fresh-context review gate, the diff review
   gates the push rather than the merge, builds run off a reviewed plan straight to completion (no
   per-phase checkpoints), every PR is watched and merged on green, and main is always watched.
-  Also carries the multi-agent PR queue for running several agent sessions against one repo at
-  once. Triggers on phrases like "set up
+  Triggers on phrases like "set up
   spec-driven", "scaffold the docs structure", "write a spec", "start SPEC-XXX", "build this spec",
   "complete the spec / run the completion ritual", "run several agents at once".
 ---
@@ -23,7 +22,7 @@ goal is a small always-loaded context (`CLAUDE.md`) backed by layered, on-demand
 `template/docs/process.md` is the **pristine** copy of the method, for scaffolding. In a repo that
 has already been scaffolded, read that repo's own **`docs/process.md`** instead, every session — it
 is the contract `CLAUDE.md` summarises, and its *Operational traps* and *Project ground rules*
-sections are filled in per project and exist nowhere else. The four jobs below are the operating modes.
+sections are filled in per project and exist nowhere else. The jobs below are the operating modes.
 
 ## 0. Scaffold a repo (bootstrap)
 
@@ -181,7 +180,10 @@ the remote is still shared: two PRs open at once means each is tested against a 
 about to move, and a merge race turns a green PR red for a reason neither agent caused. **Serialise
 the remote, parallelise the work.**
 
-1. **Install the queue once, before launching anyone:** `sh scripts/pr-queue/install.sh '<branch-regex>'`.
+1. **Install the queue once, before launching anyone:** `sh scripts/pr-queue/install.sh '<branch-regex>'`
+   (default `^spec-`). **That regex is the setting that silently disables everything** — the hook
+   enforces only against branches matching it and allows every other push, so it must match the
+   branch names you hand out in step 2, and nothing reports the mismatch if it does not.
    It copies `queue.sh`, `pre-push` and `PROTOCOL.md` to a shared directory under `$HOME` — outside
    every worktree and outside the repo, because a lock inside a worktree is invisible to peers and a
    lock inside the repo is a file that itself conflicts — and points a `.git/hooks/pre-push` wrapper

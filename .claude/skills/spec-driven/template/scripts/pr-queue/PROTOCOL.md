@@ -38,9 +38,11 @@ your heartbeat: a waiter that stops polling for 30 minutes loses its place, whic
 dead session from blocking the line forever. Do not poll `acquire` — poll `turn`, then `acquire` once
 it exits 0.
 
-`turn` refuses for four reasons and says which: someone is ahead of you, the lock is held, a PR is
-open on the remote, or `main` is unsettled. A fifth is special — **if it reports the trunk `IS RED`,
-stop and escalate to the human.** A red `main` is fixed before anything else merges.
+`turn` says which refusal it is: someone is ahead of you, the lock is held, a PR is open on the
+remote, `main` is unsettled, or a check could not run. Two need a different response from waiting.
+**If it reports the trunk `IS RED`, stop and escalate to the human** — a red `main` is fixed before
+anything else merges. If it says `NO_TICKET` (exit **3**, not 1) you never got in line; run `ticket`.
+Every other refusal exits 1 and means keep polling.
 
 `queue.sh status` shows the holder, the line, and what is actually open on the remote.
 
@@ -62,15 +64,15 @@ clears it after 90 minutes.
 ## What is enforced, and what is not
 
 A `pre-push` hook refuses a push of any ref matching `enforce-branches` unless that branch holds the
-lock. It reads the refs git actually hands it on stdin rather than the checked-out branch, so
-`git push origin spec-x/y` from somewhere else, and a `HEAD:refs/heads/spec-x/y` refspec from a
-detached HEAD, are covered too. It **fails open** everywhere else: a branch outside the pattern, a missing queue, an
-unreadable one. Linked worktrees share `.git/hooks` through the common git dir, so this hook fires
-for **every** session on the checkout — including ones that never agreed to the queue and have never
-heard of it, and blocking those would be a worse failure than the one it prevents. The hook is
-reached through a two-line wrapper that `exec`s the real one from the queue directory, so
-enforcement cannot outlive the queue it enforces. `PR_QUEUE_BYPASS=1 git push …` overrides it; if you
-need that, say so in your report.
+lock. It reads the refs git actually hands it on stdin rather than the checked-out branch, so `git
+push origin spec-x/y` from somewhere else, and a `HEAD:refs/heads/spec-x/y` refspec from a detached
+HEAD, are covered too. It **fails open** everywhere else: a branch outside the pattern, a missing
+queue, an unreadable one. Linked worktrees share `.git/hooks` through the common git dir, so this
+hook fires for **every** session on the checkout — including ones that never agreed to the queue and
+have never heard of it, and blocking those would be a worse failure than the one it prevents. The
+hook is reached through a wrapper in `.git/hooks` that `exec`s the real one from the queue
+directory, so enforcement cannot outlive the queue it enforces: delete the queue and the wrapper is
+a no-op. `PR_QUEUE_BYPASS=1 git push …` overrides it; if you need that, say so in your report.
 
 The queue only orders the agents that use it, so `turn` also asks the remote itself — that is what
 covers sessions outside the set. **Both remote checks fail closed.** The trap they are written
@@ -79,12 +81,17 @@ check that could not run is never evidence that it passed.
 
 ## Stale entries
 
-A waiter that has not polled `turn` for 30 minutes is dropped from the line automatically. A lock
-whose holder is over 90 minutes old is broken **only** when there is also no open PR and `main` is
-green — age alone is never enough. Ticket numbers are allocated from a high-water mark and never
-reuse a freed slot: reaping frees a low number, and a new arrival taking it would land ahead of
-someone who has been waiting longer, which is precisely the starvation the tickets prevent. Both
-reaps are logged to `$Q/log`.
+A waiter that has not polled `turn` for 30 minutes is dropped from the line automatically; the
+holder is exempt, because acquiring stops the polling and the lock deliberately covers far longer
+than that. A lock whose holder is over 90 minutes old is broken **only** when there is also no open
+PR and `main` is green — age alone is never enough. Both timeouts are `STALE_TICKET` and
+`STALE_LOCK` at the top of `queue.sh`; change them there, and fix this paragraph in the same edit.
+
+Ticket numbers come from a high-water mark and are floored at one past the highest ticket in the
+line, so a freed slot is never handed to a newcomer while anyone is still waiting: reaping frees a
+low number, and a new arrival taking it would land ahead of someone who has waited longer, which is
+precisely the starvation the tickets prevent. (With the line empty and the mark lost, numbering does
+restart from zero — there is nobody left to jump.) Both reaps are logged to `$Q/log`.
 
 ## Configuration
 
@@ -94,7 +101,10 @@ Single-value files in the queue directory, all written by `install.sh`:
 |---|---|
 | `repo` | The checkout the remote checks run from. |
 | `main-branch` | The trunk branch name (default `main`). |
-| `enforce-branches` | ERE for the branches `pre-push` enforces against. Empty or missing enforces nothing. |
+| `enforce-branches` | ERE for the branches `pre-push` enforces against; `install.sh` writes `^spec-` unless you pass your own. Empty or missing enforces nothing, silently — it must match the branch names the briefing hands out. |
+
+Two environment variables override the files, for a one-off: `PR_QUEUE_DIR` tells `install.sh` where
+to put the queue, and `PR_QUEUE_REPO` overrides `repo` for a single `queue.sh` invocation.
 
 Two optional **executables** replace the built-in GitHub checks — the seam for a project whose CI is
 not GitHub Actions, or whose repo is not on GitHub:
@@ -104,9 +114,10 @@ not GitHub Actions, or whose repo is not on GitHub:
 | `open-prs` | Prints the open PRs, empty for none. **Non-zero exit means the check itself failed**, and the queue waits rather than assuming the remote is clear. |
 | `main-green` | Exit `0` green · `1` RED · `2` building/unsettled · `3` the check could not run. Only `0` lets the queue move. |
 
-The built-in `main-green` reads the GitHub Actions runs recorded for `main`'s head sha and waits when
-any is incomplete, when any concluded other than success/skipped/neutral, and when the repo has
-workflows but no run for that sha yet. Its known limit: it can only judge the runs that **exist**, so
+The built-in `main-green` reads the GitHub Actions runs recorded for `main`'s head sha. It waits
+while any is incomplete, and while the repo has workflows but no run for that sha yet; a run that
+concluded anything other than success/skipped/neutral is **RED**, which stops the agent rather than
+making it wait. Its known limit: it can only judge the runs that **exist**, so
 in the seconds between one workflow being created and another it can see a green subset. A project
 with its own CI watcher should install it here rather than rely on that.
 

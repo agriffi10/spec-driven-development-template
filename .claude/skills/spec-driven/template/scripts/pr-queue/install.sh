@@ -6,7 +6,7 @@
 #
 # The queue must live OUTSIDE the repo and outside every worktree: a lock inside a worktree is
 # invisible to peers, and a lock inside the repo is a file that itself conflicts. So this copies
-# queue.sh, pre-push and PROTOCOL.md to a directory under $HOME and points a two-line
+# queue.sh, pre-push and PROTOCOL.md to a directory under $HOME and points a
 # .git/hooks/pre-push wrapper at the copy there.
 #
 # The default location is keyed on the ORIGIN URL, not the directory name, because the invariant

@@ -8,8 +8,8 @@
 # failure than the one it prevents. So a branch outside the configured pattern, a missing queue,
 # an unreadable one, and an explicit bypass all allow the push.
 #
-# It lives in the queue directory and is reached by a two-line wrapper in .git/hooks that execs
-# it, so enforcement cannot outlive the queue it enforces: delete the queue and the wrapper
+# It lives in the queue directory and is reached by a wrapper in .git/hooks that execs it, so
+# enforcement cannot outlive the queue it enforces: delete the queue and the wrapper
 # becomes a no-op. `install.sh` writes both.
 
 Q="$(cd "$(dirname "$0")" && pwd)"

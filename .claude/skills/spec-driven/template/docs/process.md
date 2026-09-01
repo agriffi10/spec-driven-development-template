@@ -80,7 +80,9 @@ happen).
 2. Skim `component-inventory.md` for reuse; pull only the `architecture.md` section / dependency
    delivery-doc you actually need.
 3. Confirm CI is green on `main`. Investigate failures before building.
-4. **Branch from fresh `main`**, and set the spec header's `Status: In Progress` plus its `INDEX.md`
+4. **Branch from fresh `main`** — and in a multi-agent run, in your **own worktree** off
+   `origin/main`, never the shared checkout and never a peer's branch (§3, *Several agents on one
+   repo*) — then set the spec header's `Status: In Progress` plus its `INDEX.md`
    row in the same commit — that transition is what makes "exactly one spec in flight" (§2) legible
    to the next session, and nothing gates it, so it is missed by being skipped rather than by failing.
 5. **Generate and validate a plan before writing code.** Turn the spec's Implementation Phases into a
@@ -407,7 +409,7 @@ whole idea, and the invariant is **one PR open at a time, taken in the order age
   linked worktrees share `.git/hooks` through the common git dir, so the hook fires for sessions that
   never agreed to the queue, and blocking those would be worse than the problem it solves.
 - **Brief each session explicitly** from `docs/templates/multi-agent-briefing.md`: its own worktree
-  off fresh `origin/main`, who else is running and on what, the files two agents will both edit — and
+  off fresh `origin/main`, who else is running and on what, the files two agents will both edit, and
   that a rebase conflict is never resolved by discarding a peer's work. An unbriefed session does the
   reasonable thing for a session working alone, which is exactly what breaks a parallel run.
 

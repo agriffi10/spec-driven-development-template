@@ -324,9 +324,9 @@ caused. You then spend the time you saved diagnosing failures that are artifacts
 
 **What this template does about it.** It serializes the *remote* while leaving the *work* parallel.
 The rule is: **one pull request open at a time, taken in the order the agents asked for it, with
-`main` settled and green before the next one goes up.** A small queue in `scripts/pr-queue/` enforces
-that — a lock plus a first-come-first-served line, living outside the repository so every session
-sees the same one.
+`main` settled and green before the next one goes up.** The tool that enforces it ships in
+`scripts/pr-queue/`: a lock plus a first-come-first-served line. Installing it copies it *out* of the
+repository, because a lock inside one working directory is invisible to sessions in the others.
 
 **Setting it up**, once, before you launch anyone:
 
@@ -334,22 +334,25 @@ sees the same one.
 sh scripts/pr-queue/install.sh '^spec-'
 ```
 
-The argument is the branch-name pattern the queue applies to; branches outside it push freely. The
-script copies itself somewhere shared under your home directory and installs a `pre-push` hook, so a
-session that tries to push out of turn is stopped rather than reminded. If you already have a
-`pre-push` hook, it says so and tells you the two lines to add.
+The argument is the branch-name pattern the queue applies to, and it defaults to `^spec-`. Branches
+outside it push freely, so the pattern has to match the branch names you give the agents — nothing
+warns you if it doesn't. The script copies the queue somewhere shared under your home directory and
+installs a `pre-push` hook, so a session that tries to push out of turn is stopped rather than
+reminded. If you already have a `pre-push` hook of your own, it says so and prints the line to add.
 
 **Briefing each session.** Fill in `docs/templates/multi-agent-briefing.md` per session and paste it
-as that session's first message. It covers the four things a session cannot work out for itself: to
-work in its own worktree off a fresh `main`, who else is running and on what, which files two of them
-will both edit — and that a conflict is never resolved by deleting a peer's work. A session that
-isn't told does the sensible thing for a session working alone, which is precisely what breaks a
-parallel run.
+as that session's first message. It covers what a session cannot work out for itself: to work in its
+own worktree off a fresh `main`, who else is running and on what, which files two of them will both
+edit, that its own tests and reviews come before the queue rather than instead of it — and that a
+conflict is never resolved by deleting a peer's work. A session that isn't told does the sensible
+thing for a session working alone, which is precisely what breaks a parallel run.
 
 **What you'll see.** Each agent builds normally, and at the end — after its own tests and its two
 reviews, which the queue does *not* replace — it gets in line and waits its turn to push. `queue.sh
-status` shows who holds the lock, who's waiting, and what's actually open on GitHub. Sessions that
-stop responding lose their place automatically, so one crashed agent doesn't block the rest.
+status` shows who holds the lock, who's waiting, and what's actually open on GitHub. A *waiting*
+session that stops responding loses its place after half an hour, so a crashed agent doesn't hold up
+the line; a session that crashes while it *holds* the lock is the expensive case, and takes 90
+minutes to clear — see the troubleshooting entry below.
 
 Full detail, including how to point the queue at something other than GitHub Actions, is in
 `scripts/pr-queue/PROTOCOL.md`.
