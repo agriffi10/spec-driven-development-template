@@ -19,7 +19,10 @@ SKILL_TEMPLATE="$ROOT/.claude/skills/spec-driven/template"
 # Mirror the skill's template into the repo root. cp does not delete, so this
 # script (scripts/sync-from-skill.sh) is left untouched.
 cp -R "$SKILL_TEMPLATE/." "$ROOT/"
-chmod +x "$ROOT/scripts/spec-lint.sh"
+chmod +x "$ROOT/scripts/spec-lint.sh" \
+         "$ROOT/scripts/pr-queue/queue.sh" \
+         "$ROOT/scripts/pr-queue/pre-push" \
+         "$ROOT/scripts/pr-queue/install.sh"
 
 echo "Synced root scaffold from .claude/skills/spec-driven/template/."
 echo "Review 'git diff' before committing."

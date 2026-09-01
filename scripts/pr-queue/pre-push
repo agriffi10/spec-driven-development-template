@@ -1,0 +1,50 @@
+#!/bin/bash
+# pre-push — makes the PR queue real rather than advisory. Refuses a push from a participating
+# branch that does not hold the lock.
+#
+# It FAILS OPEN by design, and the reason is worktrees: linked worktrees share `.git/hooks`
+# through the common git dir, so this hook fires for every session on the checkout — including
+# ones that never agreed to the queue and have never heard of it. Blocking those would be a worse
+# failure than the one it prevents. So a branch outside the configured pattern, a missing queue,
+# an unreadable one, and an explicit bypass all allow the push.
+#
+# It lives in the queue directory and is reached by a two-line wrapper in .git/hooks that execs
+# it, so enforcement cannot outlive the queue it enforces: delete the queue and the wrapper
+# becomes a no-op. `install.sh` writes both.
+
+Q="$(cd "$(dirname "$0")" && pwd)"
+BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+PATTERN="$(cat "$Q/enforce-branches" 2>/dev/null)"
+
+[ -d "$Q" ] || exit 0                              # no queue — enforce nothing
+[ -n "$PATTERN" ] || exit 0                        # no pattern configured — enforce nothing
+[ -n "$BRANCH" ] || exit 0                         # detached HEAD — not a queue branch
+echo "$BRANCH" | grep -qE "$PATTERN" || exit 0     # not a participating branch — not our business
+[ "${PR_QUEUE_BYPASS:-}" = "1" ] && { echo "pre-push: PR_QUEUE_BYPASS=1 — queue check skipped" >&2; exit 0; }
+
+# The holder's branch is compared as a string, never grepped: a substring match would let
+# `spec-207/qu` push under the lock held by `spec-207/queue`.
+holder_branch="$(awk '$1=="branch" { $1=""; sub(/^ /,""); print; exit }' "$Q/lock/holder" 2>/dev/null)"
+[ -d "$Q/lock" ] && [ "$holder_branch" = "$BRANCH" ] && exit 0
+
+cat >&2 <<MSG
+
+  PUSH REFUSED — you do not hold the PR queue lock.
+
+  Branch:      $BRANCH
+  Lock holder: ${holder_branch:-(free)}
+
+  Several agent sessions share this repo and only one PR may be open at a time.
+  Get in line, wait for your turn, then push:
+
+      $Q/queue.sh ticket  SPEC-XXX
+      $Q/queue.sh turn    SPEC-XXX     # poll until it exits 0 (Monitor, not sleep)
+      $Q/queue.sh acquire SPEC-XXX
+      ... push, open the PR, watch it to green, merge, confirm main green ...
+      $Q/queue.sh release SPEC-XXX     # on every exit path, including failure
+
+  Protocol: $Q/PROTOCOL.md
+  Emergency override: PR_QUEUE_BYPASS=1 git push ...
+
+MSG
+exit 1
