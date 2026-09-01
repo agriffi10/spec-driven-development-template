@@ -28,6 +28,10 @@ $Q/queue.sh acquire SPEC-207     # take the lock. Exits 0 on ACQUIRED, 1 on BUSY
 $Q/queue.sh release SPEC-207     # drop the lock and your ticket. Always exits 0
 ```
 
+**Run `acquire` from your worktree, on the branch you are about to push.** The lock records that
+branch and the hook compares against it, so a lock taken from anywhere else would refuse its own
+holder's push; `acquire` refuses rather than let that happen.
+
 `turn` is what you poll. **Blocking `sleep` is unavailable in the agent's Bash tool** — poll with the
 Monitor tool's until-loop on `queue.sh turn SPEC-XXX`, every couple of minutes. Each call is also
 your heartbeat: a waiter that stops polling for 30 minutes loses its place, which is what stops a
@@ -57,8 +61,10 @@ clears it after 90 minutes.
 
 ## What is enforced, and what is not
 
-A `pre-push` hook refuses a push from a branch matching `enforce-branches` unless that branch holds
-the lock. It **fails open** everywhere else: a branch outside the pattern, a missing queue, an
+A `pre-push` hook refuses a push of any ref matching `enforce-branches` unless that branch holds the
+lock. It reads the refs git actually hands it on stdin rather than the checked-out branch, so
+`git push origin spec-x/y` from somewhere else, and a `HEAD:refs/heads/spec-x/y` refspec from a
+detached HEAD, are covered too. It **fails open** everywhere else: a branch outside the pattern, a missing queue, an
 unreadable one. Linked worktrees share `.git/hooks` through the common git dir, so this hook fires
 for **every** session on the checkout — including ones that never agreed to the queue and have never
 heard of it, and blocking those would be a worse failure than the one it prevents. The hook is

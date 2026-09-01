@@ -44,12 +44,30 @@ else
   Q="$HOME/.claude/pr-queue/$slug"
 fi
 
-case "$Q" in "$REPO"/*) echo "error: the queue may not live inside the repo ($Q)" >&2; exit 1 ;; esac
+# Absolutise before anything is compared or written: the guard below is a prefix test, which a
+# relative path silently passes, and the same string goes into the hook wrapper — where a
+# relative path resolves against whatever directory git happens to run the hook from, leaving a
+# healthy-looking queue with no enforcement at all.
+mkdir -p "$Q" || { echo "error: could not create $Q" >&2; exit 1; }
+Q="$(cd "$Q" && pwd)"
+
+# Outside the repo AND outside every worktree, not just the main one: a queue inside a linked
+# worktree is invisible to that worktree's peers, which is the whole failure this avoids.
+worktrees="$(git -C "$REPO" worktree list --porcelain | sed -n 's/^worktree //p')"
+oldifs="$IFS"; IFS='
+'
+for wt in $worktrees; do
+  case "$Q/" in
+    "$wt"/*) echo "error: the queue may not live inside a worktree ($wt)" >&2
+             rmdir "$Q" 2>/dev/null || true
+             exit 1 ;;
+  esac
+done
+IFS="$oldifs"
 
 MAIN="$(git -C "$REPO" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##')"
 [ -n "$MAIN" ] || MAIN=main
 
-mkdir -p "$Q"
 cp "$SRC/queue.sh" "$SRC/pre-push" "$SRC/PROTOCOL.md" "$Q/"
 chmod +x "$Q/queue.sh" "$Q/pre-push"
 printf '%s\n' "$REPO" > "$Q/repo"

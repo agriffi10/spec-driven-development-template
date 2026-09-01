@@ -6,7 +6,7 @@
 #
 #   queue.sh ticket  SPEC-207   # get in line, when ready to push (idempotent — keeps your place)
 #   queue.sh turn    SPEC-207   # exit 0 when it is your turn AND the remote is clear
-#   queue.sh acquire SPEC-207   # take the lock; 0 on ACQUIRED, 1 on BUSY
+#   queue.sh acquire SPEC-207   # take the lock; 0 on ACQUIRED, 1 on BUSY. Run it from your worktree
 #   queue.sh release SPEC-207   # drop the lock and the ticket; always exit 0
 #   queue.sh status             # who holds it, who is waiting, what is on the remote
 #   queue.sh reap               # drop dead waiters and a dead holder (also runs automatically)
@@ -24,6 +24,7 @@ LOCK="$Q/lock"
 LOG="$Q/log"
 STALE_TICKET=1800   # 30 min with no heartbeat — a waiter that stopped
 STALE_LOCK=5400     # 90 min — a holder that stopped
+HALF_BUILT=60       # grace for a ticket still being created
 
 # --- configuration: single-value files beside this script, all written by install.sh ---------
 REPO="${PR_QUEUE_REPO:-$(cat "$Q/repo" 2>/dev/null)}"
@@ -33,8 +34,16 @@ die() { echo "queue.sh: $*" >&2; exit 2; }
 [ -n "$REPO" ] || die "no checkout configured — write its path to $Q/repo (install.sh does this)"
 git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1 || die "$REPO is not a git checkout"
 
+# `stat` differs between BSD and GNU, and handing GNU the BSD spelling does not fail quietly: it
+# reads `-f` as --file-system and PRINTS A REPORT on stdout, which a `||` fallback then appends
+# to. So probe the spelling once, and refuse any answer that is not a number.
+if stat -c %Y "$Q" >/dev/null 2>&1; then STAT_MTIME=(stat -c %Y)   # GNU / busybox
+else                                     STAT_MTIME=(stat -f %m)   # BSD / macOS
+fi
+
 now()   { date -u +%FT%TZ; }
-mtime() { stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null || echo 0; }   # BSD, then GNU
+mtime() { local m; m="$("${STAT_MTIME[@]}" "$1" 2>/dev/null)"
+          case "$m" in ''|*[!0-9]*) echo 0 ;; *) echo "$m" ;; esac; }
 age()   { echo $(( $(date +%s) - $(mtime "$1") )); }
 note()  { printf '%s %s\n' "$(now)" "$*" >> "$LOG"; }
 
@@ -64,8 +73,8 @@ open_prs() {
 }
 
 # main_green  0 green · 1 RED · 2 building or unsettled · 3 the check could not run.
-#             Only 0 lets the queue move; every other code waits, so a check that could not run
-#             is never read as evidence that it passed.
+#             Only 0 lets the queue move, so a check that could not run is never read as
+#             evidence that it passed.
 main_green() {
   [ -x "$Q/main-green" ] && { "$Q/main-green"; return $?; }
   local sha runs rsha status conclusion any=0 building=0 red=0
@@ -84,8 +93,11 @@ main_green() {
   done <<< "$runs"
   if [ "$any" -eq 0 ]; then
     # No run yet for main's head. Either CI has not started, or this repo has none — and those
-    # need opposite answers, so ask which it is rather than guessing.
-    ls "$REPO"/.github/workflows/*.yml "$REPO"/.github/workflows/*.yaml >/dev/null 2>&1 && return 2
+    # need opposite answers, so ask which it is rather than guessing. One `ls` per extension:
+    # `ls a b` exits non-zero when EITHER operand is missing, so a single call testing both
+    # would answer "no workflows" for the repo that has only one of them.
+    ls "$REPO"/.github/workflows/*.yml  >/dev/null 2>&1 && return 2
+    ls "$REPO"/.github/workflows/*.yaml >/dev/null 2>&1 && return 2
     return 0
   fi
   [ "$red" -eq 1 ] && return 1
@@ -108,41 +120,77 @@ my_ticket() {  # prints the ticket dir for a spec, empty if it has none
 }
 
 reap() {
-  local t holder_age prs
+  local t spec held lock_age before after prs
+  held="$(holder_field spec)"
   for t in "$TICKETS"/*/; do
     [ -d "$t" ] || continue
-    if [ "$(ticket_age "${t%/}")" -gt "$STALE_TICKET" ]; then
-      note "reaped stale ticket $(basename "$t") ($(cat "$t/spec" 2>/dev/null)) — no heartbeat"
+    t="${t%/}"
+    spec="$(cat "$t/spec" 2>/dev/null)"
+    if [ -z "$spec" ]; then
+      # Creation died between the mkdir and the write. Nobody can claim this ticket and it sits
+      # at the head of the line, so clear it — after a grace period, because a ticket being
+      # taken at this instant looks exactly the same.
+      [ "$(age "$t")" -gt "$HALF_BUILT" ] &&
+        { note "cleared ticket $(basename "$t") — created but never named"; rm -rf "${t:?}"; }
+      continue
+    fi
+    # The holder is not a waiter. Acquiring stops the polling, and the lock covers a PR lifecycle
+    # far longer than the waiter timeout, so ageing out the holder's own ticket would be wrong.
+    [ -n "$held" ] && [ "$spec" = "$held" ] && continue
+    if [ "$(ticket_age "$t")" -gt "$STALE_TICKET" ]; then
+      note "reaped stale ticket $(basename "$t") ($spec) — no heartbeat"
       rm -rf "${t:?}"
     fi
   done
   [ -d "$LOCK" ] || return 0
-  holder_age=$(age "$LOCK/holder")
-  [ "$holder_age" -gt "$STALE_LOCK" ] || return 0
+  # The LOCK DIRECTORY's age, not the holder file's. `acquire` does mkdir first and writes the
+  # holder second, and a holder file that is not there yet reads as mtime 0 — which makes a lock
+  # one second old look infinitely old, and evicts live holders under contention.
+  lock_age=$(age "$LOCK")
+  [ "$lock_age" -gt "$STALE_LOCK" ] || return 0
   # Age alone is not enough to break a lock: a long PR is not a dead one. Only a holder whose
   # work has demonstrably stopped may be broken, and a check that could not run proves nothing.
+  before=$(mtime "$LOCK")
   prs="$(open_prs)" || return 0
   [ -z "$prs" ] || return 0
   main_green || return 0
-  note "BROKE STALE LOCK held by [$(holder_field spec)] — ${holder_age}s old, no open PR, main green"
+  # Those checks take seconds, and the lock can turn over inside them. Re-read before deleting:
+  # a changed mtime means someone has acquired since, and this is no longer a dead lock.
+  after=$(mtime "$LOCK")
+  [ "$before" = "$after" ] || return 0
+  [ "$(age "$LOCK")" -gt "$STALE_LOCK" ] || return 0
+  note "BROKE STALE LOCK held by [$(holder_field spec)] — ${lock_age}s old, no open PR, main green"
   rm -f "$LOCK/holder" && rmdir "$LOCK"
 }
 
 cmd_ticket() {
-  local spec="$1" t n
+  local spec="$1" t n d b
   mkdir -p "$TICKETS"; reap
   t="$(my_ticket "$spec")"
   if [ -z "$t" ]; then
     # Allocate from the high-water mark, never from zero. Reaping frees a low number, and a new
     # arrival taking it would land ahead of someone who has been waiting longer — which is the
-    # starvation the tickets exist to prevent.
-    n=$(cat "$Q/seq" 2>/dev/null || echo 0)
+    # starvation the tickets exist to prevent. An unreadable or corrupt mark restarts at zero
+    # rather than killing the script mid-ticket, which would leave an unclaimable one behind.
+    n=$(cat "$Q/seq" 2>/dev/null)
+    case "$n" in ''|*[!0-9]*) n=0 ;; esac
+    # The mark is the primary source, but it is one file and files are lost. Floor the number at
+    # one past the highest ticket in the line as well, so a lost mark cannot restart at zero and
+    # put this arrival ahead of everyone already waiting.
+    for d in "$TICKETS"/*/; do
+      [ -d "$d" ] || continue
+      b="$(basename "$d")"
+      case "$b" in ''|*[!0-9]*) continue ;; esac
+      [ "$((10#$b + 1))" -gt "$n" ] && n=$((10#$b + 1))
+    done
     while ! mkdir "$TICKETS/$(printf %04d "$n")" 2>/dev/null; do n=$((n+1)); done
     t="$TICKETS/$(printf %04d "$n")"
     touch "$t/alive"          # heartbeat first: an unheartbeaten ticket is a reap candidate
-    echo $((n+1)) > "$Q/seq"
     echo "$spec" > "$t/spec"
     my_branch > "$t/branch"
+    # Written through a temp file: `> "$Q/seq"` truncates before it writes, and a peer reading
+    # in that window gets an empty mark and starts again from zero.
+    printf '%s\n' "$((n+1))" > "$Q/seq.$$" && mv -f "$Q/seq.$$" "$Q/seq"
     note "$spec took ticket $(basename "$t")"
   fi
   touch "$t/alive"
@@ -177,15 +225,25 @@ cmd_turn() {
 }
 
 cmd_acquire() {
-  local spec="$1" out
+  local spec="$1" out branch
+  # The lock records the branch it covers and pre-push compares against it, so a lock taken from
+  # outside a worktree would name no branch and would refuse its own holder's push.
+  branch="$(my_branch)"
+  [ -n "$branch" ] || {
+    echo "REFUSED — run this from your worktree, on the branch you are about to push."; return 1; }
   out="$(cmd_turn "$spec")" || { echo "BUSY — $out"; return 1; }
   # mkdir IS the atomicity: it either creates or fails, with no window between the two. A
   # test-then-create has a gap, and agents polling on similar cadences land in it.
-  mkdir "$LOCK" 2>/dev/null || { echo "BUSY — lost the race to [$(holder_field spec)]"; return 1; }
+  if ! mkdir "$LOCK" 2>/dev/null; then
+    # Already ours means this is a retry, not a race — `turn` reports READY to the holder, so a
+    # turn-then-acquire loop would otherwise spin forever against its own lock.
+    [ "$(holder_field spec)" = "$spec" ] && { echo "ACQUIRED (already yours)"; return 0; }
+    echo "BUSY — lost the race to [$(holder_field spec)]"; return 1
+  fi
   { printf 'spec %s\n'   "$spec"
-    printf 'branch %s\n' "$(my_branch)"
+    printf 'branch %s\n' "$branch"
     printf 'since %s\n'  "$(now)"; } > "$LOCK/holder"
-  note "$spec ACQUIRED the lock"
+  note "$spec ACQUIRED the lock on $branch"
   echo "ACQUIRED — release it when the PR is merged and $MAIN is green, on every exit path"
 }
 
@@ -204,7 +262,7 @@ cmd_status() {
   local n prs
   mkdir -p "$TICKETS"
   if [ -d "$LOCK" ]; then
-    echo "LOCK: [$(holder_field spec) on $(holder_field branch)] — held $(age "$LOCK/holder")s"
+    echo "LOCK: [$(holder_field spec) on $(holder_field branch)] — held $(age "$LOCK")s"
   else
     echo "LOCK: free"
   fi

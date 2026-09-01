@@ -39,7 +39,7 @@ The queue serialises the remote — it is not a review, and it does not replace 
 ```
 [queue-dir]/queue.sh ticket  SPEC-XXX     # get in line — when ready to push, not before
 [queue-dir]/queue.sh turn    SPEC-XXX     # poll until it exits 0 (Monitor's until-loop, not sleep)
-[queue-dir]/queue.sh acquire SPEC-XXX     # take the lock
+[queue-dir]/queue.sh acquire SPEC-XXX     # take the lock — from your worktree, on the branch you will push
 [queue-dir]/queue.sh release SPEC-XXX     # on EVERY exit path, including failure and abandonment
 ```
 

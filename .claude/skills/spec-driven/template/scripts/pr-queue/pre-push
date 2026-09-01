@@ -1,6 +1,6 @@
 #!/bin/bash
-# pre-push — makes the PR queue real rather than advisory. Refuses a push from a participating
-# branch that does not hold the lock.
+# pre-push — makes the PR queue real rather than advisory. Refuses a push of a participating
+# branch by a session that does not hold the lock.
 #
 # It FAILS OPEN by design, and the reason is worktrees: linked worktrees share `.git/hooks`
 # through the common git dir, so this hook fires for every session on the checkout — including
@@ -13,33 +13,46 @@
 # becomes a no-op. `install.sh` writes both.
 
 Q="$(cd "$(dirname "$0")" && pwd)"
-BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
 PATTERN="$(cat "$Q/enforce-branches" 2>/dev/null)"
 
 [ -d "$Q" ] || exit 0                              # no queue — enforce nothing
 [ -n "$PATTERN" ] || exit 0                        # no pattern configured — enforce nothing
-[ -n "$BRANCH" ] || exit 0                         # detached HEAD — not a queue branch
-echo "$BRANCH" | grep -qE "$PATTERN" || exit 0     # not a participating branch — not our business
 [ "${PR_QUEUE_BYPASS:-}" = "1" ] && { echo "pre-push: PR_QUEUE_BYPASS=1 — queue check skipped" >&2; exit 0; }
 
 # The holder's branch is compared as a string, never grepped: a substring match would let
 # `spec-207/qu` push under the lock held by `spec-207/queue`.
-holder_branch="$(awk '$1=="branch" { $1=""; sub(/^ /,""); print; exit }' "$Q/lock/holder" 2>/dev/null)"
-[ -d "$Q/lock" ] && [ "$holder_branch" = "$BRANCH" ] && exit 0
+holder_branch=""
+[ -d "$Q/lock" ] &&
+  holder_branch="$(awk '$1=="branch" { $1=""; sub(/^ /,""); print; exit }' "$Q/lock/holder" 2>/dev/null)"
+
+# git names the refs actually being pushed on STDIN, one
+# "<local ref> <local sha> <remote ref> <remote sha>" line per ref. Read those rather than the
+# checked-out branch: `git push origin spec-x/y` from a different branch, and
+# `git push origin HEAD:refs/heads/spec-x/y` from a detached HEAD, both bypass a HEAD-based check.
+refused=""
+while read -r _lref _lsha rref _rsha; do
+  [ -n "$rref" ] || continue
+  case "$rref" in refs/heads/*) branch="${rref#refs/heads/}" ;; *) continue ;; esac
+  echo "$branch" | grep -qE "$PATTERN" || continue   # not a participating branch — not our business
+  [ "$branch" = "$holder_branch" ] && continue
+  refused="$refused $branch"
+done
+
+[ -n "$refused" ] || exit 0
 
 cat >&2 <<MSG
 
   PUSH REFUSED — you do not hold the PR queue lock.
 
-  Branch:      $BRANCH
-  Lock holder: ${holder_branch:-(free)}
+  Refused ref(s):$refused
+  Lock holder:   ${holder_branch:-(free)}
 
   Several agent sessions share this repo and only one PR may be open at a time.
   Get in line, wait for your turn, then push:
 
       $Q/queue.sh ticket  SPEC-XXX
       $Q/queue.sh turn    SPEC-XXX     # poll until it exits 0 (Monitor, not sleep)
-      $Q/queue.sh acquire SPEC-XXX
+      $Q/queue.sh acquire SPEC-XXX     # from your worktree, on the branch you are pushing
       ... push, open the PR, watch it to green, merge, confirm main green ...
       $Q/queue.sh release SPEC-XXX     # on every exit path, including failure
 
