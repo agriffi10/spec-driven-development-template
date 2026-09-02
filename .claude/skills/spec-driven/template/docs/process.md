@@ -275,6 +275,25 @@ So the loop rotates the frame instead of adding rounds:
   Then fix-verification is mechanical and needs no second reviewer — which is what stops a review
   round spawning a review of its fixes. A frame only finds what its mutations probe, so a fix that
   satisfies a weak mutation can still be wrong.
+- **A gate is not tested by running it on the thing it guards.** Running a linter over the repo's own
+  files proves the files pass; it proves nothing about whether any check still fires, and a gate whose
+  checks have gone quiet is indistinguishable from a healthy repo. Every gate owes a **fixture corpus**:
+  one case per construct, asserting the specific **failure text** rather than the exit code, because a
+  check that fails for the wrong reason gets "fixed" by changing the wrong thing. Include cases that
+  assert **silence** — half of a gate's regressions are false positives, and a corpus of only-failures
+  cannot see them. Prove the corpus bites by defeating each check in turn and watching it redden.
+  Measured: a doc linter shipped four rounds of fixes, three of which each opened a fresh escape while
+  closing the previous one, and every regression reached `main` because CI only ever ran it against
+  documents that happened to pass.
+- **One fixture per guard is not enough when the guard has more than one exit.** A check with two
+  terminating conditions is satisfied by a fixture exercising either, so the mutant that breaks the
+  other survives with the suite green. Count the ways a check can stop, and write that many cases.
+- **A verification method has a frame, exactly as a review does.** Three sweeps that all ask "is the
+  old content still present" are one check run three times, however exhaustive each is — they cover the
+  mechanical half of a change and say nothing about the half that was authored. Before trusting a
+  verification, ask what question it asks, and whether anything asks a different one. Measured: a
+  migration was proved lossless three ways while the freshly-written summaries of the moved material
+  went unexamined, and contained a fabricated citation.
 - **Reasoning finds wording; execution finds defects.** Require a reproduction, not an argument.
   Passing review, passing unit tests and deploying successfully are three things that can all be true
   of code that fails on its first real invocation.
@@ -542,6 +561,11 @@ this way):
   contradicts at scale trains readers to ignore the ones that hold.
 - **Standing rules never cite volatile numbers** (line counts, row counts, section ranges) — state
   the principle. The numbers rot, and a rule resting on false evidence teaches readers to distrust it.
+  **Dating the measurement does not save it**, which is the tempting half-fix: a dated number still
+  reads as current to anyone not checking the date against the calendar, and one such entry went stale
+  within a single commit of being written. Either delete the number and state the principle, or anchor
+  the evidence to something immutable — a commit SHA, which a reader can re-measure — rather than to a
+  live count.
 - **A rule practice consistently violates gets reconciled or deleted.** A dead rule trains agents to
   ignore the live ones.
 - **Routers and indexes carry only what self-describes.** Hand-maintained metadata (symbol counts,
@@ -564,11 +588,20 @@ this way):
   the corpus.
   **The budgets are ratchets at the measured level** — when one fires,
   move detail down a tier and re-ratchet, rather than raising the cap to admit the edit.
-  *Why a script and not this paragraph:* every rule in this section already existed here, and a
-  sibling project running this template violated all of them anyway — its `CLAUDE.md` went from
-  7,583 bytes on 2026-07-09 to 87,392 on 2026-09-01, monotonically, while this very section named
-  the violation in the present tense throughout. A rule a reader has to remember is a rule that
-  rots.
+  **A threshold can be invalidated by its own success, not only by being wrong.** A cap calibrated
+  against a document catches things until a cut shrinks everything below it, after which it sits far
+  above anything it governs and can never fire — still advertised here as a fence, and now not one.
+  So after any structural change to what a threshold measures, **re-derive it rather than re-checking
+  it**: a check that passes proves nothing about a cap that can no longer fail. The opposite error is
+  as bad and more tempting — a budget pinned exactly at the measurement leaves no working room, so the
+  next change that legitimately needs a line has to take one from somewhere else, which is the gate
+  causing the damage it exists to prevent. Leave headroom deliberately and say why in the file.
+  *Why a script and not this paragraph:* every rule in this section already existed here, and the
+  sibling project `log-forge` violated all of them anyway — its `CLAUDE.md` grew more than tenfold
+  over eight weeks without one commit reducing it, while that repo's own copy of this section named
+  the violation in the present tense throughout. The measurements are in its history at `e60b60d`,
+  anchored there rather than restated here, per the volatile-number rule above. A rule a reader has
+  to remember is a rule that rots.
 
 ---
 

@@ -497,6 +497,7 @@ which is which tells you what breaks silently if you skip a step.
 | Domain code follows the right rulebook, loading only what's needed | `best-practices/INDEX.md` + `process.md` |
 | The always-loaded tier stays lean — budget, digest line length, a register behind every digest line | `docs-lint.sh` (CI) + the completion ritual in `process.md` |
 | The doc linter's own checks still fire | `docs-lint-test.sh` (CI) — a fixture per construct, each asserting its failure text |
+| Any gate you add is itself tested, not just run | `process.md` §3 — a gate run only on what it guards proves the artifacts pass, not that the gate works |
 | One pull request open at a time when several agents share the repo | `scripts/pr-queue/` (the `pre-push` hook) |
 | The root scaffold matches the skill's canonical copy | `check-mirror.sh` (CI) |
 | Your language's own quality gates | the `ci.yml` you create from `ci.yml.example` |

@@ -138,7 +138,12 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
    reviewer checks the diff against the spec's acceptance criteria and the relevant `best-practices/`
    rules. Findings are **fixed or flagged** — a rejection costs a sentence out loud, and goes in
    writing only when it carries a lesson worth keeping.
-8. **Rotate the frame instead of adding rounds.** Cap same-frame review at two rounds, then switch
+8. **A gate is not tested by running it on what it guards.** A linter run over the repo's own files
+   proves the files pass, not that any check still fires. Every gate owes a fixture corpus asserting
+   the specific failure text, including cases that assert silence, proved by defeating each check in
+   turn and watching it redden. A verification *sweep* has a frame the same way a review does —
+   several sweeps asking the same question are one check, however exhaustive each is.
+9. **Rotate the frame instead of adding rounds.** Cap same-frame review at two rounds, then switch
    frame: adversarial execution, whole-module fresh eyes (not the diff), concurrency, security. **One
    rotation must actually build the thing** off-repo and run the suites — it finds contradictions,
    unspecified shapes and sequencing that no reader finds. Every reviewer runs the repo's gates against
