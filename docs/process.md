@@ -120,6 +120,8 @@ four before the first push.
   no evidence.
 - Before pushing, run the project's **formatter, linter, typecheck and unit tests** locally and get
   them green. These quality gates are a pre-push step — don't push red and leave CI to discover it.
+  **`sh scripts/docs-lint.sh` is in that set and nothing in CI runs it** — plus
+  `sh scripts/docs-lint-test.sh` whenever the linter itself changed.
 - Work the **reviewed** plan's phases in order, **straight through to completion**. Summarize a phase
   in passing where it is worth saying, but do not end the turn on it — a summary that ends the turn
   *is* a request for approval, whatever its wording says. Re-review the plan only if the phase
@@ -589,8 +591,11 @@ this way):
   full-file read.
 - **Live findings and obligations never live in historical or cancelled narrative** — rehome them to
   an active register and leave a pointer behind.
-- **`scripts/docs-lint.sh` enforces the structural half of these rules, and runs on every PR**
-  (`.github/workflows/docs-lint.yml`). It holds `CLAUDE.md` to a byte budget and each Key Decisions
+- **`scripts/docs-lint.sh` enforces the structural half of these rules, and is a LOCAL PRE-PUSH
+  gate — deliberately not a CI job.** Run it, and `docs-lint-test.sh` if you touched it, before every
+  PR, alongside the formatter, linter, type-checker and tests. Keeping it local puts the failure in
+  front of the person who caused it, at the moment they can still fix it silently, rather than on a
+  shared branch where it reds someone else's unrelated work and becomes a thing to be waived. It holds `CLAUDE.md` to a byte budget and each Key Decisions
   **unit** — a bullet with its continuations — to a length, and refuses any construct in that section but an area heading, a bullet, a continuation, a blank line and plain intro prose; requires `docs/decisions.md` to exist, to carry a `###` entry for every digest
   line and a digest line for every entry, and to list every entry in its Contents; requires every
   Completed spec to have a delivery doc, and holds every doc in `docs/spec-delivery/` to a line cap

@@ -221,7 +221,7 @@ Claude reads it every session.
 6. Trim `docs/best-practices/` to the domains you actually use — a Python library doesn't need the
    React rulebook — and update `docs/best-practices/INDEX.md` to match.
 7. **Protect `main`.** In Settings → Rules, require pull requests (no direct pushes) and add
-   `spec-lint`, `docs-lint` and your `ci` jobs as required status checks. Nothing in the files can enforce this;
+   `spec-lint` and your `ci` jobs as required status checks. Nothing in the files can enforce this;
    it's a repository setting.
 8. Fill in the two per-project sections at the bottom of `docs/process.md`: *Operational traps* (§6)
    and *Project ground rules* (§7). They start as examples and exist nowhere else — the first time a
@@ -426,7 +426,6 @@ from the template don't need them.
 | `scripts/sync-from-skill.sh` | Maintenance for **this template repo only** — regenerates the root scaffold from the skill's canonical copy. Delete it in a derived project. | Maintainers of this template |
 | `scripts/check-mirror.sh` | Maintenance for **this template repo only** — fails if the root scaffold has drifted from the canonical copy, in either direction. Delete it in a derived project, where customizing `CLAUDE.md` makes it fail by design. | CI + maintainers |
 | `.github/workflows/spec-lint.yml` | Runs spec-lint on pushes to `main`, and on pull requests that touch `docs/specs/`, the lint script, or the workflow itself. | CI |
-| `.github/workflows/docs-lint.yml` | Runs docs-lint on every pull request and push to `main`. Deliberately not path-filtered, for the same reason as the mirror check: the growth it exists to catch arrives in whichever doc nobody thought to list. | CI |
 | `.github/workflows/check-mirror.yml` | Runs the mirror check on every pull request and push to `main`, in **this template repo only**. Deliberately not path-filtered — the failure it exists to catch is a change in a path nobody thought to list. Delete it in a derived project. | CI |
 | `.github/workflows/ci.yml.example` | **Inert** template for your language's formatter, linter, type-checker and tests (Node and Python jobs included). The `.example` extension means GitHub never runs it; you turn it into a real `ci.yml` at setup. | CI (once you fill it in) |
 | `.github/pull_request_template.md` | PR checklist restating the rules: maps to the plan, no new open questions, **both framed pre-push reviews done**, gates green, owed criteria named, watch to green. | You + Claude |
@@ -473,8 +472,8 @@ and the repository served a stale scaffold for weeks, because nothing was checki
 
 > ⚠️ **The CI jobs are not yet *required* status checks on `main`**, so a red run doesn't currently
 > block a merge — the `main` ruleset has no `required_status_checks` rule. To make them binding, add
-> `check-mirror`, `spec-lint` and `docs-lint` under Settings → Rules → the `main` ruleset → *Require
-> status checks to pass*.
+> `check-mirror` and `spec-lint` under Settings → Rules → the `main` ruleset → *Require status checks
+> to pass*.
 
 ## Where each guardrail is enforced
 

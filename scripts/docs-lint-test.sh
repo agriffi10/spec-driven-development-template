@@ -29,6 +29,15 @@ FILTER="${1:-}"
 WORK="${TMPDIR:-/tmp}/docs-lint-test.$$"
 trap 'rm -rf "$WORK"' EXIT INT TERM
 
+# Parse the linter before exercising it. A syntax error partway through a shell script can
+# end a run with status 0 — the linter never reaches its checks and reports success on a
+# script that did nothing. That happened once while it was being written, and this used to
+# be a separate CI step; the corpus is where it lives now that the gate is local.
+if ! sh -n "$ROOT/scripts/docs-lint.sh"; then
+  echo "FAIL  scripts/docs-lint.sh does not parse — a syntax error can exit 0 and look green."
+  exit 1
+fi
+
 pass=0; fail=0
 for case_file in "$CASES"/*.case; do
   [ -f "$case_file" ] || continue

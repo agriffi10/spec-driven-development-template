@@ -42,9 +42,10 @@ When a repo has no spec-driven docs yet:
    the manifest (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, …) rather than guessing.
 4. Seed `docs/architecture.md` from any existing design notes the repo already has; otherwise leave the
    sectioned stub.
-5. Wire `spec-lint` and `docs-lint` into CI. If the repo already has a CI workflow, add both steps there
-   too (or keep the standalone `spec-lint.yml` / `docs-lint.yml` — either is fine, but they must run on
-   PRs). Then **re-ratchet all three budgets in `scripts/docs-lint.sh`** — `CLAUDE_MAX_BYTES`,
+5. Wire `spec-lint` into CI (add a step to the repo's workflow, or keep the standalone `spec-lint.yml`
+   — either is fine, but it must run on PRs). **`docs-lint` is deliberately NOT a CI job**: it is a
+   local pre-push gate, so its failures land on the person who caused them rather than on a shared
+   branch where they red unrelated work. Then **re-ratchet all three budgets in `scripts/docs-lint.sh`** — `CLAUDE_MAX_BYTES`,
    `DIGEST_MAX_BYTES` and `DELIVERY_MAX_LINES` — to what this repo actually measures. The shipped
    defaults are sized for a scaffold whose `CLAUDE.md` is placeholders and whose `docs/spec-delivery/`
    is empty, and a budget far above the measurement never fires.
