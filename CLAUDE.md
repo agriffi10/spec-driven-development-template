@@ -98,6 +98,10 @@ component inventory. **Key Decisions is grouped by AREA and carries fences, not 
 a per-spec changelog, and `## Specs` is not one either; both regrow by being appended to, one
 completion at a time. **`scripts/docs-lint.sh` enforces this on every PR** — the byte budget,
 the digest line cap, and the rule that every Key Decisions line has a full entry behind it in
-`@docs/decisions.md`. A threshold can be invalidated by its own **success** — after a structural cut, re-derive it rather than re-checking it, since a cap that can no longer fail is still advertised as a fence. The budget is a **ratchet**: when it fires, cut and re-ratchet at the new
-measurement — never raise it to fit the edit in hand. Full rule set: `@docs/process.md` §5 →
+`@docs/decisions.md`. A threshold can be invalidated by its own **success** — after a structural cut, re-derive it rather
+than re-checking it, since a cap that can no longer fail is still advertised as a fence. The budget
+is a **ratchet against accretion**: when it fires because the file grew a line at a time, cut and
+re-ratchet, never raising it to fit the edit in hand. **After a structural cut the regime inverts** —
+what remains is fences, so leave headroom and record why beside the number, or the next decision
+that legitimately needs a line takes one from another area. Full rule set: `@docs/process.md` §5 →
 *Anti-regrowth & doc hygiene*.

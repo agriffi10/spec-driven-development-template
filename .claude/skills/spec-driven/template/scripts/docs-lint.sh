@@ -148,7 +148,8 @@ esac
 if [ "$size" -gt "$CLAUDE_MAX_BYTES" ]; then
   note "$CLAUDE is $size bytes against a $CLAUDE_MAX_BYTES budget. It loads every session:
       move the detail into docs/ behind a pointer. Raising this number to fit an edit is the
-      failure mode it exists to prevent — cut first, then re-ratchet at the measurement."
+      failure mode it exists to prevent — cut first, then re-ratchet. After a structural cut, leave
+      headroom rather than pinning at the new measurement, and record why beside the number."
 fi
 
 # ── 2. Key Decisions has a FIXED SHAPE, and is measured whole ────────────────

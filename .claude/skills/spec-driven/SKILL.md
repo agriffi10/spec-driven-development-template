@@ -141,8 +141,9 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
 8. **A gate is not tested by running it on what it guards.** A linter run over the repo's own files
    proves the files pass, not that any check still fires. Every gate owes a fixture corpus asserting
    the specific failure text, including cases that assert silence, proved by defeating each check in
-   turn and watching it redden. A verification *sweep* has a frame the same way a review does —
-   several sweeps asking the same question are one check, however exhaustive each is.
+   turn and watching it redden. **Count the ways each check can stop and write
+   that many cases** — a check with two terminating conditions is satisfied by a fixture exercising
+   either, so the mutant that breaks the other survives with the suite green.
 9. **Rotate the frame instead of adding rounds.** Cap same-frame review at two rounds, then switch
    frame: adversarial execution, whole-module fresh eyes (not the diff), concurrency, security. **One
    rotation must actually build the thing** off-repo and run the suites — it finds contradictions,
@@ -152,7 +153,9 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
    N+1 what round N fixed. Budget a round for any substantial **rewrite** a finding causes — that
    replacement is the least-reviewed thing in the loop. **When the risk is what the change *removed*,
    enumerate rather than review** — a reviewer samples, and a deletion leaves nothing to read; write
-   the sweep that lists the whole population, and have it report before it applies. **Spot-check a
+   the sweep that lists the whole population, and have it report before it applies. A sweep has a
+   frame the same way a review does — several sweeps asking the same question are one check, however
+   exhaustive each is, and they say nothing about the half of a change that was newly written. **Spot-check a
    negative claim** ("no test covers this", "nothing imports this") before acting on it and again
    before writing it down. Full contract and the measurements behind it: `docs/process.md` §3.
 
@@ -240,5 +243,5 @@ with no digest label; an entry absent from that file's Contents; a `Status: Comp
 pointer in `CLAUDE.md` that resolves to nothing. Entries labelled `(example)` are exempt, so a fresh
 scaffold is green. **`scripts/docs-lint-test.sh` is its fixture corpus — run it after any change to
 `docs-lint.sh`.** The linter passing against your own docs says nothing about whether its checks
-work; the corpus is what says that. The budgets are **ratchets**: when one fires, cut and re-ratchet at the new
-measurement — never raise it to fit the edit. POSIX `sh` — no runtime dependency.
+work; the corpus is what says that. The budgets are **ratchets against accretion**: when one fires because a doc grew a line at a time, cut and re-ratchet at the new
+measurement — never raise it to fit the edit. **After a structural CUT the regime inverts**: what remains is fences rather than accretion, so leave headroom deliberately and record why beside the number, or the next change that legitimately needs a line takes one from another area. POSIX `sh` — no runtime dependency.

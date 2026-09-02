@@ -253,7 +253,8 @@ So the loop rotates the frame instead of adding rounds:
   what is there, and a deletion leaves nothing to read. Measured on a test-suite reduction in a
   project run this way: three fresh frames returned **4, then 7, then 17** findings, diverging
   rather than converging, because each sampled a population of hundreds. The mechanical sweep that
-  answered it completely — error codes raised vs error codes asserted — ran in seconds. **Before
+  answered the absence question completely — error codes raised vs error codes asserted — ran in
+  seconds. **Before
   reviewing a change whose risk is what it removed, write the sweep that lists the whole
   population.**
 - **Spot-check a negative claim before acting on it, and again before writing it down.** "Only
@@ -271,6 +272,13 @@ So the loop rotates the frame instead of adding rounds:
   helpers classified a test framework's discovered classes as dead and would have deleted every test
   inside them — caught only because it printed first. A regex over source is the same hazard one
   level down; parse instead where a parser exists.
+- **A verification method has a frame, exactly as a review does.** Three sweeps that all ask "is the
+  old content still present" are one check run three times, however exhaustive each is — they cover the
+  mechanical half of a change and say nothing about the half that was authored. Before trusting a
+  verification, ask what question it asks, and whether anything asks a different one. Measured: a
+  migration was proved lossless three ways while the freshly-written summaries of the moved material
+  went unexamined, and contained a fabricated citation.
+  Its stopping rule is the sweep's: stop when a fresh question would not change what you conclude.
 - **A finding should carry a reproducing mutation, and the fix is verified by re-planting it.**
   Then fix-verification is mechanical and needs no second reviewer — which is what stops a review
   round spawning a review of its fixes. A frame only finds what its mutations probe, so a fix that
@@ -280,20 +288,15 @@ So the loop rotates the frame instead of adding rounds:
   checks have gone quiet is indistinguishable from a healthy repo. Every gate owes a **fixture corpus**:
   one case per construct, asserting the specific **failure text** rather than the exit code, because a
   check that fails for the wrong reason gets "fixed" by changing the wrong thing. Include cases that
-  assert **silence** — half of a gate's regressions are false positives, and a corpus of only-failures
-  cannot see them. Prove the corpus bites by defeating each check in turn and watching it redden.
-  Measured: a doc linter shipped four rounds of fixes, three of which each opened a fresh escape while
-  closing the previous one, and every regression reached `main` because CI only ever ran it against
-  documents that happened to pass.
+  assert **silence** — a corpus of only-failures cannot see a false positive, and false positives are
+  a large share of what a gate gets wrong. Prove the corpus bites by defeating each check in turn and watching it redden.
+  Measured: a doc linter took four rounds of fixes, three of which each opened a fresh escape while
+  closing the previous one, and every one was found by a reviewer rather than by CI — because the
+  only thing CI ran was the linter against documents that happened to pass. Nothing reached `main`;
+  the point is that nothing would have stopped it if the branch had merged a round earlier.
 - **One fixture per guard is not enough when the guard has more than one exit.** A check with two
   terminating conditions is satisfied by a fixture exercising either, so the mutant that breaks the
   other survives with the suite green. Count the ways a check can stop, and write that many cases.
-- **A verification method has a frame, exactly as a review does.** Three sweeps that all ask "is the
-  old content still present" are one check run three times, however exhaustive each is — they cover the
-  mechanical half of a change and say nothing about the half that was authored. Before trusting a
-  verification, ask what question it asks, and whether anything asks a different one. Measured: a
-  migration was proved lossless three ways while the freshly-written summaries of the moved material
-  went unexamined, and contained a fabricated citation.
 - **Reasoning finds wording; execution finds defects.** Require a reproduction, not an argument.
   Passing review, passing unit tests and deploying successfully are three things that can all be true
   of code that fails on its first real invocation.
@@ -584,22 +587,28 @@ this way):
   out of `CLAUDE.md` resolve.
   **`scripts/docs-lint-test.sh` is the corpus that proves those checks still fire** — running the
   linter against the repo's own documents proves the documents pass and nothing about whether any
-  check works, which is how four rounds of regressions reached main. A change to the linter runs
-  the corpus.
-  **The budgets are ratchets at the measured level** — when one fires,
-  move detail down a tier and re-ratchet, rather than raising the cap to admit the edit.
-  **A threshold can be invalidated by its own success, not only by being wrong.** A cap calibrated
-  against a document catches things until a cut shrinks everything below it, after which it sits far
-  above anything it governs and can never fire — still advertised here as a fence, and now not one.
-  So after any structural change to what a threshold measures, **re-derive it rather than re-checking
-  it**: a check that passes proves nothing about a cap that can no longer fail. The opposite error is
-  as bad and more tempting — a budget pinned exactly at the measurement leaves no working room, so the
-  next change that legitimately needs a line has to take one from somewhere else, which is the gate
-  causing the damage it exists to prevent. Leave headroom deliberately and say why in the file.
+  check works. A change to the linter runs the corpus. The general rule, and its evidence, is in §3.
+  **The budgets are ratchets against ACCRETION** — when one fires because a doc grew a line at a
+  time, move detail down a tier and re-ratchet, rather than raising the cap to admit the edit. That
+  is the regime a budget is normally in, and pinning it near the measurement is right there.
+  **After a structural CUT the regime changes, and the same pinning becomes the trap.** What remains
+  after a cut is not accretion but fences, and a budget left at the new measurement leaves the next
+  change that legitimately needs a line nothing to spend — so it takes one from somewhere else, and
+  the gate causes the damage it exists to prevent. Measured in `log-forge`: a cap set at its post-cut
+  size left about two digest lines of room, and was deliberately raised with the reasoning recorded
+  beside the number. Leave headroom after a cut, say why where the number lives, and mark that budget
+  as the one **not** at the measurement.
+  **A threshold can also be invalidated by its own success.** A cap calibrated against a document
+  catches things until a cut shrinks everything below it, after which it sits far above anything it
+  governs and can never fire — still advertised here as a fence, and now not one. So after any
+  structural change to what a threshold measures, **re-derive it rather than re-checking it**: a
+  check that passes proves nothing about a cap that can no longer fail. This repo's own shipped
+  budgets are deliberately loose for that reason — it ships a scaffold, and `scripts/docs-lint.sh`
+  says so where they are set.
   *Why a script and not this paragraph:* every rule in this section already existed here, and the
   sibling project `log-forge` violated all of them anyway — its `CLAUDE.md` grew more than tenfold
-  over eight weeks without one commit reducing it, while that repo's own copy of this section named
-  the violation in the present tense throughout. The measurements are in its history at `e60b60d`,
+  over eight weeks while that repo's own copy of this section named the violation in the present
+  tense throughout. The measurements are in its history at `e60b60d`,
   anchored there rather than restated here, per the volatile-number rule above. A rule a reader has
   to remember is a rule that rots.
 
