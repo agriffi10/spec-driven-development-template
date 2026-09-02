@@ -66,8 +66,7 @@ ticket_age() { if [ -f "$1/alive" ]; then age "$1/alive"; else age "$1"; fi; }
 # A DRAFT DOES NOT BLOCK. The remote check stands in for "another agent is mid-turn", and a
 # draft is the one open PR explicitly *not* ready to merge — it can sit for hours by design.
 # Counting one starves every agent that obeys this queue while agents that never took a
-# ticket push straight past it. Measured in the sibling project s3-upload-portal, whose queue
-# log records it: ticket 0017 took its place at 21:40:09Z and did not acquire until 00:21:55Z
+# ticket push straight past it. Measured in s3-upload-portal, whose queue log records it: ticket 0017 took its place at 21:40:09Z and did not acquire until 00:21:55Z
 # — two hours forty behind a draft titled "DO NOT MERGE YET", as the only waiter, with the
 # lock free throughout. A non-draft PR still blocks, bot-authored ones included: those are
 # intended to merge, so waiting for them is the point.

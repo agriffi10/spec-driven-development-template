@@ -49,7 +49,7 @@ Every other refusal exits 1 and means keep polling.
 **A DRAFT DOES NOT BLOCK.** The remote check stands in for "another agent is mid-turn", and a draft
 is the one open PR explicitly *not* ready to merge — it can sit for hours by design. Counting one
 starves every agent that obeys this queue, while agents that never took a ticket push straight past
-it. Measured in the sibling project `s3-upload-portal`, and recorded in that queue's own log: ticket
+it. Measured in `s3-upload-portal`, and recorded in that queue's own log: ticket
 0017 took its place at 2026-09-01T21:40:09Z and did not acquire until 2026-09-02T00:21:55Z — 2h41m,
 as the only waiter, with the lock free throughout. What it was behind is recorded in that repo's
 protocol rather than its log: a draft titled "DO NOT MERGE YET" **and five PRs opened by sessions
