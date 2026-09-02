@@ -1,0 +1,35 @@
+@@@ expect exit=1
+@@@ match a fenced block
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+One line each; the full entry lives in the register.
+
+### Area one
+
+- **Alpha rule** — short claim and its fence.
+
+```
+We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. 
+
+## Out of Scope
+
+nothing
+
+@@@ file docs/decisions.md
+# Key Decisions — full register
+
+## Contents
+
+- [Alpha rule](#alpha-rule)
+
+---
+
+## Area one
+
+### Alpha rule
+
+Reasoning.
+

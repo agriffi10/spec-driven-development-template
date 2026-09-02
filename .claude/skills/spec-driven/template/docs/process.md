@@ -340,7 +340,8 @@ yields a different class of finding than any reading-based frame.*
   adversarial reader finds defects and does not find these; the implementer finds these and is worse at
   defects. Run both, not one twice.
 - **Every reviewer runs the repo's gates against the branch** — formatter, linter, typecheck, tests,
-  and `scripts/spec-lint.sh` on any spec it touched. Four rounds once reviewed a spec and none ran the
+  `scripts/spec-lint.sh` on any spec it touched, and `scripts/docs-lint.sh` on any change that touches
+  `CLAUDE.md`, `docs/decisions.md` or a delivery doc. Four rounds once reviewed a spec and none ran the
   repo's doc-layout gate; the branch was red on it throughout, for a reason unrelated to the spec, and
   it took an agent that *built* the change to notice. A review of a change touching gated files runs
   the gates.
@@ -483,9 +484,13 @@ When a spec is done, in the same pass:
 4. If reusable modules/services/components were added, add a **one-line** row to
    `docs/component-inventory.md` (if the inventory has split into area files, the row goes in the
    file **matching the component's path**).
-5. A *new architectural decision* gets its **full entry in `docs/decisions.md` first**, then **one
+5. A *new architectural decision* gets its **full entry in `docs/decisions.md` first, plus a row in
+   that file's `## Contents`** — an entry the Contents does not reach is findable only by reading the
+   whole file, and `docs-lint.sh` fails the PR for it — then **one
    line** in CLAUDE.md's Key Decisions — the digest line is **never the only home of a fact**, and
-   never a paragraph. If the decision **supersedes an earlier one**, update the old register entry in
+   never a paragraph. A reversal that changes the entry's **heading** must move its Contents row with it —
+   the row is an anchor link, left pointing at nothing otherwise, which docs-lint fails.
+   If the decision **supersedes an earlier one**, update the old register entry in
    place and add a superseded marker (short blockquote: what changed, which spec, where the full
    entry lives) at every doc site that still states the old claim — arc narratives, architecture
    sections. The new entry alone is not enough; a reader who lands only on the old site must see the
@@ -546,6 +551,24 @@ this way):
   full-file read.
 - **Live findings and obligations never live in historical or cancelled narrative** — rehome them to
   an active register and leave a pointer behind.
+- **`scripts/docs-lint.sh` enforces the structural half of these rules, and runs on every PR**
+  (`.github/workflows/docs-lint.yml`). It holds `CLAUDE.md` to a byte budget and each Key Decisions
+  **unit** — a bullet with its continuations — to a length, and refuses any construct in that section but an area heading, a bullet, a continuation, a blank line and plain intro prose; requires `docs/decisions.md` to exist, to carry a `###` entry for every digest
+  line and a digest line for every entry, and to list every entry in its Contents; requires every
+  Completed spec to have a delivery doc, and holds every doc in `docs/spec-delivery/` to a line cap
+  (not only those tied to a Completed spec); and checks that the pointers
+  out of `CLAUDE.md` resolve.
+  **`scripts/docs-lint-test.sh` is the corpus that proves those checks still fire** — running the
+  linter against the repo's own documents proves the documents pass and nothing about whether any
+  check works, which is how four rounds of regressions reached main. A change to the linter runs
+  the corpus.
+  **The budgets are ratchets at the measured level** — when one fires,
+  move detail down a tier and re-ratchet, rather than raising the cap to admit the edit.
+  *Why a script and not this paragraph:* every rule in this section already existed here, and a
+  sibling project running this template violated all of them anyway — its `CLAUDE.md` went from
+  7,583 bytes on 2026-07-09 to 87,392 on 2026-09-01, monotonically, while this very section named
+  the violation in the present tense throughout. A rule a reader has to remember is a rule that
+  rots.
 
 ---
 

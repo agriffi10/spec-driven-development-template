@@ -4,10 +4,11 @@ description: >-
   Spec-driven development workflow with guardrails. Use when (a) setting up / bootstrapping a repo for
   spec-driven work, (b) authoring or refining a spec, (c) starting to build a spec, (d) completing a
   spec, or (e) running several agent sessions against one repo at once. Provides a template repo layout (CLAUDE.md, layered docs/, spec + completion templates), a
-  POSIX spec-lint, and a CI workflow + PR template. Enforces: specs are fully specified before build
+  POSIX spec-lint and docs-lint, and a CI workflow + PR template. Enforces: specs are fully specified before build
   (no Open Questions), spec/plan/diff each pass a blocking fresh-context review gate, the diff review
   gates the push rather than the merge, builds run off a reviewed plan straight to completion (no
-  per-phase checkpoints), every PR is watched and merged on green, and main is always watched.
+  per-phase checkpoints), every PR is watched and merged on green, main is always watched, and the
+  always-loaded tier stays lean (budget + a decisions register behind every digest line).
   Triggers on phrases like "set up
   spec-driven", "scaffold the docs structure", "write a spec", "start SPEC-XXX", "build this spec",
   "complete the spec / run the completion ritual", "run several agents at once".
@@ -35,14 +36,18 @@ When a repo has no spec-driven docs yet:
    mirror of `template/`, `scripts/sync-from-skill.sh` regenerates it, and edits belong in `template/`
    followed by a sync. Steps 3 and 6 below would fill in the mirror and delete `ci.yml.example`, which
    must survive there.
-2. `chmod +x scripts/spec-lint.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh`.
+2. `chmod +x scripts/spec-lint.sh scripts/docs-lint.sh scripts/docs-lint-test.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh`.
 3. Fill in the placeholders in `CLAUDE.md` (Project Overview, Layout, Tech Stack, Code Conventions,
    Common Commands) from what the repo actually is — detect the language/build/test/lint tooling from
    the manifest (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, …) rather than guessing.
 4. Seed `docs/architecture.md` from any existing design notes the repo already has; otherwise leave the
    sectioned stub.
-5. Wire `spec-lint` into CI. If the repo already has a CI workflow, add the spec-lint step there too (or
-   keep the standalone `spec-lint.yml` — either is fine, but it must run on PRs).
+5. Wire `spec-lint` and `docs-lint` into CI. If the repo already has a CI workflow, add both steps there
+   too (or keep the standalone `spec-lint.yml` / `docs-lint.yml` — either is fine, but they must run on
+   PRs). Then **re-ratchet all three budgets in `scripts/docs-lint.sh`** — `CLAUDE_MAX_BYTES`,
+   `DIGEST_MAX_BYTES` and `DELIVERY_MAX_LINES` — to what this repo actually measures. The shipped
+   defaults are sized for a scaffold whose `CLAUDE.md` is placeholders and whose `docs/spec-delivery/`
+   is empty, and a budget far above the measurement never fires.
 6. **Set up language CI (GitHub Actions).** Ask the user *once* what the repo's CI needs — which
    languages/runtimes, and the install / format-check / lint / typecheck / test commands (default to
    `CLAUDE.md` → Common Commands). From `.github/workflows/ci.yml.example`, produce a real
@@ -50,9 +55,12 @@ When a repo has no spec-driven docs yet:
    commands, run on PR + push to `main`, then delete the `.example`. 🔴 Never leave placeholder commands
    that would fail — if a check doesn't apply, drop it. This makes "land on green CI" cover the language
    gates, not just spec-lint.
-7. Run `sh scripts/spec-lint.sh` to confirm it passes (it no-ops cleanly when there are no specs yet).
+7. Run `sh scripts/spec-lint.sh` and `sh scripts/docs-lint.sh` to confirm both pass (each no-ops or
+   passes cleanly on a fresh scaffold).
 
-Keep the always-loaded tier (`CLAUDE.md`) lean — it must not regrow into a wall of prose.
+Keep the always-loaded tier (`CLAUDE.md`) lean — it must not regrow into a wall of prose. `docs-lint.sh`
+now enforces that rather than asking you to remember it: prose alone lost this fight for eight weeks
+in a project running this template, while that project's own docs named the violation throughout.
 
 ## 1. Author a spec
 
@@ -215,3 +223,17 @@ section (`## Overview`, `## Scope`, `## Functional Requirements`, `## Implementa
 containing an `Open Questions` / `Checkpoint` heading. **WARN** (exit 0): unfilled placeholders, a
 spec with FRs but no acceptance criteria anywhere in it, and a spec carrying more than
 `FR_CEILING` (8) distinct FRs. POSIX `sh` — no runtime dependency.
+
+## docs-lint reference
+
+`scripts/docs-lint.sh` (no arguments; resolves its own repo root). **FAIL** (exit 1), no WARN tier:
+`CLAUDE.md` over `CLAUDE_MAX_BYTES`; a Key Decisions unit over `DIGEST_MAX_BYTES` — a bullet with its
+continuation lines joined, or a prose paragraph, since keying only on bullets let the section be
+rewritten as prose to escape both this cap and the register cross-check; `docs/decisions.md` missing; a digest label with no `###` entry or an entry
+with no digest label; an entry absent from that file's Contents; a `Status: Completed` spec with no
+`docs/spec-delivery/SPEC-NNN-*.md`; a delivery doc over `DELIVERY_MAX_LINES`; a relative link or `@`
+pointer in `CLAUDE.md` that resolves to nothing. Entries labelled `(example)` are exempt, so a fresh
+scaffold is green. **`scripts/docs-lint-test.sh` is its fixture corpus — run it after any change to
+`docs-lint.sh`.** The linter passing against your own docs says nothing about whether its checks
+work; the corpus is what says that. The budgets are **ratchets**: when one fires, cut and re-ratchet at the new
+measurement — never raise it to fit the edit. POSIX `sh` — no runtime dependency.

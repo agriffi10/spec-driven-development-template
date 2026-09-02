@@ -1,0 +1,34 @@
+@@@ expect exit=1
+@@@ match a bullet before the first `### ` area heading
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+Intro.
+
+- **Ghost rule** — a decision hiding in the intro.
+
+### Area one
+
+- **Alpha rule** — short claim and its fence.
+
+## Out of Scope
+
+nothing
+
+@@@ file docs/decisions.md
+# Key Decisions — full register
+
+## Contents
+
+- [Alpha rule](#alpha-rule)
+
+---
+
+## Area one
+
+### Alpha rule
+
+Reasoning.
+

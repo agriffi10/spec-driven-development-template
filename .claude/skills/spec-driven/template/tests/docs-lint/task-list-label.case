@@ -1,0 +1,30 @@
+@@@ expect exit=1
+@@@ match a bullet that does not open with a **bold label**
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+One line each; the full entry lives in the register.
+
+### Area one
+
+- [ ] **Never restart** — fence.
+
+## Out of Scope
+
+nothing
+
+@@@ file docs/decisions.md
+# Key Decisions — full register
+
+## Contents
+
+
+
+---
+
+## Area one
+
+
+

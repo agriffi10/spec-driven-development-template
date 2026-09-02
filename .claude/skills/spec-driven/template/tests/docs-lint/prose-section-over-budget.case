@@ -1,0 +1,30 @@
+@@@ expect exit=1
+@@@ match The Key Decisions section is
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+One line each; the full entry lives in the register.
+
+### Area one
+
+We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. 
+
+## Out of Scope
+
+nothing
+
+@@@ file docs/decisions.md
+# Key Decisions — full register
+
+## Contents
+
+
+
+---
+
+## Area one
+
+
+

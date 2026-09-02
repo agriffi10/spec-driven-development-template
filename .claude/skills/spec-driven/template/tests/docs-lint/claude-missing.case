@@ -1,0 +1,17 @@
+@@@ expect exit=1
+@@@ match does not exist, but docs/ is scaffolded
+@@@ file docs/decisions.md
+# Key Decisions — full register
+
+## Contents
+
+- [Alpha rule](#alpha-rule)
+
+---
+
+## Area one
+
+### Alpha rule
+
+Reasoning.
+

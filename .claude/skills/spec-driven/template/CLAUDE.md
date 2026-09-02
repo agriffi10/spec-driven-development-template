@@ -41,6 +41,9 @@ expectations. Keep to what an implementer must not violate.]
 # test
 # lint / typecheck
 # spec-lint:  sh scripts/spec-lint.sh
+# docs-lint:  sh scripts/docs-lint.sh
+# docs-lint tests: sh scripts/docs-lint-test.sh
+# docs-lint tests: sh scripts/docs-lint-test.sh
 ```
 
 ## Specs
@@ -55,7 +58,15 @@ Index + status: `@docs/specs/INDEX.md`. Each spec file's header carries its own 
 One line each — a digest of the full entry in `@docs/decisions.md`; read the entry before working in
 that area. A line here is **never the only home of a fact**, and never a paragraph.
 
-- [One line per settled decision, bold label matching its `decisions.md` heading.]
+**Grouped by AREA, not by spec.** `scripts/docs-lint.sh` holds this section to that shape: an
+`### ` area heading, `- **Label** — …` bullets at column 0, indented continuations, blank lines,
+and plain prose here in the intro. A table, blockquote, fenced block, ordered list or bare bullet
+is refused — each one was a way past the checks. Rename the area below and replace the example.
+
+### (example) Area name
+
+- **(example) Decision label** — the claim and its fence in one line, matching the `###` heading of
+  its full entry in `@docs/decisions.md`. Delete this once the first real decision lands.
 
 ## Out of Scope (don't build)
 
@@ -71,18 +82,22 @@ that area. A line here is **never the only home of a fact**, and never a paragra
 
 **Review — three artifacts, one blocking gate:** a **spec**, an implementation **plan** and a **diff** each go to a reviewer in a **fresh context** (new session or subagent), never the context that produced them. **Counts: one on the spec, one on the plan, two on the diff** — two *frames*, not two rounds, both before the push; the diff gets two because it is the widest artifact and the last one before the branch is public, one frame reading it against the spec's criteria + `best-practices/` and the other starting from the **system** rather than the diff. Both counts are **floors**, and they work differently: on a **diff**, a clean first review does *not* close the gate ("never exit on a round count" says when to stop *above* two, never below it); on a **spec or plan**, one clean review *does* close it, and what makes one a floor is that a revised artifact re-enters the gate as a new one. A spec is not Draft-ready, a plan does not start code, and **a branch does not reach the remote**, until every finding is either **fixed** or **flagged** — a rejection costs a sentence out loud, and only goes in writing when it carries a lesson worth keeping. **The diff review gates the PUSH, not the merge**, because **green CI is not a review**: it cannot see a test that passes against the bug it claims to catch, a lock taken in the wrong order, or an acceptance criterion ticked with no evidence. Cap same-frame rounds at two, then rotate the frame; exit on the *class* of finding shrinking, never on a round count. Brief the reviewer that "this is sound" is a valid verdict, make it cite where it looked, and tell round N+1 what round N fixed. On a code diff, one of the two must **build** the thing, not read it — and every reviewer runs the repo's gates against the branch. When the risk is what a change *removed*, enumerate the population with a sweep instead of reviewing a sample. Full contract: `@docs/process.md` §3 → *The reviewer contract*.
 
-**PRs & main:** before pushing, get the diff through the review gate above, and get the formatter, linter, typecheck and unit tests green locally. Watch every PR to completion and merge it as soon as CI is green — never open-and-abandon. **Key the watch on the current head sha** — a bare `gh pr checks --watch` can exit clean against the *previous* commit's checks. `main` is always watched: after any merge confirm it went green, and if `main` fails, diagnose immediately and fix it with a new PR before anything else. **When several agent sessions share this repo**, install `scripts/pr-queue/install.sh` once and the remote is serialised by a PR queue — one PR open at a time, taken in the order agents asked, `main` green before the next — and you get in line only once your gates and reviews are green, because the queue is not a review. Until it is installed the queue is inert. Protocol and the four commands: `scripts/pr-queue/PROTOCOL.md`; brief each session from `@docs/templates/multi-agent-briefing.md`.
+**PRs & main:** before pushing, get the diff through the review gate above, and get the formatter, linter, typecheck and unit tests green locally, plus `sh scripts/spec-lint.sh`, `sh scripts/docs-lint.sh` and `sh scripts/docs-lint-test.sh`. Watch every PR to completion and merge it as soon as CI is green — never open-and-abandon. **Key the watch on the current head sha** — a bare `gh pr checks --watch` can exit clean against the *previous* commit's checks. `main` is always watched: after any merge confirm it went green, and if `main` fails, diagnose immediately and fix it with a new PR before anything else. **When several agent sessions share this repo**, install `scripts/pr-queue/install.sh` once and the remote is serialised by a PR queue — one PR open at a time, taken in the order agents asked, `main` green before the next — and you get in line only once your gates and reviews are green, because the queue is not a review. Until it is installed the queue is inert. Protocol and the four commands: `scripts/pr-queue/PROTOCOL.md`; brief each session from `@docs/templates/multi-agent-briefing.md`.
 
 **On spec completion — keep the always-loaded files lean:**
 1. Set the spec file's `Status: Completed`.
 2. Update the one-line row in `@docs/specs/INDEX.md` (status only — don't add prose).
 3. Write a short delivery doc at `docs/spec-delivery/SPEC-XXX-<name>.md` from the template.
 4. If it added reusable modules/services/components, add a one-line row to `@docs/component-inventory.md`.
-5. A *new architectural decision* gets its full entry in `docs/decisions.md` **first**, then one line in Key Decisions above — the line is never the only home of a fact, and never a paragraph. If it supersedes an earlier decision, add an in-place superseded marker at every doc site still stating the old claim.
+5. A *new architectural decision* gets its full entry in `docs/decisions.md` **first, plus a row in that file's `## Contents`** (docs-lint fails an entry the Contents does not reach), then one line in Key Decisions above — the line is never the only home of a fact, and never a paragraph. If it supersedes an earlier decision, add an in-place superseded marker at every doc site still stating the old claim — and if the reversal changes the entry's **heading**, move its Contents row and its digest label with it, or the row points at a dead anchor and docs-lint fails.
 6. If it changed the **shape** of the system — a piece added or removed, a boundary moved, a mechanism swapped — add an append-only row to `@docs/architecture.md` → *Architecture Decision Record* and fix the prose section it contradicts. Most decisions do not qualify.
 
 **Doc-size guardrail:** this is the always-loaded file — if an edit pushes a section past a few lines,
 the detail belongs in a `docs/` file behind a pointer. Same for `INDEX.md` (status rows only) and the
 component inventory. **Key Decisions is grouped by AREA and carries fences, not history** — it is not
 a per-spec changelog, and `## Specs` is not one either; both regrow by being appended to, one
-completion at a time. Full rule set: `@docs/process.md` §5 → *Anti-regrowth & doc hygiene*.
+completion at a time. **`scripts/docs-lint.sh` enforces this on every PR** — the byte budget,
+the digest line cap, and the rule that every Key Decisions line has a full entry behind it in
+`@docs/decisions.md`. The budget is a **ratchet**: when it fires, cut and re-ratchet at the new
+measurement — never raise it to fit the edit in hand. Full rule set: `@docs/process.md` §5 →
+*Anti-regrowth & doc hygiene*.

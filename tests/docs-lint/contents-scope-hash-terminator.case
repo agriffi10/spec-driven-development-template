@@ -1,0 +1,33 @@
+@@@ expect exit=1
+@@@ match absent from the Contents
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+Intro.
+
+### Area one
+
+- **Alpha rule** — short claim.
+- **Beta rule** — short claim.
+
+## Out of Scope
+
+x
+@@@ file docs/decisions.md
+# Register
+
+## Contents
+
+- [Alpha rule](#alpha-rule)
+
+## Area one
+
+### Alpha rule
+
+See also [Beta rule](#beta-rule) — linked here, absent from the Contents.
+
+### Beta rule
+
+R.
