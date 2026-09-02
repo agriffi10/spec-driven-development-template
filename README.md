@@ -147,8 +147,8 @@ phrased as "passes on a green run." It can't be ticked honestly while the branch
 it's named under **Owed** in the pull request instead. Owed items block the merge, not the push.
 
 **CI (continuous integration).** GitHub Actions runs checks automatically on every pull request. This
-template ships spec-lint and a mirror check, and includes a template for your language's formatter,
-linter, type-checker, and tests.
+template ships spec-lint, docs-lint and a mirror check, and includes a template for your language's
+formatter, linter, type-checker, and tests.
 
 ## The workflow
 
@@ -378,6 +378,10 @@ sh scripts/spec-lint.sh
 ```
 
 ```bash
+sh scripts/docs-lint.sh
+```
+
+```bash
 sh scripts/sync-from-skill.sh
 ```
 
@@ -385,8 +389,10 @@ sh scripts/sync-from-skill.sh
 sh scripts/check-mirror.sh
 ```
 
-`spec-lint.sh` checks every spec in `docs/specs` (pass a different directory as an argument). The
-other two are maintenance scripts for *this* template repository, explained under
+`spec-lint.sh` checks every spec in `docs/specs` (pass a different directory as an argument).
+`docs-lint.sh` checks the always-loaded tier: `CLAUDE.md`'s size, the length of each Key Decisions
+line, and the rule that the digest and `docs/decisions.md` are two halves of one thing rather than
+one file doing both jobs. The last two are maintenance scripts for *this* template repository, explained under
 [Why the scaffold exists in two places](#why-the-scaffold-exists-in-two-places); projects created
 from the template don't need them.
 
@@ -411,6 +417,7 @@ from the template don't need them.
 | `docs/templates/spec-completion-template.md` | The blank a delivery note is written from. | You + Claude |
 | `docs/templates/multi-agent-briefing.md` | The blank a launch briefing is written from, when several agents run at once. One per session. | You + Claude |
 | `scripts/spec-lint.sh` | **POSIX** shell linter. Fails a spec that's missing a required section or contains an "Open Questions"/"Checkpoint" heading; warns on unfilled placeholders, on requirements with no acceptance criteria anywhere in the file, and on a spec carrying more than eight requirements. No dependencies. | CI + you + Claude |
+| `scripts/docs-lint.sh` | **POSIX** shell linter for the always-loaded tier. Fails when `CLAUDE.md` is over its byte budget, a Key Decisions line has grown into an essay, `docs/decisions.md` is missing or has stopped matching the digest one-for-one, an entry is missing from that file's Contents, a Completed spec has no delivery doc, a delivery doc has become an essay, or a pointer out of `CLAUDE.md` goes nowhere. No dependencies. | CI + you + Claude |
 | `scripts/pr-queue/queue.sh` | The **PR queue**: a lock and a first-come-first-served line that keeps one pull request open at a time when several agents share the repo. Runs from outside the repo — `install.sh` puts it there. | Claude (multi-agent runs) |
 | `scripts/pr-queue/pre-push` | The git hook that makes the queue binding rather than advisory. Refuses a push from a participating branch that doesn't hold the lock, and allows everything else. | Git |
 | `scripts/pr-queue/install.sh` | One-time setup for a multi-agent run: places the queue outside the repo and installs the hook wrapper. | You + Claude |
@@ -418,6 +425,7 @@ from the template don't need them.
 | `scripts/sync-from-skill.sh` | Maintenance for **this template repo only** — regenerates the root scaffold from the skill's canonical copy. Delete it in a derived project. | Maintainers of this template |
 | `scripts/check-mirror.sh` | Maintenance for **this template repo only** — fails if the root scaffold has drifted from the canonical copy, in either direction. Delete it in a derived project, where customizing `CLAUDE.md` makes it fail by design. | CI + maintainers |
 | `.github/workflows/spec-lint.yml` | Runs spec-lint on pushes to `main`, and on pull requests that touch `docs/specs/`, the lint script, or the workflow itself. | CI |
+| `.github/workflows/docs-lint.yml` | Runs docs-lint on every pull request and push to `main`. Deliberately not path-filtered, for the same reason as the mirror check: the growth it exists to catch arrives in whichever doc nobody thought to list. | CI |
 | `.github/workflows/check-mirror.yml` | Runs the mirror check on every pull request and push to `main`, in **this template repo only**. Deliberately not path-filtered — the failure it exists to catch is a change in a path nobody thought to list. Delete it in a derived project. | CI |
 | `.github/workflows/ci.yml.example` | **Inert** template for your language's formatter, linter, type-checker and tests (Node and Python jobs included). The `.example` extension means GitHub never runs it; you turn it into a real `ci.yml` at setup. | CI (once you fill it in) |
 | `.github/pull_request_template.md` | PR checklist restating the rules: maps to the plan, no new open questions, **both framed pre-push reviews done**, gates green, owed criteria named, watch to green. | You + Claude |
@@ -464,8 +472,8 @@ and the repository served a stale scaffold for weeks, because nothing was checki
 
 > ⚠️ **The CI jobs are not yet *required* status checks on `main`**, so a red run doesn't currently
 > block a merge — the `main` ruleset has no `required_status_checks` rule. To make them binding, add
-> `check-mirror` and `spec-lint` under Settings → Rules → the `main` ruleset → *Require status checks
-> to pass*.
+> `check-mirror`, `spec-lint` and `docs-lint` under Settings → Rules → the `main` ruleset → *Require
+> status checks to pass*.
 
 ## Where each guardrail is enforced
 
@@ -486,7 +494,7 @@ which is which tells you what breaks silently if you skip a step.
 | Formatter, linter, type-checker and tests green **before** a push | `process.md` + `CLAUDE.md` + PR template |
 | Every PR watched and merged on green; `main` watched; red `main` fixed first | `process.md` + `CLAUDE.md` + PR template |
 | Domain code follows the right rulebook, loading only what's needed | `best-practices/INDEX.md` + `process.md` |
-| The always-loaded tier stays lean | the completion ritual in `process.md` |
+| The always-loaded tier stays lean — budget, digest line length, a register behind every digest line | `docs-lint.sh` (CI) + the completion ritual in `process.md` |
 | One pull request open at a time when several agents share the repo | `scripts/pr-queue/` (the `pre-push` hook) |
 | The root scaffold matches the skill's canonical copy | `check-mirror.sh` (CI) |
 | Your language's own quality gates | the `ci.yml` you create from `ci.yml.example` |
@@ -560,8 +568,18 @@ project still carries the bundled payload copy, and the script's `cp -R` would o
 customized `CLAUDE.md`, `docs/` and `.github/` with the blank template versions, then report success.
 
 **CI is green but nothing was really checked.** Until you turn `ci.yml.example` into a real `ci.yml`,
-the only check running in your project is spec-lint, which knows nothing about your code. (In this
-template repository itself, the mirror check runs too — it also knows nothing about your code.)
+the only checks running in your project are spec-lint and docs-lint, which know about your documents
+and nothing about your code. (In this template repository itself, the mirror check runs too — it also
+knows nothing about your code.)
+
+**docs-lint fails on `CLAUDE.md` being over budget.** The fix is a cut, not a bigger number: move the
+detail into `docs/` behind a pointer, then re-set `CLAUDE_MAX_BYTES` in `scripts/docs-lint.sh` to what
+the file measures afterwards. Raising the cap to admit the edit in hand is exactly the failure the
+budget exists to catch, and it is how a sibling project's always-loaded file reached 87 KB.
+
+**docs-lint says a Key Decisions line has no entry in `docs/decisions.md`.** Write the full entry
+first, then leave the one-line digest pointing at it. A digest line that is the only home of a fact
+has quietly turned the always-loaded file into the archive.
 
 **A push was refused with "PUSH REFUSED — you do not hold the PR queue lock".** The PR queue is
 installed and that branch is in a multi-agent run, so it has to take its turn: `queue.sh ticket`,

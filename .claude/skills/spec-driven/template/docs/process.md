@@ -546,6 +546,18 @@ this way):
   full-file read.
 - **Live findings and obligations never live in historical or cancelled narrative** — rehome them to
   an active register and leave a pointer behind.
+- **`scripts/docs-lint.sh` enforces the structural half of these rules, and runs on every PR**
+  (`.github/workflows/docs-lint.yml`). It holds `CLAUDE.md` to a byte budget and each Key Decisions
+  bullet to a length; requires `docs/decisions.md` to exist, to carry a `###` entry for every digest
+  line and a digest line for every entry, and to list every entry in its Contents; requires every
+  Completed spec to have a delivery doc and holds each to a line cap; and checks that the pointers
+  out of `CLAUDE.md` resolve. **The budgets are ratchets at the measured level** — when one fires,
+  move detail down a tier and re-ratchet, rather than raising the cap to admit the edit.
+  *Why a script and not this paragraph:* every rule in this section already existed here, and a
+  sibling project running this template violated all of them anyway — its `CLAUDE.md` went from
+  7,583 bytes on 2026-07-09 to 87,392 on 2026-09-01, monotonically, while this very section named
+  the violation in the present tense throughout. A rule a reader has to remember is a rule that
+  rots.
 
 ---
 
