@@ -59,8 +59,9 @@ When a repo has no spec-driven docs yet:
    passes cleanly on a fresh scaffold).
 
 Keep the always-loaded tier (`CLAUDE.md`) lean — it must not regrow into a wall of prose. `docs-lint.sh`
-now enforces that rather than asking you to remember it: prose alone lost this fight for eight weeks
-in a project running this template, while that project's own docs named the violation throughout.
+now enforces that rather than asking you to remember it. In a project that ran this template the
+always-loaded file grew more than tenfold: first under a rule too weak to bind, then — once the
+full rule set arrived and named the violation correctly — for two more days regardless.
 
 ## 1. Author a spec
 
@@ -130,7 +131,7 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
    **change** and reads it against what it must satisfy; the other starts from **something other
    than the change** — on code, a pass that *builds* the thing and runs the suites; on a docs- or
    spec-only diff, the other places the same rule is stated. Two frames, not two rounds, and two is
-   the floor rather than the cap (step 8) — a clean first review does not close a **diff** gate,
+   the floor rather than the cap (step 9) — a clean first review does not close a **diff** gate,
    though it does close a spec's or a plan's. A self-reviewing agent rubber-stamps its own work, and
    pushing first inverts the gate: the branch is already public and the fixes arrive as follow-up
    commits. **Green CI is not a review** — it cannot see a test that passes against the bug it claims

@@ -291,9 +291,10 @@ So the loop rotates the frame instead of adding rounds:
   assert **silence** — a corpus of only-failures cannot see a false positive, and false positives are
   a large share of what a gate gets wrong. Prove the corpus bites by defeating each check in turn and watching it redden.
   Measured: a doc linter took four rounds of fixes, three of which each opened a fresh escape while
-  closing the previous one, and every one was found by a reviewer rather than by CI — because the
-  only thing CI ran was the linter against documents that happened to pass. Nothing reached `main`;
-  the point is that nothing would have stopped it if the branch had merged a round earlier.
+  closing the previous one, and **not one was caught by CI** — the only thing CI ran was the linter
+  against documents that happened to pass. Reviewers found most; the author found two mid-build; and
+  the fixture corpus found two the moment it existed, which is the argument for it. Nothing reached
+  `main`, because the branch happened not to merge in between.
 - **One fixture per guard is not enough when the guard has more than one exit.** A check with two
   terminating conditions is satisfied by a fixture exercising either, so the mutant that breaks the
   other survives with the suite green. Count the ways a check can stop, and write that many cases.
@@ -606,11 +607,17 @@ this way):
   budgets are deliberately loose for that reason — it ships a scaffold, and `scripts/docs-lint.sh`
   says so where they are set.
   *Why a script and not this paragraph:* every rule in this section already existed here, and the
-  sibling project `log-forge` violated all of them anyway — its `CLAUDE.md` grew more than tenfold
-  over eight weeks while that repo's own copy of this section named the violation in the present
-  tense throughout. The measurements are in its history at `e60b60d`,
-  anchored there rather than restated here, per the volatile-number rule above. A rule a reader has
-  to remember is a rule that rots.
+  sibling project `log-forge` violated several of them anyway — and its history says something
+  sharper than "a rule was ignored". Its `CLAUDE.md` grew from 7,350 bytes at `ad898fc8` to 89,340
+  at `e60b60d`, more than tenfold. For most of that it had only a **two-sentence** version of this
+  section — "don't add prose to the always-loaded tier", naming no shape, no register and no budget:
+  a rule too weak to bind. The full set arrived at `690d2a55`, ported from s3-upload-portal, naming
+  the violation in the present tense and naming it correctly; the file was already 67,925 bytes by
+  then, and grew a further fifth before anyone cut it. **Both halves fail without a gate**: the weak
+  rule could not bind, and the right rule, diagnosing itself accurately in the file every session
+  reads, did not stop the next edit either. Both ends of each measurement are anchored to a commit
+  so a reader can re-derive them, per the volatile-number rule above. A rule a reader has to
+  remember is a rule that rots.
 
 ---
 

@@ -4,12 +4,14 @@
 # Why this exists as a script rather than a rule. Every check below already existed in
 # prose — in `docs/process.md` §5 (*Anti-regrowth & doc hygiene*), in `CLAUDE.md`'s own
 # doc-size guardrail, and in `docs/decisions.md`'s rules header — and in the sibling
-# project this template was extracted from (`log-forge`, published as `log-foundry`),
-# every one of them was violated anyway. That repo's `CLAUDE.md` went from 7,583 bytes
-# on 2026-07-09 to 89,340 on 2026-09-02 — monotonically, not one commit reducing it —
-# while its own `process.md` named the violation in the present tense throughout and its
-# `CLAUDE.md` repeated the confession. It was cut back to 29,515 on 2026-09-02, in the
-# same change that first ran this script against it.
+# project `log-forge` (published as `log-foundry`) several were violated anyway. Its
+# `CLAUDE.md` grew from 7,350 bytes at `ad898fc8` to 89,340 at `e60b60d`, more than
+# tenfold — most of it while that repo carried only a TWO-SENTENCE version of the rule,
+# naming no shape, no register and no budget. The full set landed two days before the cut
+# and did not stop the next edit either. It was cut back to a digest over its register in
+# the change that first ran this script there. Both ends are anchored to commits rather
+# than restated: an earlier version of this comment carried three numbers, and two of them
+# were wrong by the time it shipped.
 #
 # A rule a reader has to remember is a rule that rots. This is the same rules where CI
 # can see them.
