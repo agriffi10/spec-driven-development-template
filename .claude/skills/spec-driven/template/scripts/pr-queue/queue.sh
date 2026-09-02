@@ -53,9 +53,11 @@ note()  { printf '%s %s\n' "$(now)" "$*" >> "$LOG"; }
 ticket_age() { if [ -f "$1/alive" ]; then age "$1/alive"; else age "$1"; fi; }
 
 # --- the two remote checks -------------------------------------------------------------------
-# Both are overridable: drop an executable named `open-prs` or `main-green` in the queue
-# directory and it is used instead of the gh default below. That is the seam for a project whose
-# CI is not GitHub Actions, or whose repo is not on GitHub at all.
+# All three are overridable: drop an executable named `open-prs`, `all-prs` or `main-green` in the
+# queue directory and it is used instead of the gh default below. That is the seam for a project
+# whose CI is not GitHub Actions, or whose repo is not on GitHub at all. NOTE that `open-prs` must
+# exclude drafts — an override written before drafts were exempted reinstates draft-blocking, and
+# nothing here can detect that, because an override is opaque by design.
 #
 # open_prs   prints the open NON-DRAFT PRs (empty output = none). Non-zero exit means THE
 #            CHECK ITSELF failed — an unreadable remote is never "the remote is clear", so
@@ -88,6 +90,12 @@ all_prs() {
   local out
   if [ -x "$Q/all-prs" ]; then
     out="$("$Q/all-prs")" || return 1
+  elif [ -x "$Q/open-prs" ]; then
+    # A gh-less install that predates this function wrote only `open-prs`. Fall back to it
+    # rather than reaching for a `gh` that is not there: drafts go unlisted in `status`, which
+    # is a smaller loss than a permanently broken `status` and a stale-lock check that cannot
+    # read the remote at all.
+    out="$("$Q/open-prs")" || return 1
   else
     out="$( cd "$REPO" && gh pr list --state open --limit 20 \
               --json number,headRefName,title,isDraft \
@@ -175,8 +183,16 @@ reap() {
   [ "$lock_age" -gt "$STALE_LOCK" ] || return 0
   # Age alone is not enough to break a lock: a long PR is not a dead one. Only a holder whose
   # work has demonstrably stopped may be broken, and a check that could not run proves nothing.
+  #
+  # ALL_PRS, NOT OPEN_PRS — the two questions are different and only one of them ignores
+  # drafts. Gating a waiter asks "is someone mid-turn", and a draft is explicitly not that.
+  # Breaking a lock asks "has this holder stopped", and an open draft is live evidence they
+  # have not: a holder who opens one would otherwise lose the protection they had, get their
+  # lock broken under them, and leave two PRs open at once — the invariant this queue exists
+  # for. Nothing refreshes the lock's mtime after acquire, so this check is the only thing
+  # standing between a slow holder and a broken lock.
   before=$(mtime "$LOCK")
-  prs="$(open_prs)" || return 0
+  prs="$(all_prs)" || return 0
   [ -z "$prs" ] || return 0
   main_green || return 0
   # Those checks take seconds, and the lock can turn over inside them. Re-read before deleting:
@@ -184,7 +200,7 @@ reap() {
   after=$(mtime "$LOCK")
   [ "$before" = "$after" ] || return 0
   [ "$(age "$LOCK")" -gt "$STALE_LOCK" ] || return 0
-  note "BROKE STALE LOCK held by [$(holder_field spec)] — ${lock_age}s old, no open PR, main green"
+  note "BROKE STALE LOCK held by [$(holder_field spec)] — ${lock_age}s old, no open PR of any kind, main green"
   rm -f "$LOCK/holder" && rmdir "$LOCK"
 }
 
