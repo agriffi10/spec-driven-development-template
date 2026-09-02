@@ -553,7 +553,7 @@ this way):
   an active register and leave a pointer behind.
 - **`scripts/docs-lint.sh` enforces the structural half of these rules, and runs on every PR**
   (`.github/workflows/docs-lint.yml`). It holds `CLAUDE.md` to a byte budget and each Key Decisions
-  **unit** — a bullet with its continuations, or a prose paragraph — to a length; requires `docs/decisions.md` to exist, to carry a `###` entry for every digest
+  **unit** — a bullet with its continuations — to a length, and refuses any construct in that section but an area heading, a bullet, a continuation, a blank line and plain intro prose; requires `docs/decisions.md` to exist, to carry a `###` entry for every digest
   line and a digest line for every entry, and to list every entry in its Contents; requires every
   Completed spec to have a delivery doc, and holds every doc in `docs/spec-delivery/` to a line cap
   (not only those tied to a Completed spec); and checks that the pointers

@@ -58,7 +58,15 @@ Index + status: `@docs/specs/INDEX.md`. Each spec file's header carries its own 
 One line each — a digest of the full entry in `@docs/decisions.md`; read the entry before working in
 that area. A line here is **never the only home of a fact**, and never a paragraph.
 
-- [One line per settled decision, bold label matching its `decisions.md` heading.]
+**Grouped by AREA, not by spec.** `scripts/docs-lint.sh` holds this section to that shape: an
+`### ` area heading, `- **Label** — …` bullets at column 0, indented continuations, blank lines,
+and plain prose here in the intro. A table, blockquote, fenced block, ordered list or bare bullet
+is refused — each one was a way past the checks. Rename the area below and replace the example.
+
+### (example) Area name
+
+- **(example) Decision label** — the claim and its fence in one line, matching the `###` heading of
+  its full entry in `@docs/decisions.md`. Delete this once the first real decision lands.
 
 ## Out of Scope (don't build)
 

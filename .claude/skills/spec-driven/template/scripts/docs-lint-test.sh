@@ -14,6 +14,11 @@
 # message. Cases named `*-ok.case` assert the linter stays SILENT: half of the
 # regressions were false positives, and a corpus of only-failures would have missed them.
 #
+# Directives are `@@@ `-prefixed, not `--- `: a fixture whose CONTENT began "--- " was
+# silently truncated at that line, so the construct it existed to test was not on disk and
+# the case passed for the wrong reason. A thematic break (bare `---`) is legitimate markdown
+# and every register fixture uses one.
+#
 # Usage: sh scripts/docs-lint-test.sh [case-name-substring]
 # POSIX sh — no dependencies.
 
@@ -43,10 +48,10 @@ for case_file in "$CASES"/*.case; do
   chmod +x "$WORK/scripts/docs-lint.sh"
 
   # Split the case into its expectations and its files.
-  want_exit=$(sed -n 's/^--- expect exit=//p' "$case_file")
+  want_exit=$(sed -n 's/^@@@ expect exit=//p' "$case_file")
   awk -v work="$WORK" '
-    /^--- file / { path = work "/" substr($0, 10); system("mkdir -p $(dirname \"" path "\")"); out = path; next }
-    /^--- / { out = ""; next }
+    /^@@@ file / { path = work "/" substr($0, 10); system("mkdir -p $(dirname \"" path "\")"); out = path; next }
+    /^@@@ / { out = ""; next }
     out { print >> out }
   ' "$case_file"
 
@@ -54,7 +59,7 @@ for case_file in "$CASES"/*.case; do
   ok=1
   [ "$rc" = "${want_exit:-0}" ] || { ok=0; why="exit $rc, wanted ${want_exit:-0}"; }
   if [ "$ok" = 1 ]; then
-    sed -n 's/^--- match //p' "$case_file" | while IFS= read -r m; do
+    sed -n 's/^@@@ match //p' "$case_file" | while IFS= read -r m; do
       [ -n "$m" ] || continue
       case "$got" in *"$m"*) ;; *) echo "MISSING|$m" ;; esac
     done > "$WORK/.miss"

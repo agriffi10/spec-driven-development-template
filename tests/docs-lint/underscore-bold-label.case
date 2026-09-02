@@ -1,6 +1,6 @@
---- expect exit=1
---- match prose after the first area heading
---- file CLAUDE.md
+@@@ expect exit=1
+@@@ match prose after the first area heading
+@@@ file CLAUDE.md
 # Project
 
 ## Key Decisions
@@ -15,7 +15,7 @@ __Never restart__ — We decided after long deliberation that this must never be
 
 nothing
 
---- file docs/decisions.md
+@@@ file docs/decisions.md
 # Key Decisions — full register
 
 ## Contents

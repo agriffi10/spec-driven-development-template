@@ -1,8 +1,8 @@
---- expect exit=1
---- match is empty
---- file CLAUDE.md
+@@@ expect exit=1
+@@@ match is empty
+@@@ file CLAUDE.md
 
---- file docs/decisions.md
+@@@ file docs/decisions.md
 # Key Decisions — full register
 
 ## Contents

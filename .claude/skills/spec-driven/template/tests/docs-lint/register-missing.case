@@ -1,6 +1,6 @@
---- expect exit=1
---- match is missing
---- file CLAUDE.md
+@@@ expect exit=1
+@@@ match is missing
+@@@ file CLAUDE.md
 # Project
 
 ## Key Decisions

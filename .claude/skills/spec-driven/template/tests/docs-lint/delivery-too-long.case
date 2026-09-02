@@ -1,6 +1,6 @@
---- expect exit=1
---- match lines (cap 10)
---- file CLAUDE.md
+@@@ expect exit=1
+@@@ match lines (cap 10)
+@@@ file CLAUDE.md
 # Project
 
 ## Key Decisions
@@ -15,7 +15,7 @@ One line each; the full entry lives in the register.
 
 nothing
 
---- file docs/decisions.md
+@@@ file docs/decisions.md
 # Key Decisions — full register
 
 ## Contents
@@ -30,7 +30,7 @@ nothing
 
 Reasoning.
 
---- file docs/spec-delivery/SPEC-001-x.md
+@@@ file docs/spec-delivery/SPEC-001-x.md
 line
 line
 line

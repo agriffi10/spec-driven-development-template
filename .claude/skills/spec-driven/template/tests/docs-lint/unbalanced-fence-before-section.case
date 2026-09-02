@@ -1,0 +1,36 @@
+@@@ expect exit=1
+@@@ match No `## Key Decisions` section found
+@@@ file CLAUDE.md
+# Project
+
+An example someone forgot to close:
+
+```
+
+## Key Decisions
+
+### Area one
+
+- **Alpha rule** — short claim and its fence.
+
+| a | b |
+
+## Out of Scope
+
+x
+
+@@@ file docs/decisions.md
+# Key Decisions — full register
+
+## Contents
+
+- [Alpha rule](#alpha-rule)
+
+---
+
+## Area one
+
+### Alpha rule
+
+Reasoning.
+

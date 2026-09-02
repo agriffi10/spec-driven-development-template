@@ -1,5 +1,5 @@
---- expect exit=0
---- file CLAUDE.md
+@@@ expect exit=0
+@@@ file CLAUDE.md
 # Project
 
 ## Key Decisions
@@ -14,7 +14,7 @@ One line each; the full entry lives in the register.
 
 nothing
 
---- file docs/decisions.md
+@@@ file docs/decisions.md
 # Key Decisions — full register
 
 ## Contents

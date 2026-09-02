@@ -17,6 +17,9 @@ Rules that keep this file useful (each earned by a real failure in a project run
   The new entry alone is not enough; a reader who lands only on the old site must see the reversal.
 - **Date-stamp user decisions** (YYYY-MM-DD) so "settled" has a when.
 
+One constraint the shape imposes: `## Key Decisions` cannot carry a fenced block, so an example of
+the digest format belongs in another section of `CLAUDE.md`, not inside the digest itself.
+
 `scripts/docs-lint.sh` checks the first two mechanically on every PR: this file must exist, every
 `CLAUDE.md` digest label must have a `###` entry here and every entry a digest label, and every entry
 must appear in the Contents. The `(example)` entry below is exempt, so a fresh scaffold is green

@@ -1,0 +1,30 @@
+@@@ expect exit=1
+@@@ match No `## Key Decisions` section found
+@@@ file CLAUDE.md
+# Project
+
+## Key decisions
+
+### Area one
+
+- **Alpha rule** — short claim and its fence.
+
+## Out of Scope
+
+x
+
+@@@ file docs/decisions.md
+# Key Decisions — full register
+
+## Contents
+
+- [Alpha rule](#alpha-rule)
+
+---
+
+## Area one
+
+### Alpha rule
+
+Reasoning.
+

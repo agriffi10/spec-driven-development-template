@@ -1,0 +1,34 @@
+@@@ expect exit=1
+@@@ match raw HTML in the intro
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+Intro.
+
+<details><summary>Reasoning</summary>hidden</details>
+
+### Area one
+
+- **Alpha rule** — short claim and its fence.
+
+## Out of Scope
+
+nothing
+
+@@@ file docs/decisions.md
+# Key Decisions — full register
+
+## Contents
+
+- [Alpha rule](#alpha-rule)
+
+---
+
+## Area one
+
+### Alpha rule
+
+Reasoning.
+

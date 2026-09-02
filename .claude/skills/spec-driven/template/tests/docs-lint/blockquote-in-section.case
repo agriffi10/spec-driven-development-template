@@ -1,6 +1,6 @@
---- expect exit=1
---- match a table or blockquote row
---- file CLAUDE.md
+@@@ expect exit=1
+@@@ match a table or blockquote row
+@@@ file CLAUDE.md
 # Project
 
 ## Key Decisions
@@ -18,7 +18,7 @@ We decided after long deliberation that this must never be done, because the alt
 
 nothing
 
---- file docs/decisions.md
+@@@ file docs/decisions.md
 # Key Decisions — full register
 
 ## Contents

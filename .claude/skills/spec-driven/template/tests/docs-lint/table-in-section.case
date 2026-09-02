@@ -1,6 +1,6 @@
---- expect exit=1
---- match a table or blockquote row
---- file CLAUDE.md
+@@@ expect exit=1
+@@@ match a table or blockquote row
+@@@ file CLAUDE.md
 # Project
 
 ## Key Decisions
@@ -17,7 +17,7 @@ One line each; the full entry lives in the register.
 
 nothing
 
---- file docs/decisions.md
+@@@ file docs/decisions.md
 # Key Decisions — full register
 
 ## Contents

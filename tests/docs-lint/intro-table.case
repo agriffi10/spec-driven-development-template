@@ -1,0 +1,36 @@
+@@@ expect exit=1
+@@@ match a table or blockquote row in the intro
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+Intro.
+
+| decision | rationale |
+| - | - |
+| never buffer | measured loss |
+
+### Area one
+
+- **Alpha rule** — short claim and its fence.
+
+## Out of Scope
+
+nothing
+
+@@@ file docs/decisions.md
+# Key Decisions — full register
+
+## Contents
+
+- [Alpha rule](#alpha-rule)
+
+---
+
+## Area one
+
+### Alpha rule
+
+Reasoning.
+

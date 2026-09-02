@@ -1,6 +1,6 @@
---- expect exit=1
---- match A Key Decisions bullet is
---- file CLAUDE.md
+@@@ expect exit=1
+@@@ match A Key Decisions bullet is
+@@@ file CLAUDE.md
 # Project
 
 ## Key Decisions
@@ -16,7 +16,7 @@ One line each; the full entry lives in the register.
 
 nothing
 
---- file docs/decisions.md
+@@@ file docs/decisions.md
 # Key Decisions — full register
 
 ## Contents

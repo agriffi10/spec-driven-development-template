@@ -36,6 +36,13 @@
 
 set -eu
 
+# Both byte budgets rely on awk length() counting BYTES. It does in the one-true-awk
+# that ships on macOS, but gawk in a UTF-8 locale counts CHARACTERS — every em dash in a
+# digest would then count 1 instead of 3, so the caps would measure something different
+# in CI than they do locally. C locale makes it bytes everywhere.
+LC_ALL=C
+export LC_ALL
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
@@ -65,10 +72,6 @@ KEY_DECISIONS_MAX_BYTES=12000
 # the physical line looks equivalent and is not: the moment the section is rewritten as
 # wrapped prose the longest physical line collapses to the wrap width, and the guard can
 # never fire again while still being advertised in process.md.
-#
-# A PROSE PARAGRAPH COUNTS AS A UNIT, and that is the point. Keying only on "- " left
-# the section rewritable as prose to escape both this cap and the register cross-check
-# below — 6.8 KB of settled decisions with no register behind them passed green.
 #
 # BYTES, not characters: awk length() is byte-based in the one-true-awk that ships on
 # BSD and macOS, so em dashes and smart quotes count for more than one. Named for what
@@ -182,24 +185,48 @@ kd_report=$(awk -v ucap="$DIGEST_MAX_BYTES" -v scap="$KEY_DECISIONS_MAX_BYTES" -
     if (n > ucap)
       printf "FAIL  A Key Decisions bullet is %d bytes (cap %d): %s…\n      Keep the claim and the fence in the digest; the reasoning goes in %s.\n",
              n, ucap, substr(unit, 1, 70), reg
+    # A bullet whose ** never closes is a decision the register cross-check cannot see:
+    # it parses as a valid bullet and yields no label, so nothing demands an entry.
+    if (unit ~ /^- \*\*/ && !has_close(unit))
+      printf "FAIL  A Key Decisions bullet never closes its `**` label: %s…\n      An unclosed label yields no label at all, so nothing requires a register entry for it.\n",
+             substr(unit, 1, 70)
     unit = ""
   }
-  function bad(why) {
-    printf "FAIL  Key Decisions, line %d: %s\n      The section has a fixed shape — area headings, `- **Label**` bullets at column 0,\n      indented continuations, blank lines, and intro prose before the first heading.\n      Anything else is refused because every one of them was a way past this check.\n      Offending line: %s\n", FNR, why, substr($0, 1, 60)
+  function has_close(u,   s, i, j, k, p) {
+    s = u; sub(/^- \*\*/, "", s)
+    p = 1
+    while ((j = index(substr(s, p), "**")) > 0) {
+      k = p + j - 1
+      if (substr(s, k + 2, 1) != "*") return (k > 1)
+      p = k + 1
+    }
+    return 0
   }
-  # Fences are tracked over the WHOLE file, before the section test, so a fenced example
-  # of the digest format cannot open a phantom section. The file must be able to
-  # document its own format.
+  function bad(why) {
+    printf "FAIL  Key Decisions, line %d: %s\n      The section has a fixed shape — area headings, `- **Label**` bullets at column 0,\n      indented continuations, blank lines, and plain intro prose before the first heading.\n      Anything else is refused because every one of them was a way past this check.\n      Offending line: %s\n", FNR, why, substr($0, 1, 60)
+  }
+  # The section CLOSES on any level-2 heading, tested before the opener. Leaving the
+  # opener first meant a second `## Key Decisions — see also …` line was swallowed at
+  # zero cost while still inside the section: 14 KB of decisions measured as 51 bytes.
+  in_sec && /^## /    { flush(); in_sec = 0 }
+  # Fences are tracked file-wide so a fenced example cannot open a phantom section.
   /^[ \t]*(```|~~~)/ { if (in_sec) { bytes += length($0) + 1; bad("a fenced block") }
                       fence = !fence; next }
   fence               { if (in_sec) bytes += length($0) + 1; next }
-  /^## Key Decisions/ { in_sec = 1; next }
-  in_sec && /^## /    { flush(); in_sec = 0 }
+  !in_sec && /^## Key Decisions/ { if (!fence) { in_sec = 1; found = 1 } next }
   !in_sec             { next }
   { bytes += length($0) + 1 }
   /^###[ \t]/          { flush(); seen_area = 1; next }
   /^[ \t]*\r?$/       { flush(); next }
-  # Before the first area heading, the intro may be any prose.
+  # The intro, before the first area heading, may be PLAIN PROSE and nothing else. It
+  # was previously exempt from every rule, which made it a hole the size of the section
+  # budget — and the shipped scaffold had no area heading at all, so its whole section
+  # sat in that hole with every shape check switched off.
+  !seen_area && /^[|>]/            { bad("a table or blockquote row in the intro") ; next }
+  !seen_area && /^[0-9]+[.)][ \t]/ { bad("an ordered-list item in the intro") ; next }
+  !seen_area && /^[-*+][ \t]/      { bad("a bullet before the first `### ` area heading") ; next }
+  !seen_area && /^[ \t]+[^ \t]/    { bad("an indented line in the intro") ; next }
+  !seen_area && /^</                { bad("raw HTML in the intro") ; next }
   !seen_area          { next }
   /^- \*\*/            { flush(); unit = $0; next }
   /^- /               { bad("a bullet that does not open with a **bold label**") ; next }
@@ -211,6 +238,13 @@ kd_report=$(awk -v ucap="$DIGEST_MAX_BYTES" -v scap="$KEY_DECISIONS_MAX_BYTES" -
                       { bad("prose after the first area heading") ; next }
   END {
     flush()
+    # Nothing else in this file notices a section that is missing, misspelled, or hidden
+    # behind an unbalanced fence earlier in the document — and each of those turned every
+    # check above into a silent pass.
+    if (!found)
+      printf "FAIL  No `## Key Decisions` section found. It cannot be renamed, cased differently\n      or hidden behind an unclosed fence earlier in the file: every check on the digest\n      goes quiet when the section cannot be located, which is a silent pass.\n"
+    else if (!seen_area)
+      printf "FAIL  Key Decisions has no `### ` area heading. It is grouped by AREA, not by spec, and\n      the shape checks on bullets only begin at the first heading — a section with none\n      sits entirely in the intro, unvalidated.\n"
     if (bytes > scap)
       printf "FAIL  The Key Decisions section is %d bytes (cap %d). It is the bulk of the file that\n      loads every session: move decisions into %s and leave one line each.\n", bytes, scap, reg
   }
@@ -275,8 +309,8 @@ else
     NR == FNR {
       if ($0 ~ /^[ \t]*(```|~~~)/) { kfence = !kfence; next }
       if (kfence) next
-      if ($0 ~ /^## Key Decisions/) { kd = 1; next }
       if (kd && $0 ~ /^## /)        { emit(); kd = 0 }
+      if (!kd && $0 ~ /^## Key Decisions/) { if (!kfence) kd = 1; next }
       if (!kd) next
       sub(/\r$/, "")
       if ($0 ~ /^- /)               { emit(); unit = $0; next }
