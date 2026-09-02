@@ -29,7 +29,7 @@
 - [ ] `sh scripts/spec-lint.sh` passes
 - [ ] `sh scripts/docs-lint.sh` passes
 - [ ] `sh scripts/docs-lint-test.sh` passes (only if you changed the linter)
-- [ ] `sh scripts/docs-lint-test.sh` passes (only if you changed the linter)
+- [ ] Any gate this PR adds ships fixtures asserting its failure text, including a silence case
 
 ## Landing
 - [ ] Watching this PR to green — will merge once CI passes **and** every Owed item above is settled

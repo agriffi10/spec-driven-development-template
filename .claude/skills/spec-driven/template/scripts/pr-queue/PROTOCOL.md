@@ -36,15 +36,34 @@ holder's push; `acquire` refuses rather than let that happen.
 Monitor tool's until-loop on `queue.sh turn SPEC-XXX`, every couple of minutes. Each call is also
 your heartbeat: a waiter that stops polling for 30 minutes loses its place, which is what stops a
 dead session from blocking the line forever. Do not poll `acquire` — poll `turn`, then `acquire` once
-it exits 0.
+it exits 0. And **`cd` into the worktree you built the spec in and `acquire` from there in the
+SAME command** — the agent's Bash tool resets the working directory between calls, so a `cd` in
+one call and an `acquire` in the next acquires from the wrong tree.
 
-`turn` says which refusal it is: someone is ahead of you, the lock is held, a PR is open on the
-remote, `main` is unsettled, or a check could not run. Two need a different response from waiting.
+`turn` says which refusal it is: someone is ahead of you, the lock is held, a **non-draft** PR is
+open on the remote, `main` is unsettled, or a check could not run. Two need a different response from waiting.
 **If it reports the trunk `IS RED`, stop and escalate to the human** — a red `main` is fixed before
 anything else merges. If it says `NO_TICKET` (exit **3**, not 1) you never got in line; run `ticket`.
 Every other refusal exits 1 and means keep polling.
 
-`queue.sh status` shows the holder, the line, and what is actually open on the remote.
+**A DRAFT DOES NOT BLOCK.** The remote check stands in for "another agent is mid-turn", and a draft
+is the one open PR explicitly *not* ready to merge — it can sit for hours by design. Counting one
+starves every agent that obeys this queue, while agents that never took a ticket push straight past
+it. Measured in the sibling project `s3-upload-portal`, and recorded in that queue's own log: ticket
+0017 took its place at 2026-09-01T21:40:09Z and did not acquire until 2026-09-02T00:21:55Z — 2h41m,
+as the only waiter, with the lock free throughout. What it was behind is recorded in that repo's
+protocol rather than its log: a draft titled "DO NOT MERGE YET" **and five PRs opened by sessions
+that never took a ticket**. Keep the second half — the log cannot show which of the two held it up,
+so the wait is not evidence that drafts alone caused it. A non-draft PR still blocks, bot-authored
+ones included: those are intended to merge, so waiting for them is the point.
+
+**Known limit, so a clear `turn` is not read as more than it is:** this queue orders only the agents
+that use it. If sessions push without taking tickets, the remote is rarely clear and a waiter can
+still starve. The remote check narrows that window; it does not close it.
+
+`queue.sh status` shows the holder, the line, and what is actually open on the remote — **including
+drafts, labelled `DRAFT (ignored by the queue)`**, so a clear `turn` beside a visibly open draft
+never looks like a bug in the queue.
 
 ## What the lock covers
 
@@ -106,13 +125,19 @@ Single-value files in the queue directory, all written by `install.sh`:
 Two environment variables override the files, for a one-off: `PR_QUEUE_DIR` tells `install.sh` where
 to put the queue, and `PR_QUEUE_REPO` overrides `repo` for a single `queue.sh` invocation.
 
-Two optional **executables** replace the built-in GitHub checks — the seam for a project whose CI is
-not GitHub Actions, or whose repo is not on GitHub:
+Three optional **executables** replace the built-in GitHub checks — the seam for a project whose CI
+is not GitHub Actions, or whose repo is not on GitHub:
 
 | Executable | Contract |
 |---|---|
-| `open-prs` | Prints the open PRs, empty for none. **Non-zero exit means the check itself failed**, and the queue waits rather than assuming the remote is clear. |
+| `open-prs` | Prints the open **non-draft** PRs, empty for none. **Non-zero exit means the check itself failed**, and the queue waits rather than assuming the remote is clear. |
+| `all-prs` | Prints **every** open PR including drafts, for `status` only — never for gating. Optional: if absent, `all-prs` falls back to `open-prs`, and drafts simply go unlisted. |
 | `main-green` | Exit `0` green · `1` RED · `2` building/unsettled · `3` the check could not run. Only `0` lets the queue move. |
+
+> **If you wrote an `open-prs` override before drafts were exempted, update it.** One that still
+> lists drafts silently reinstates draft-blocking — and `status`, which reads `all-prs`, will label
+> the same PR `DRAFT (ignored by the queue)` while `turn` refuses because of it. The queue does not
+> and cannot detect this: an override is opaque by design.
 
 The built-in `main-green` reads the GitHub Actions runs recorded for `main`'s head sha. It waits
 while any is incomplete, and while the repo has workflows but no run for that sha yet; a run that

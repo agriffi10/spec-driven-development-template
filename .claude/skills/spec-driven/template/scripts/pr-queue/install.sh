@@ -108,7 +108,9 @@ echo "  checkout:  $REPO"
 echo "  main:      $MAIN"
 echo "  enforcing: $(cat "$Q/enforce-branches")"
 command -v gh >/dev/null 2>&1 || echo "  WARNING: 'gh' not found — the built-in remote checks need it, or install
-           your own 'open-prs' and 'main-green' executables in $Q (see PROTOCOL.md)."
+           your own 'open-prs', 'all-prs' and 'main-green' executables in $Q (see PROTOCOL.md)."
+[ -x "$Q/open-prs" ] && echo "  NOTE: an existing 'open-prs' override is in place. It must now exclude DRAFT
+        PRs; one written before drafts were exempted will reinstate draft-blocking silently."
 echo
 echo "Brief each agent with these four commands:"
 echo "  $Q/queue.sh ticket  SPEC-XXX"

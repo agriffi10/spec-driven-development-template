@@ -4,7 +4,8 @@ description: >-
   Spec-driven development workflow with guardrails. Use when (a) setting up / bootstrapping a repo for
   spec-driven work, (b) authoring or refining a spec, (c) starting to build a spec, (d) completing a
   spec, or (e) running several agent sessions against one repo at once. Provides a template repo layout (CLAUDE.md, layered docs/, spec + completion templates), a
-  POSIX spec-lint and docs-lint, and a CI workflow + PR template. Enforces: specs are fully specified before build
+  POSIX spec-lint (CI) and docs-lint (a local pre-push gate, deliberately not CI), plus a CI workflow
+  + PR template. Enforces: specs are fully specified before build
   (no Open Questions), spec/plan/diff each pass a blocking fresh-context review gate, the diff review
   gates the push rather than the merge, builds run off a reviewed plan straight to completion (no
   per-phase checkpoints), every PR is watched and merged on green, main is always watched, and the
@@ -42,9 +43,10 @@ When a repo has no spec-driven docs yet:
    the manifest (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, …) rather than guessing.
 4. Seed `docs/architecture.md` from any existing design notes the repo already has; otherwise leave the
    sectioned stub.
-5. Wire `spec-lint` and `docs-lint` into CI. If the repo already has a CI workflow, add both steps there
-   too (or keep the standalone `spec-lint.yml` / `docs-lint.yml` — either is fine, but they must run on
-   PRs). Then **re-ratchet all three budgets in `scripts/docs-lint.sh`** — `CLAUDE_MAX_BYTES`,
+5. Wire `spec-lint` into CI (add a step to the repo's workflow, or keep the standalone `spec-lint.yml`
+   — either is fine, but it must run on PRs). **`docs-lint` is deliberately NOT a CI job**: it is a
+   local pre-push gate, so its failures land on the person who caused them rather than on a shared
+   branch where they red unrelated work. Then **re-ratchet all three budgets in `scripts/docs-lint.sh`** — `CLAUDE_MAX_BYTES`,
    `DIGEST_MAX_BYTES` and `DELIVERY_MAX_LINES` — to what this repo actually measures. The shipped
    defaults are sized for a scaffold whose `CLAUDE.md` is placeholders and whose `docs/spec-delivery/`
    is empty, and a budget far above the measurement never fires.
@@ -59,8 +61,9 @@ When a repo has no spec-driven docs yet:
    passes cleanly on a fresh scaffold).
 
 Keep the always-loaded tier (`CLAUDE.md`) lean — it must not regrow into a wall of prose. `docs-lint.sh`
-now enforces that rather than asking you to remember it: prose alone lost this fight for eight weeks
-in a project running this template, while that project's own docs named the violation throughout.
+now enforces that rather than asking you to remember it. In a project that ran this template the
+always-loaded file grew more than tenfold: first under a rule too weak to bind, then — once the
+full rule set arrived and named the violation correctly — for days more regardless.
 
 ## 1. Author a spec
 
@@ -130,7 +133,7 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
    **change** and reads it against what it must satisfy; the other starts from **something other
    than the change** — on code, a pass that *builds* the thing and runs the suites; on a docs- or
    spec-only diff, the other places the same rule is stated. Two frames, not two rounds, and two is
-   the floor rather than the cap (step 8) — a clean first review does not close a **diff** gate,
+   the floor rather than the cap (step 9) — a clean first review does not close a **diff** gate,
    though it does close a spec's or a plan's. A self-reviewing agent rubber-stamps its own work, and
    pushing first inverts the gate: the branch is already public and the fixes arrive as follow-up
    commits. **Green CI is not a review** — it cannot see a test that passes against the bug it claims
@@ -138,7 +141,13 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
    reviewer checks the diff against the spec's acceptance criteria and the relevant `best-practices/`
    rules. Findings are **fixed or flagged** — a rejection costs a sentence out loud, and goes in
    writing only when it carries a lesson worth keeping.
-8. **Rotate the frame instead of adding rounds.** Cap same-frame review at two rounds, then switch
+8. **A gate is not tested by running it on what it guards.** A linter run over the repo's own files
+   proves the files pass, not that any check still fires. Every gate owes a fixture corpus asserting
+   the specific failure text, including cases that assert silence, proved by defeating each check in
+   turn and watching it redden. **Count the ways each check can stop and write
+   that many cases** — a check with two terminating conditions is satisfied by a fixture exercising
+   either, so the mutant that breaks the other survives with the suite green.
+9. **Rotate the frame instead of adding rounds.** Cap same-frame review at two rounds, then switch
    frame: adversarial execution, whole-module fresh eyes (not the diff), concurrency, security. **One
    rotation must actually build the thing** off-repo and run the suites — it finds contradictions,
    unspecified shapes and sequencing that no reader finds. Every reviewer runs the repo's gates against
@@ -147,7 +156,9 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
    N+1 what round N fixed. Budget a round for any substantial **rewrite** a finding causes — that
    replacement is the least-reviewed thing in the loop. **When the risk is what the change *removed*,
    enumerate rather than review** — a reviewer samples, and a deletion leaves nothing to read; write
-   the sweep that lists the whole population, and have it report before it applies. **Spot-check a
+   the sweep that lists the whole population, and have it report before it applies. A sweep has a
+   frame the same way a review does — several sweeps asking the same question are one check, however
+   exhaustive each is, and they say nothing about the half of a change that was newly written. **Spot-check a
    negative claim** ("no test covers this", "nothing imports this") before acting on it and again
    before writing it down. Full contract and the measurements behind it: `docs/process.md` §3.
 
@@ -235,5 +246,5 @@ with no digest label; an entry absent from that file's Contents; a `Status: Comp
 pointer in `CLAUDE.md` that resolves to nothing. Entries labelled `(example)` are exempt, so a fresh
 scaffold is green. **`scripts/docs-lint-test.sh` is its fixture corpus — run it after any change to
 `docs-lint.sh`.** The linter passing against your own docs says nothing about whether its checks
-work; the corpus is what says that. The budgets are **ratchets**: when one fires, cut and re-ratchet at the new
-measurement — never raise it to fit the edit. POSIX `sh` — no runtime dependency.
+work; the corpus is what says that. The budgets are **ratchets against accretion**: when one fires because a doc grew a line at a time, cut and re-ratchet at the new
+measurement — never raise it to fit the edit. **After a structural CUT the regime inverts**: what remains is fences rather than accretion, so leave headroom deliberately and record why beside the number, or the next change that legitimately needs a line takes one from another area. POSIX `sh` — no runtime dependency.

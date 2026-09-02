@@ -120,6 +120,8 @@ four before the first push.
   no evidence.
 - Before pushing, run the project's **formatter, linter, typecheck and unit tests** locally and get
   them green. These quality gates are a pre-push step — don't push red and leave CI to discover it.
+  **`sh scripts/docs-lint.sh` is in that set and nothing in CI runs it** — plus
+  `sh scripts/docs-lint-test.sh` whenever the linter itself changed.
 - Work the **reviewed** plan's phases in order, **straight through to completion**. Summarize a phase
   in passing where it is worth saying, but do not end the turn on it — a summary that ends the turn
   *is* a request for approval, whatever its wording says. Re-review the plan only if the phase
@@ -253,7 +255,8 @@ So the loop rotates the frame instead of adding rounds:
   what is there, and a deletion leaves nothing to read. Measured on a test-suite reduction in a
   project run this way: three fresh frames returned **4, then 7, then 17** findings, diverging
   rather than converging, because each sampled a population of hundreds. The mechanical sweep that
-  answered it completely — error codes raised vs error codes asserted — ran in seconds. **Before
+  answered the absence question completely — error codes raised vs error codes asserted — ran in
+  seconds. **Before
   reviewing a change whose risk is what it removed, write the sweep that lists the whole
   population.**
 - **Spot-check a negative claim before acting on it, and again before writing it down.** "Only
@@ -265,16 +268,48 @@ So the loop rotates the frame instead of adding rounds:
   such claims shipped as source comments in one project and were believed for weeks — a "registry
   guard" a router advertised and did not have, and a credential "scrub" a config module named as the
   thing keeping tokens out of logs. Both were found by writing the test that assumed them.
+- **Never carry an evidence sentence from another repo's commit message or script header — re-measure
+  it where you are putting it.** This is the mechanism behind every false claim a review has caught in
+  these docs, and it does not feel like guessing: the sentence was written by someone who had the repo
+  open, it reads as measured, and it is repeated verbatim. Six such claims shipped into this section
+  and its script — "monotonically, not one commit reducing it", "named the violation in the present
+  tense throughout", "eight weeks", a byte count already stale on the branch that wrote it. The one
+  figure that survived checking came from the same place, which is exactly why the habit persists.
+  **Anchor both ends of any measurement to a commit** a reader can re-derive it from: anchoring only
+  the end is what let "eight weeks" through, because "from" was then whichever commit the writer had
+  in mind. If you cannot cite both ends, state the principle and drop the number.
 - **A mechanical sweep REPORTS before it applies.** Print what it would change, read the list, then
   re-run with `--apply`, and check the result by diffing **test names** rather than a pass count. A
   classifier that looks right is routinely wrong at its edges: a sweep for unused module-level
   helpers classified a test framework's discovered classes as dead and would have deleted every test
   inside them — caught only because it printed first. A regex over source is the same hazard one
   level down; parse instead where a parser exists.
+- **A verification method has a frame, exactly as a review does.** Three sweeps that all ask "is the
+  old content still present" are one check run three times, however exhaustive each is — they cover the
+  mechanical half of a change and say nothing about the half that was authored. Before trusting a
+  verification, ask what question it asks, and whether anything asks a different one. Measured: a
+  migration was proved lossless three ways while the freshly-written summaries of the moved material
+  went unexamined, and contained a fabricated citation.
+  Its stopping rule is the sweep's: stop when a fresh question would not change what you conclude.
 - **A finding should carry a reproducing mutation, and the fix is verified by re-planting it.**
   Then fix-verification is mechanical and needs no second reviewer — which is what stops a review
   round spawning a review of its fixes. A frame only finds what its mutations probe, so a fix that
   satisfies a weak mutation can still be wrong.
+- **A gate is not tested by running it on the thing it guards.** Running a linter over the repo's own
+  files proves the files pass; it proves nothing about whether any check still fires, and a gate whose
+  checks have gone quiet is indistinguishable from a healthy repo. Every gate owes a **fixture corpus**:
+  one case per construct, asserting the specific **failure text** rather than the exit code, because a
+  check that fails for the wrong reason gets "fixed" by changing the wrong thing. Include cases that
+  assert **silence** — a corpus of only-failures cannot see a false positive, and false positives are
+  a large share of what a gate gets wrong. Prove the corpus bites by defeating each check in turn and watching it redden.
+  Measured: a doc linter took four rounds of fixes, three of which each opened a fresh escape while
+  closing the previous one, and **not one was caught by CI** — the only thing CI ran was the linter
+  against documents that happened to pass. Reviewers found most; the author found two mid-build; and
+  the fixture corpus found two the moment it existed, which is the argument for it. Nothing reached
+  `main`, because the branch happened not to merge in between.
+- **One fixture per guard is not enough when the guard has more than one exit.** A check with two
+  terminating conditions is satisfied by a fixture exercising either, so the mutant that breaks the
+  other survives with the suite green. Count the ways a check can stop, and write that many cases.
 - **Reasoning finds wording; execution finds defects.** Require a reproduction, not an argument.
   Passing review, passing unit tests and deploying successfully are three things that can all be true
   of code that fails on its first real invocation.
@@ -542,6 +577,11 @@ this way):
   contradicts at scale trains readers to ignore the ones that hold.
 - **Standing rules never cite volatile numbers** (line counts, row counts, section ranges) — state
   the principle. The numbers rot, and a rule resting on false evidence teaches readers to distrust it.
+  **Dating the measurement does not save it**, which is the tempting half-fix: a dated number still
+  reads as current to anyone not checking the date against the calendar, and one such entry went stale
+  within a single commit of being written. Either delete the number and state the principle, or anchor
+  the evidence to something immutable — a commit SHA, which a reader can re-measure — rather than to a
+  live count.
 - **A rule practice consistently violates gets reconciled or deleted.** A dead rule trains agents to
   ignore the live ones.
 - **Routers and indexes carry only what self-describes.** Hand-maintained metadata (symbol counts,
@@ -551,8 +591,17 @@ this way):
   full-file read.
 - **Live findings and obligations never live in historical or cancelled narrative** — rehome them to
   an active register and leave a pointer behind.
-- **`scripts/docs-lint.sh` enforces the structural half of these rules, and runs on every PR**
-  (`.github/workflows/docs-lint.yml`). It holds `CLAUDE.md` to a byte budget and each Key Decisions
+- **`scripts/docs-lint.sh` enforces the structural half of these rules, and is a LOCAL PRE-PUSH
+  gate — deliberately not a CI job.** Run it, and `docs-lint-test.sh` if you touched it, before every
+  PR, alongside the formatter, linter, type-checker and tests. Keeping it local puts the failure in
+  front of the person who caused it, at the moment they can still fix it silently, rather than on a
+  shared branch where it reds someone else's unrelated work and becomes a thing to be waived.
+  **State the trade honestly, because this section argues the opposite elsewhere:** a local gate is
+  prose asking a session to run a script, which is the category this section says rots. What carries
+  the mechanism instead is the reviewer rule in §3 — *every reviewer runs the repo's gates against
+  the branch* — so the gate is enforced by the review that must happen before a push rather than by
+  a job after it. A project that wants it mechanical as well as local can call it from the pre-push
+  hook `scripts/pr-queue/pre-push` already installs. It holds `CLAUDE.md` to a byte budget and each Key Decisions
   **unit** — a bullet with its continuations — to a length, and refuses any construct in that section but an area heading, a bullet, a continuation, a blank line and plain intro prose; requires `docs/decisions.md` to exist, to carry a `###` entry for every digest
   line and a digest line for every entry, and to list every entry in its Contents; requires every
   Completed spec to have a delivery doc, and holds every doc in `docs/spec-delivery/` to a line cap
@@ -560,15 +609,36 @@ this way):
   out of `CLAUDE.md` resolve.
   **`scripts/docs-lint-test.sh` is the corpus that proves those checks still fire** — running the
   linter against the repo's own documents proves the documents pass and nothing about whether any
-  check works, which is how four rounds of regressions reached main. A change to the linter runs
-  the corpus.
-  **The budgets are ratchets at the measured level** — when one fires,
-  move detail down a tier and re-ratchet, rather than raising the cap to admit the edit.
-  *Why a script and not this paragraph:* every rule in this section already existed here, and a
-  sibling project running this template violated all of them anyway — its `CLAUDE.md` went from
-  7,583 bytes on 2026-07-09 to 87,392 on 2026-09-01, monotonically, while this very section named
-  the violation in the present tense throughout. A rule a reader has to remember is a rule that
-  rots.
+  check works. A change to the linter runs the corpus. The general rule, and its evidence, is in §3.
+  **The budgets are ratchets against ACCRETION** — when one fires because a doc grew a line at a
+  time, move detail down a tier and re-ratchet, rather than raising the cap to admit the edit. That
+  is the regime a budget is normally in, and pinning it near the measurement is right there.
+  **After a structural CUT the regime changes, and the same pinning becomes the trap.** What remains
+  after a cut is not accretion but fences, and a budget left at the new measurement leaves the next
+  change that legitimately needs a line nothing to spend — so it takes one from somewhere else, and
+  the gate causes the damage it exists to prevent. Measured in `log-forge`: a cap set at its post-cut
+  size left about two digest lines of room, and was deliberately raised with the reasoning recorded
+  beside the number. Leave headroom after a cut, say why where the number lives, and mark that budget
+  as the one **not** at the measurement.
+  **A threshold can also be invalidated by its own success.** A cap calibrated against a document
+  catches things until a cut shrinks everything below it, after which it sits far above anything it
+  governs and can never fire — still advertised here as a fence, and now not one. So after any
+  structural change to what a threshold measures, **re-derive it rather than re-checking it**: a
+  check that passes proves nothing about a cap that can no longer fail. This repo's own shipped
+  budgets are deliberately loose for that reason — it ships a scaffold, and `scripts/docs-lint.sh`
+  says so where they are set.
+  *Why a script and not this paragraph:* every rule in this section already existed here, and the
+  sibling project `log-forge` violated several of them anyway — and its history says something
+  sharper than "a rule was ignored". Its `CLAUDE.md` grew from 7,350 bytes at `ad898fc8` to 89,340
+  at `e60b60d`, more than tenfold. For most of that it had only a **two-sentence** version of this
+  section — "don't add prose to the always-loaded tier", naming no shape, no register and no budget:
+  a rule too weak to bind. The full set arrived at `690d2a55`, ported from s3-upload-portal, naming
+  the violation in the present tense and naming it correctly; the file was already 67,925 bytes by
+  then, and grew by nearly a third again before anyone cut it. **Both halves fail without a gate**: the weak
+  rule could not bind, and the right rule, diagnosing itself accurately in the file every session
+  reads, did not stop the next edit either. Both ends of each measurement are anchored to a commit
+  so a reader can re-derive them, per the volatile-number rule above. A rule a reader has to
+  remember is a rule that rots.
 
 ---
 
