@@ -44,9 +44,10 @@ When a repo has no spec-driven docs yet:
    sectioned stub.
 5. Wire `spec-lint` and `docs-lint` into CI. If the repo already has a CI workflow, add both steps there
    too (or keep the standalone `spec-lint.yml` / `docs-lint.yml` — either is fine, but they must run on
-   PRs). Then **re-ratchet `CLAUDE_MAX_BYTES` in `scripts/docs-lint.sh`** to what this repo's filled-in
-   `CLAUDE.md` actually measures: the shipped default is sized for a scaffold, and a budget far above
-   the measurement never fires.
+   PRs). Then **re-ratchet all three budgets in `scripts/docs-lint.sh`** — `CLAUDE_MAX_BYTES`,
+   `DIGEST_MAX_BYTES` and `DELIVERY_MAX_LINES` — to what this repo actually measures. The shipped
+   defaults are sized for a scaffold whose `CLAUDE.md` is placeholders and whose `docs/spec-delivery/`
+   is empty, and a budget far above the measurement never fires.
 6. **Set up language CI (GitHub Actions).** Ask the user *once* what the repo's CI needs — which
    languages/runtimes, and the install / format-check / lint / typecheck / test commands (default to
    `CLAUDE.md` → Common Commands). From `.github/workflows/ci.yml.example`, produce a real
@@ -226,8 +227,9 @@ spec with FRs but no acceptance criteria anywhere in it, and a spec carrying mor
 ## docs-lint reference
 
 `scripts/docs-lint.sh` (no arguments; resolves its own repo root). **FAIL** (exit 1), no WARN tier:
-`CLAUDE.md` over `CLAUDE_MAX_BYTES`; a Key Decisions bullet over `DIGEST_MAX_CHARS`, measured with its
-continuation lines joined; `docs/decisions.md` missing; a digest label with no `###` entry or an entry
+`CLAUDE.md` over `CLAUDE_MAX_BYTES`; a Key Decisions unit over `DIGEST_MAX_BYTES` — a bullet with its
+continuation lines joined, or a prose paragraph, since keying only on bullets let the section be
+rewritten as prose to escape both this cap and the register cross-check; `docs/decisions.md` missing; a digest label with no `###` entry or an entry
 with no digest label; an entry absent from that file's Contents; a `Status: Completed` spec with no
 `docs/spec-delivery/SPEC-NNN-*.md`; a delivery doc over `DELIVERY_MAX_LINES`; a relative link or `@`
 pointer in `CLAUDE.md` that resolves to nothing. Entries labelled `(example)` are exempt, so a fresh

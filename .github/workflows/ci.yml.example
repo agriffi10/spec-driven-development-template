@@ -7,7 +7,7 @@
 #
 # Purpose: run the project's quality gates on every PR and push to `main`, so that
 # "land on green CI" (docs/process.md) means the formatter, linter, type-checker, and
-# tests all passed — not just spec-lint. (spec-lint runs in its own workflow.)
+# tests all passed — not just the lints. (spec-lint and docs-lint run in their own workflows.)
 
 name: CI
 

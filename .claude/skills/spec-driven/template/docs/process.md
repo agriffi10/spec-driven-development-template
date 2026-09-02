@@ -340,7 +340,8 @@ yields a different class of finding than any reading-based frame.*
   adversarial reader finds defects and does not find these; the implementer finds these and is worse at
   defects. Run both, not one twice.
 - **Every reviewer runs the repo's gates against the branch** — formatter, linter, typecheck, tests,
-  and `scripts/spec-lint.sh` on any spec it touched. Four rounds once reviewed a spec and none ran the
+  `scripts/spec-lint.sh` on any spec it touched, and `scripts/docs-lint.sh` on any change that touches
+  `CLAUDE.md`, `docs/decisions.md` or a delivery doc. Four rounds once reviewed a spec and none ran the
   repo's doc-layout gate; the branch was red on it throughout, for a reason unrelated to the spec, and
   it took an agent that *built* the change to notice. A review of a change touching gated files runs
   the gates.
@@ -550,7 +551,8 @@ this way):
   (`.github/workflows/docs-lint.yml`). It holds `CLAUDE.md` to a byte budget and each Key Decisions
   bullet to a length; requires `docs/decisions.md` to exist, to carry a `###` entry for every digest
   line and a digest line for every entry, and to list every entry in its Contents; requires every
-  Completed spec to have a delivery doc and holds each to a line cap; and checks that the pointers
+  Completed spec to have a delivery doc, and holds every doc in `docs/spec-delivery/` to a line cap
+  (not only those tied to a Completed spec); and checks that the pointers
   out of `CLAUDE.md` resolve. **The budgets are ratchets at the measured level** — when one fires,
   move detail down a tier and re-ratchet, rather than raising the cap to admit the edit.
   *Why a script and not this paragraph:* every rule in this section already existed here, and a

@@ -212,7 +212,7 @@ Claude reads it every session.
    keep only the job for your language, replace the placeholder commands with your real ones, then
    delete the `.example` file. GitHub Actions only runs workflow files ending in `.yml` or `.yaml`,
    which is why the shipped copy is inert. Until you do this, "green CI" in your project means only
-   that spec-lint passed — and spec-lint knows nothing about your code.
+   that spec-lint and docs-lint passed — and neither knows anything about your code.
 5. **Delete the mirror machinery.** Remove `scripts/check-mirror.sh`, `scripts/sync-from-skill.sh`
    and `.github/workflows/check-mirror.yml`. They keep *this* template's two copies of the scaffold
    in step, and in your project they will fail: the check compares the root files against the copy
@@ -221,7 +221,7 @@ Claude reads it every session.
 6. Trim `docs/best-practices/` to the domains you actually use — a Python library doesn't need the
    React rulebook — and update `docs/best-practices/INDEX.md` to match.
 7. **Protect `main`.** In Settings → Rules, require pull requests (no direct pushes) and add
-   `spec-lint` and your `ci` jobs as required status checks. Nothing in the files can enforce this;
+   `spec-lint`, `docs-lint` and your `ci` jobs as required status checks. Nothing in the files can enforce this;
    it's a repository setting.
 8. Fill in the two per-project sections at the bottom of `docs/process.md`: *Operational traps* (§6)
    and *Project ground rules* (§7). They start as examples and exist nowhere else — the first time a

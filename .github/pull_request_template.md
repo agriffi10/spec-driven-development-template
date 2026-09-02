@@ -27,6 +27,7 @@
 - [ ] Lint / typecheck pass
 - [ ] Tests pass (added/updated where behavior changed)
 - [ ] `sh scripts/spec-lint.sh` passes
+- [ ] `sh scripts/docs-lint.sh` passes
 
 ## Landing
 - [ ] Watching this PR to green — will merge once CI passes **and** every Owed item above is settled
