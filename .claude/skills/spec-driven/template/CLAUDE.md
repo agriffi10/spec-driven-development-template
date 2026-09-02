@@ -43,7 +43,6 @@ expectations. Keep to what an implementer must not violate.]
 # spec-lint:  sh scripts/spec-lint.sh
 # docs-lint:  sh scripts/docs-lint.sh
 # docs-lint tests: sh scripts/docs-lint-test.sh
-# docs-lint tests: sh scripts/docs-lint-test.sh
 ```
 
 ## Specs

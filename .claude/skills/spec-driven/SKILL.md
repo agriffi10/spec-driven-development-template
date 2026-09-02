@@ -4,7 +4,8 @@ description: >-
   Spec-driven development workflow with guardrails. Use when (a) setting up / bootstrapping a repo for
   spec-driven work, (b) authoring or refining a spec, (c) starting to build a spec, (d) completing a
   spec, or (e) running several agent sessions against one repo at once. Provides a template repo layout (CLAUDE.md, layered docs/, spec + completion templates), a
-  POSIX spec-lint and docs-lint, and a CI workflow + PR template. Enforces: specs are fully specified before build
+  POSIX spec-lint (CI) and docs-lint (a local pre-push gate, deliberately not CI), plus a CI workflow
+  + PR template. Enforces: specs are fully specified before build
   (no Open Questions), spec/plan/diff each pass a blocking fresh-context review gate, the diff review
   gates the push rather than the merge, builds run off a reviewed plan straight to completion (no
   per-phase checkpoints), every PR is watched and merged on green, main is always watched, and the
@@ -62,7 +63,7 @@ When a repo has no spec-driven docs yet:
 Keep the always-loaded tier (`CLAUDE.md`) lean — it must not regrow into a wall of prose. `docs-lint.sh`
 now enforces that rather than asking you to remember it. In a project that ran this template the
 always-loaded file grew more than tenfold: first under a rule too weak to bind, then — once the
-full rule set arrived and named the violation correctly — for two more days regardless.
+full rule set arrived and named the violation correctly — for days more regardless.
 
 ## 1. Author a spec
 

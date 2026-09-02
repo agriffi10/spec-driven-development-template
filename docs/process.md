@@ -595,7 +595,13 @@ this way):
   gate — deliberately not a CI job.** Run it, and `docs-lint-test.sh` if you touched it, before every
   PR, alongside the formatter, linter, type-checker and tests. Keeping it local puts the failure in
   front of the person who caused it, at the moment they can still fix it silently, rather than on a
-  shared branch where it reds someone else's unrelated work and becomes a thing to be waived. It holds `CLAUDE.md` to a byte budget and each Key Decisions
+  shared branch where it reds someone else's unrelated work and becomes a thing to be waived.
+  **State the trade honestly, because this section argues the opposite elsewhere:** a local gate is
+  prose asking a session to run a script, which is the category this section says rots. What carries
+  the mechanism instead is the reviewer rule in §3 — *every reviewer runs the repo's gates against
+  the branch* — so the gate is enforced by the review that must happen before a push rather than by
+  a job after it. A project that wants it mechanical as well as local can call it from the pre-push
+  hook `scripts/pr-queue/pre-push` already installs. It holds `CLAUDE.md` to a byte budget and each Key Decisions
   **unit** — a bullet with its continuations — to a length, and refuses any construct in that section but an area heading, a bullet, a continuation, a blank line and plain intro prose; requires `docs/decisions.md` to exist, to carry a `###` entry for every digest
   line and a digest line for every entry, and to list every entry in its Contents; requires every
   Completed spec to have a delivery doc, and holds every doc in `docs/spec-delivery/` to a line cap
@@ -628,7 +634,7 @@ this way):
   section — "don't add prose to the always-loaded tier", naming no shape, no register and no budget:
   a rule too weak to bind. The full set arrived at `690d2a55`, ported from s3-upload-portal, naming
   the violation in the present tense and naming it correctly; the file was already 67,925 bytes by
-  then, and grew a further fifth before anyone cut it. **Both halves fail without a gate**: the weak
+  then, and grew by nearly a third again before anyone cut it. **Both halves fail without a gate**: the weak
   rule could not bind, and the right rule, diagnosing itself accurately in the file every session
   reads, did not stop the next edit either. Both ends of each measurement are anchored to a commit
   so a reader can re-derive them, per the volatile-number rule above. A rule a reader has to

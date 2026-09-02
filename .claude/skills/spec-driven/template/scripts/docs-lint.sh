@@ -13,8 +13,9 @@
 # than restated: an earlier version of this comment carried three numbers, and two of them
 # were wrong by the time it shipped.
 #
-# A rule a reader has to remember is a rule that rots. This is the same rules where CI
-# can see them.
+# A rule a reader has to remember is a rule that rots. This is the same rules where a
+# script can see them — run before every push, deliberately not in CI, so the failure
+# lands on whoever caused it rather than on a shared branch.
 #
 # FAIL (exit 1): the always-loaded file is over budget or has been removed outright, a
 #   Key Decisions unit has become the reasoning, the register is missing or has inverted
@@ -34,7 +35,7 @@
 # NOTE for maintainers: the awk programs below are single-quoted. An apostrophe anywhere
 # inside one — including in a comment — closes the quote, and the shell then parses awk
 # source as shell. That failed *silently with status 0* once during authoring, which is
-# why `.github/workflows/docs-lint.yml` runs `sh -n` on this file as its own step.
+# why `scripts/docs-lint-test.sh` runs `sh -n` on this file before anything else.
 
 set -eu
 
