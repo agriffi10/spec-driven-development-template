@@ -79,7 +79,7 @@ that area. A line here is **never the only home of a fact**, and never a paragra
 2. Update the one-line row in `@docs/specs/INDEX.md` (status only — don't add prose).
 3. Write a short delivery doc at `docs/spec-delivery/SPEC-XXX-<name>.md` from the template.
 4. If it added reusable modules/services/components, add a one-line row to `@docs/component-inventory.md`.
-5. A *new architectural decision* gets its full entry in `docs/decisions.md` **first, plus a row in that file's `## Contents`** (docs-lint fails an entry the Contents does not reach), then one line in Key Decisions above — the line is never the only home of a fact, and never a paragraph. If it supersedes an earlier decision, add an in-place superseded marker at every doc site still stating the old claim.
+5. A *new architectural decision* gets its full entry in `docs/decisions.md` **first, plus a row in that file's `## Contents`** (docs-lint fails an entry the Contents does not reach), then one line in Key Decisions above — the line is never the only home of a fact, and never a paragraph. If it supersedes an earlier decision, add an in-place superseded marker at every doc site still stating the old claim — and if the reversal changes the entry's **heading**, move its Contents row and its digest label with it, or the row points at a dead anchor and docs-lint fails.
 6. If it changed the **shape** of the system — a piece added or removed, a boundary moved, a mechanism swapped — add an append-only row to `@docs/architecture.md` → *Architecture Decision Record* and fix the prose section it contradicts. Most decisions do not qualify.
 
 **Doc-size guardrail:** this is the always-loaded file — if an edit pushes a section past a few lines,

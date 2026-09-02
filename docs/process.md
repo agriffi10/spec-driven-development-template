@@ -488,7 +488,9 @@ When a spec is done, in the same pass:
    that file's `## Contents`** — an entry the Contents does not reach is findable only by reading the
    whole file, and `docs-lint.sh` fails the PR for it — then **one
    line** in CLAUDE.md's Key Decisions — the digest line is **never the only home of a fact**, and
-   never a paragraph. If the decision **supersedes an earlier one**, update the old register entry in
+   never a paragraph. A reversal that changes the entry's **heading** must move its Contents row with it —
+   the row is an anchor link, left pointing at nothing otherwise, which docs-lint fails.
+   If the decision **supersedes an earlier one**, update the old register entry in
    place and add a superseded marker (short blockquote: what changed, which spec, where the full
    entry lives) at every doc site that still states the old claim — arc narratives, architecture
    sections. The new entry alone is not enough; a reader who lands only on the old site must see the
@@ -551,7 +553,7 @@ this way):
   an active register and leave a pointer behind.
 - **`scripts/docs-lint.sh` enforces the structural half of these rules, and runs on every PR**
   (`.github/workflows/docs-lint.yml`). It holds `CLAUDE.md` to a byte budget and each Key Decisions
-  bullet to a length; requires `docs/decisions.md` to exist, to carry a `###` entry for every digest
+  **unit** — a bullet with its continuations, or a prose paragraph — to a length; requires `docs/decisions.md` to exist, to carry a `###` entry for every digest
   line and a digest line for every entry, and to list every entry in its Contents; requires every
   Completed spec to have a delivery doc, and holds every doc in `docs/spec-delivery/` to a line cap
   (not only those tied to a Completed spec); and checks that the pointers

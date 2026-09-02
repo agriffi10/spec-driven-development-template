@@ -390,8 +390,7 @@ sh scripts/check-mirror.sh
 ```
 
 `spec-lint.sh` checks every spec in `docs/specs` (pass a different directory as an argument).
-`docs-lint.sh` checks the always-loaded tier: `CLAUDE.md`'s size, the length of each Key Decisions
-line, and the rule that the digest and `docs/decisions.md` are two halves of one thing rather than
+`docs-lint.sh` checks the always-loaded tier: `CLAUDE.md`'s size, the length of each Key Decisions unit (a bullet with its continuations, or a prose paragraph), and the rule that the digest and `docs/decisions.md` are two halves of one thing rather than
 one file doing both jobs. The last two are maintenance scripts for *this* template repository, explained under
 [Why the scaffold exists in two places](#why-the-scaffold-exists-in-two-places); projects created
 from the template don't need them.
