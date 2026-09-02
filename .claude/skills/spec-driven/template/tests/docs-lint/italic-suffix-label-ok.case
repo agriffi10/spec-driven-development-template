@@ -1,0 +1,31 @@
+--- expect exit=0
+--- file CLAUDE.md
+# Project
+
+## Key Decisions
+
+One line each; the full entry lives in the register.
+
+### Area one
+
+- **A shutdown shortens a *wait*; it never skips *work*** — fence.
+
+## Out of Scope
+
+nothing
+
+--- file docs/decisions.md
+# Key Decisions — full register
+
+## Contents
+
+- [A shutdown shortens a *wait*; it never skips *work*](#a-shutdown-shortens-a-wait-it-never-skips-work)
+
+---
+
+## Area one
+
+### A shutdown shortens a *wait*; it never skips *work*
+
+R.
+

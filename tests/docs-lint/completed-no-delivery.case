@@ -1,0 +1,37 @@
+--- expect exit=1
+--- match with no delivery doc
+--- file CLAUDE.md
+# Project
+
+## Key Decisions
+
+One line each; the full entry lives in the register.
+
+### Area one
+
+- **Alpha rule** — short claim and its fence.
+
+## Out of Scope
+
+nothing
+
+--- file docs/decisions.md
+# Key Decisions — full register
+
+## Contents
+
+- [Alpha rule](#alpha-rule)
+
+---
+
+## Area one
+
+### Alpha rule
+
+Reasoning.
+
+--- file docs/specs/SPEC-001-x.md
+# SPEC-001
+
+Status: Completed
+

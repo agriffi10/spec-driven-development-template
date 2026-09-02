@@ -417,6 +417,8 @@ from the template don't need them.
 | `docs/templates/multi-agent-briefing.md` | The blank a launch briefing is written from, when several agents run at once. One per session. | You + Claude |
 | `scripts/spec-lint.sh` | **POSIX** shell linter. Fails a spec that's missing a required section or contains an "Open Questions"/"Checkpoint" heading; warns on unfilled placeholders, on requirements with no acceptance criteria anywhere in the file, and on a spec carrying more than eight requirements. No dependencies. | CI + you + Claude |
 | `scripts/docs-lint.sh` | **POSIX** shell linter for the always-loaded tier. Fails when `CLAUDE.md` is over its byte budget, a Key Decisions line has grown into an essay, `docs/decisions.md` is missing or has stopped matching the digest one-for-one, an entry is missing from that file's Contents, a Completed spec has no delivery doc, a delivery doc has become an essay, or a pointer out of `CLAUDE.md` goes nowhere. No dependencies. | CI + you + Claude |
+| `scripts/docs-lint-test.sh` | **POSIX** fixture corpus for the doc linter — one case per construct, asserting the specific failure text rather than the exit code. Run it whenever you change `docs-lint.sh`; running the linter against your own docs proves your docs pass, not that the checks work. | CI + you + Claude |
+| `tests/docs-lint/*.case` | The fixtures themselves. A `-ok` case asserts the linter stays SILENT: half the linter's historical regressions were false positives. | CI |
 | `scripts/pr-queue/queue.sh` | The **PR queue**: a lock and a first-come-first-served line that keeps one pull request open at a time when several agents share the repo. Runs from outside the repo — `install.sh` puts it there. | Claude (multi-agent runs) |
 | `scripts/pr-queue/pre-push` | The git hook that makes the queue binding rather than advisory. Refuses a push from a participating branch that doesn't hold the lock, and allows everything else. | Git |
 | `scripts/pr-queue/install.sh` | One-time setup for a multi-agent run: places the queue outside the repo and installs the hook wrapper. | You + Claude |
@@ -494,6 +496,7 @@ which is which tells you what breaks silently if you skip a step.
 | Every PR watched and merged on green; `main` watched; red `main` fixed first | `process.md` + `CLAUDE.md` + PR template |
 | Domain code follows the right rulebook, loading only what's needed | `best-practices/INDEX.md` + `process.md` |
 | The always-loaded tier stays lean — budget, digest line length, a register behind every digest line | `docs-lint.sh` (CI) + the completion ritual in `process.md` |
+| The doc linter's own checks still fire | `docs-lint-test.sh` (CI) — a fixture per construct, each asserting its failure text |
 | One pull request open at a time when several agents share the repo | `scripts/pr-queue/` (the `pre-push` hook) |
 | The root scaffold matches the skill's canonical copy | `check-mirror.sh` (CI) |
 | Your language's own quality gates | the `ci.yml` you create from `ci.yml.example` |

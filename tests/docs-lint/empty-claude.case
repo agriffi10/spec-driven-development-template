@@ -1,0 +1,19 @@
+--- expect exit=1
+--- match is empty
+--- file CLAUDE.md
+
+--- file docs/decisions.md
+# Key Decisions — full register
+
+## Contents
+
+- [Alpha rule](#alpha-rule)
+
+---
+
+## Area one
+
+### Alpha rule
+
+Reasoning.
+

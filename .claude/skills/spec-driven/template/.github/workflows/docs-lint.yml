@@ -25,5 +25,11 @@ jobs:
       # on a linter that did nothing. That happened once while this script was written.
       - name: Check the linter itself parses
         run: sh -n scripts/docs-lint.sh
+      # The corpus proves the CHECKS work. Running the linter against this repo's own
+      # documents only proves the documents pass — a linter whose checks have stopped
+      # firing is indistinguishable from a healthy repo, which is how four rounds of
+      # regressions all reached main.
+      - name: Prove the linter's checks still fire
+        run: sh scripts/docs-lint-test.sh
       - name: Hold the always-loaded tier to its budgets
         run: sh scripts/docs-lint.sh

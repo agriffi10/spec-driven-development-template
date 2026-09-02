@@ -557,7 +557,12 @@ this way):
   line and a digest line for every entry, and to list every entry in its Contents; requires every
   Completed spec to have a delivery doc, and holds every doc in `docs/spec-delivery/` to a line cap
   (not only those tied to a Completed spec); and checks that the pointers
-  out of `CLAUDE.md` resolve. **The budgets are ratchets at the measured level** — when one fires,
+  out of `CLAUDE.md` resolve.
+  **`scripts/docs-lint-test.sh` is the corpus that proves those checks still fire** — running the
+  linter against the repo's own documents proves the documents pass and nothing about whether any
+  check works, which is how four rounds of regressions reached main. A change to the linter runs
+  the corpus.
+  **The budgets are ratchets at the measured level** — when one fires,
   move detail down a tier and re-ratchet, rather than raising the cap to admit the edit.
   *Why a script and not this paragraph:* every rule in this section already existed here, and a
   sibling project running this template violated all of them anyway — its `CLAUDE.md` went from

@@ -36,7 +36,7 @@ When a repo has no spec-driven docs yet:
    mirror of `template/`, `scripts/sync-from-skill.sh` regenerates it, and edits belong in `template/`
    followed by a sync. Steps 3 and 6 below would fill in the mirror and delete `ci.yml.example`, which
    must survive there.
-2. `chmod +x scripts/spec-lint.sh scripts/docs-lint.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh`.
+2. `chmod +x scripts/spec-lint.sh scripts/docs-lint.sh scripts/docs-lint-test.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh`.
 3. Fill in the placeholders in `CLAUDE.md` (Project Overview, Layout, Tech Stack, Code Conventions,
    Common Commands) from what the repo actually is — detect the language/build/test/lint tooling from
    the manifest (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, …) rather than guessing.
@@ -233,5 +233,7 @@ rewritten as prose to escape both this cap and the register cross-check; `docs/d
 with no digest label; an entry absent from that file's Contents; a `Status: Completed` spec with no
 `docs/spec-delivery/SPEC-NNN-*.md`; a delivery doc over `DELIVERY_MAX_LINES`; a relative link or `@`
 pointer in `CLAUDE.md` that resolves to nothing. Entries labelled `(example)` are exempt, so a fresh
-scaffold is green. The budgets are **ratchets**: when one fires, cut and re-ratchet at the new
+scaffold is green. **`scripts/docs-lint-test.sh` is its fixture corpus — run it after any change to
+`docs-lint.sh`.** The linter passing against your own docs says nothing about whether its checks
+work; the corpus is what says that. The budgets are **ratchets**: when one fires, cut and re-ratchet at the new
 measurement — never raise it to fit the edit. POSIX `sh` — no runtime dependency.

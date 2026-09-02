@@ -21,6 +21,7 @@ SKILL_TEMPLATE="$ROOT/.claude/skills/spec-driven/template"
 cp -R "$SKILL_TEMPLATE/." "$ROOT/"
 chmod +x "$ROOT/scripts/spec-lint.sh" \
          "$ROOT/scripts/docs-lint.sh" \
+         "$ROOT/scripts/docs-lint-test.sh" \
          "$ROOT/scripts/pr-queue/queue.sh" \
          "$ROOT/scripts/pr-queue/pre-push" \
          "$ROOT/scripts/pr-queue/install.sh"

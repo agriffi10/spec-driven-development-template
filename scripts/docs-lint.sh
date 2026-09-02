@@ -54,6 +54,12 @@ cd "$ROOT"
 # the template itself rather than on anything a project did wrong.
 CLAUDE_MAX_BYTES=16000
 
+# The whole Key Decisions section, measured as bytes. This is the guard that cannot be
+# evaded by reformatting: a per-bullet cap is escaped by splitting one decision into
+# five, and every shape that escaped the old parser still costs bytes here.
+# (scaffold default; re-ratchet on adoption)
+KEY_DECISIONS_MAX_BYTES=12000
+
 # The longest a single Key Decisions unit may be. Measured on the LOGICAL unit — a
 # bullet with its continuation lines joined, or a prose paragraph — because measuring
 # the physical line looks equivalent and is not: the moment the section is rewritten as
@@ -122,6 +128,16 @@ fi
 # Not `wc | tr` in one pipeline: that takes tr's status, so a wc failure leaves size
 # empty and the `if` below — exempt from set -e as a condition — skips the check.
 size=$(wc -c < "$CLAUDE") || { echo "error: cannot measure $CLAUDE" >&2; exit 2; }
+# An emptied file passes every byte budget trivially, and feeding an empty first file to
+# the two-file awk below makes NR==FNR true for the whole REGISTER — which silently
+# disarms all three cross-check arms. Truncating instead of deleting was the emptiest
+# pass available.
+if ! grep -q '[^[:space:]]' "$CLAUDE"; then
+  note "$CLAUDE is empty. The always-loaded file cannot be emptied any more than it can be
+      deleted: every budget passes trivially and the digest/register cross-check disarms."
+  size=0
+  report
+fi
 size=$(printf '%s' "$size" | tr -d '[:space:]')
 case "$size" in
   ''|*[!0-9]*) echo "error: unreadable size for $CLAUDE" >&2; exit 2 ;;
@@ -132,36 +148,74 @@ if [ "$size" -gt "$CLAUDE_MAX_BYTES" ]; then
       failure mode it exists to prevent — cut first, then re-ratchet at the measurement."
 fi
 
-# ── 2. Every unit in Key Decisions is a digest, not the reasoning ──────────────
-# The section runs from "## Key Decisions" to the next level-2 heading. A unit is a
-# bullet (-, * or +, indented or not) with its continuations, or a prose paragraph.
-awk -v cap="$DIGEST_MAX_BYTES" -v reg="$REGISTER" '
-  function flush() {
-    if (cur != "" && length(cur) > cap)
-      printf "FAIL  A Key Decisions unit is %d bytes (cap %d): %s…\n      Keep the claim and the fence in the digest; the reasoning goes in %s.\n",
-             length(cur), cap, substr(cur, 1, 70), reg
-    cur = ""
+# ── 2. Key Decisions has a FIXED SHAPE, and is measured whole ────────────────
+#
+# This replaced a markdown parser, after that parser shipped three rounds of fixes and
+# each round introduced a fresh escape: prose evaded a bullet-only cap; widening the cap
+# to accept indented bullets let a parent-plus-children decision escape; adding boundary
+# rules for tables, blockquotes and fences made every one of those a place where content
+# was consumed and never measured at all. Eight escapes in the end, five of them
+# regressions from the previous fix.
+#
+# The lesson is that this file's format is OURS. Parsing arbitrary markdown is an
+# unbounded problem; validating a fixed shape is a bounded one. So the section may
+# contain only four things, and anything else fails LOUDLY rather than silently sliding
+# past a cap that cannot see it:
+#
+#   - a `### ` area heading at column 0
+#   - a `- **Label** — …` bullet at column 0
+#   - an indented continuation of the bullet above it
+#   - a blank line
+#
+# plus free prose BEFORE the first area heading, which is the section intro. A table, a
+# blockquote, a fenced block, an indented bullet, an ordered list, a task list and
+# `__bold__` are all refused by name. That is not a limitation to work around: every one
+# of them was an escape.
+#
+# The section is also measured WHOLE, against KEY_DECISIONS_MAX_BYTES. A per-unit cap
+# can always be evaded by splitting; a section total cannot be evaded by reformatting,
+# because every escape still costs bytes.
+kd_report=$(awk -v ucap="$DIGEST_MAX_BYTES" -v scap="$KEY_DECISIONS_MAX_BYTES" -v reg="$REGISTER" '
+  function flush(   n) {
+    if (unit == "") return
+    n = length(unit)
+    if (n > ucap)
+      printf "FAIL  A Key Decisions bullet is %d bytes (cap %d): %s…\n      Keep the claim and the fence in the digest; the reasoning goes in %s.\n",
+             n, ucap, substr(unit, 1, 70), reg
+    unit = ""
   }
-  /^## Key Decisions/       { in_sec = 1; next }
-  in_sec && /^## /          { flush(); in_sec = 0 }
-  !in_sec                   { next }
-  /^[ \t]*(```|~~~)/        { flush(); fence = !fence; next }
-  fence                     { next }
-  /^[ \t]*#/               { flush(); next }
-  /^[ \t]*$/               { flush(); next }
-  # A table row or a blockquote is not a digest unit. The supersede marker the ritual
-  # asks for is a blockquote, and joining it to the bullet above pushed the longest
-  # line over the cap with a message telling the author to move "the reasoning" out.
-  /^[ \t]*[|>]/            { flush(); next }
-  # A NEW unit starts only at column 0. Matching an indented bullet here flushed its
-  # parent and started a fresh unit, so a decision written as a parent plus nested
-  # children escaped the cap entirely — the same reformat-to-escape hole this check
-  # was widened to close for prose.
-  /^[-*+][ \t]/            { flush(); cur = $0; next }
-  /^[ \t]+[^ \t]/         { if (cur != "") { s = $0; sub(/^[ \t]+/, "", s); cur = cur " " s } next }
-                            { cur = (cur == "") ? $0 : cur " " $0 }
-  END                       { flush() }
-' "$CLAUDE" >> "$FAILS"
+  function bad(why) {
+    printf "FAIL  Key Decisions, line %d: %s\n      The section has a fixed shape — area headings, `- **Label**` bullets at column 0,\n      indented continuations, blank lines, and intro prose before the first heading.\n      Anything else is refused because every one of them was a way past this check.\n      Offending line: %s\n", FNR, why, substr($0, 1, 60)
+  }
+  # Fences are tracked over the WHOLE file, before the section test, so a fenced example
+  # of the digest format cannot open a phantom section. The file must be able to
+  # document its own format.
+  /^[ \t]*(```|~~~)/ { if (in_sec) { bytes += length($0) + 1; bad("a fenced block") }
+                      fence = !fence; next }
+  fence               { if (in_sec) bytes += length($0) + 1; next }
+  /^## Key Decisions/ { in_sec = 1; next }
+  in_sec && /^## /    { flush(); in_sec = 0 }
+  !in_sec             { next }
+  { bytes += length($0) + 1 }
+  /^###[ \t]/          { flush(); seen_area = 1; next }
+  /^[ \t]*\r?$/       { flush(); next }
+  # Before the first area heading, the intro may be any prose.
+  !seen_area          { next }
+  /^- \*\*/            { flush(); unit = $0; next }
+  /^- /               { bad("a bullet that does not open with a **bold label**") ; next }
+  /^[ \t]+[^ \t]/     { if (unit == "") { bad("indented line with no bullet above it to continue") ; next }
+                        s = $0; sub(/^[ \t]+/, "", s); unit = unit " " s; next }
+  /^[|>]/             { bad("a table or blockquote row") ; next }
+  /^[0-9]+[.)][ \t]/  { bad("an ordered-list item") ; next }
+  /^[*+][ \t]/        { bad("a `*` or `+` bullet — use `-`") ; next }
+                      { bad("prose after the first area heading") ; next }
+  END {
+    flush()
+    if (bytes > scap)
+      printf "FAIL  The Key Decisions section is %d bytes (cap %d). It is the bulk of the file that\n      loads every session: move decisions into %s and leave one line each.\n", bytes, scap, reg
+  }
+' "$CLAUDE")
+[ -z "$kd_report" ] || printf '%s\n' "$kd_report" >> "$FAILS"
 
 # ── 3, 4 & 5. The register: present, not inverted with its digest, all reachable ─
 #
@@ -182,9 +236,15 @@ else
   # two sets with comm would want process substitution, which is a bashism.
   awk -v claude="$CLAUDE" -v reg="$REGISTER" '
     function trim(s) { sub(/^[ \t\r]+/, "", s); sub(/[ \t\r]+$/, "", s); return s }
-    function emit(   s, i, j, k, p, label) {
-      if (unit == "" || unit !~ /^[-*+][ \t]+\*\*/) { unit = ""; return }
-      s = unit; sub(/^[-*+][ \t]+\*\*/, "", s)
+    function emit(   s, i, j, k, p, pad, orig, label) {
+      if (unit == "" || unit !~ /^- \*\*/) { unit = ""; return }
+      s = unit; sub(/^- \*\*/, "", s)
+      # Blank out inline code spans first: a span containing ** would otherwise close
+      # the label early, the same class as the italic-suffix bug below.
+      while (match(s, /`[^`]*`/)) {
+        pad = sprintf("%*s", RLENGTH, "")
+        s = substr(s, 1, RSTART - 1) pad substr(s, RSTART + RLENGTH)
+      }
       # The closing ** is the first NOT followed by another *. A label ending in an
       # italic (...skip *work*) is stored as *work***, and taking the first pair
       # truncates it by one character — reported as both halves of the cross-check
@@ -195,7 +255,11 @@ else
         if (substr(s, k + 2, 1) != "*") { i = k; break }
         p = k + 1
       }
-      if (i > 1) { label = trim(substr(s, 1, i - 1)); if (label !~ /^\(example\)/) digest[label] = 1 }
+      if (i > 1) {
+        orig = unit; sub(/^- \*\*/, "", orig)
+        label = trim(substr(orig, 1, i - 1))
+        if (label !~ /^\(example\)/) digest[label] = 1
+      }
       unit = ""
     }
     function anchor(s,   t) {
@@ -206,23 +270,18 @@ else
       return t
     }
     # ---- first file: the always-loaded digest ----
-    # ---- first file: the always-loaded digest ----
-    # Labels are read off the SAME logical units check 2 measures, for two reasons a
-    # line-based reader got wrong. A label whose `**…**` wraps across two physical lines
-    # yielded no label at all, so the cross-check demanded nothing and a digest line with
-    # no entry behind it passed — and six of the pre-cut bullets wrapped that way. And an
-    # INDENTED bold span is emphasis inside a decision, not a label, so reading one as a
-    # label demanded a register entry for the word "Never".
+    # Check 2 has already refused every shape but `- **Label**` at column 0 with indented
+    # continuations, so this only has to join a wrapped label and find its closing `**`.
     NR == FNR {
+      if ($0 ~ /^[ \t]*(```|~~~)/) { kfence = !kfence; next }
+      if (kfence) next
       if ($0 ~ /^## Key Decisions/) { kd = 1; next }
       if (kd && $0 ~ /^## /)        { emit(); kd = 0 }
       if (!kd) next
-      if ($0 ~ /^[ \t]*(```|~~~)/)  { emit(); kfence = !kfence; next }
-      if (kfence) next
-      if ($0 ~ /^[ \t]*#/ || $0 ~ /^[ \t]*$/ || $0 ~ /^[ \t]*[|>]/) { emit(); next }
-      if ($0 ~ /^[-*+][ \t]/)      { emit(); unit = $0; next }
-      if ($0 ~ /^[ \t]+[^ \t]/)   { if (unit != "") { s = $0; sub(/^[ \t]+/, "", s); unit = unit " " s } next }
-      unit = (unit == "") ? $0 : unit " " $0
+      sub(/\r$/, "")
+      if ($0 ~ /^- /)               { emit(); unit = $0; next }
+      if ($0 ~ /^[ \t]+[^ \t]/)     { if (unit != "") { s = $0; sub(/^[ \t]+/, "", s); unit = unit " " s } next }
+      emit()
       next
     }
     # ---- second file: the register ----
