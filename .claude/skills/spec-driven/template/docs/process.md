@@ -484,7 +484,9 @@ When a spec is done, in the same pass:
 4. If reusable modules/services/components were added, add a **one-line** row to
    `docs/component-inventory.md` (if the inventory has split into area files, the row goes in the
    file **matching the component's path**).
-5. A *new architectural decision* gets its **full entry in `docs/decisions.md` first**, then **one
+5. A *new architectural decision* gets its **full entry in `docs/decisions.md` first, plus a row in
+   that file's `## Contents`** — an entry the Contents does not reach is findable only by reading the
+   whole file, and `docs-lint.sh` fails the PR for it — then **one
    line** in CLAUDE.md's Key Decisions — the digest line is **never the only home of a fact**, and
    never a paragraph. If the decision **supersedes an earlier one**, update the old register entry in
    place and add a superseded marker (short blockquote: what changed, which spec, where the full
