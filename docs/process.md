@@ -266,6 +266,16 @@ So the loop rotates the frame instead of adding rounds:
   such claims shipped as source comments in one project and were believed for weeks — a "registry
   guard" a router advertised and did not have, and a credential "scrub" a config module named as the
   thing keeping tokens out of logs. Both were found by writing the test that assumed them.
+- **Never carry an evidence sentence from another repo's commit message or script header — re-measure
+  it where you are putting it.** This is the mechanism behind every false claim a review has caught in
+  these docs, and it does not feel like guessing: the sentence was written by someone who had the repo
+  open, it reads as measured, and it is repeated verbatim. Six such claims shipped into this section
+  and its script — "monotonically, not one commit reducing it", "named the violation in the present
+  tense throughout", "eight weeks", a byte count already stale on the branch that wrote it. The one
+  figure that survived checking came from the same place, which is exactly why the habit persists.
+  **Anchor both ends of any measurement to a commit** a reader can re-derive it from: anchoring only
+  the end is what let "eight weeks" through, because "from" was then whichever commit the writer had
+  in mind. If you cannot cite both ends, state the principle and drop the number.
 - **A mechanical sweep REPORTS before it applies.** Print what it would change, read the list, then
   re-run with `--apply`, and check the result by diffing **test names** rather than a pass count. A
   classifier that looks right is routinely wrong at its edges: a sweep for unused module-level
