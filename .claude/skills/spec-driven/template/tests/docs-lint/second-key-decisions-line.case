@@ -1,117 +1,113 @@
 @@@ expect exit=1
-@@@ match The Key Decisions section is
+@@@ match Key Decisions
 @@@ file CLAUDE.md
-# Project
+# P
+
+Loaded every session.
+
+@docs/process/INDEX.md
+@docs/process/session-rhythm.md
+
+- `@docs/decisions/INDEX.md` — register
 
 ## Key Decisions
 
-One line each; the full entry lives in the register.
+Intro prose.
 
-### Area one
+| Area | Fences |
+|---|---|
+| Area A | `docs/decisions/area-a.md#fences` |
 
-- **Alpha rule** — short claim and its fence.
+## Key Decisions — see also
 
-- **Rule 0** — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be do
-- **Rule 1** — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be do
-- **Rule 2** — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be do
-- **Rule 3** — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be do
-- **Rule 4** — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be do
-- **Rule 5** — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be do
-- **Rule 6** — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be do
-- **Rule 7** — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be do
-- **Rule 8** — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be do
-- **Rule 9** — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be do
-- **Rule 10** — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be do
-- **Rule 11** — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be do
-- **Rule 12** — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be do
-- **Rule 13** — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be do
+- **Smuggled** — a decision hidden after a second heading that must not reopen the section.
 
 ## Out of Scope
 
 nothing
+@@@ file docs/decisions/INDEX.md
+# Register
 
-@@@ file docs/decisions.md
-# Key Decisions — full register
+## Areas
+
+| Area | Fences | Governs |
+|---|---|---|
+| Area A | `docs/decisions/area-a.md#fences` | none |
+@@@ file docs/decisions/area-a.md
+# Area A — decisions
+
+intro
 
 ## Contents
 
-- [Alpha rule](#alpha-rule)
-- [Rule 0](#rule-0)
-- [Rule 1](#rule-1)
-- [Rule 2](#rule-2)
-- [Rule 3](#rule-3)
-- [Rule 4](#rule-4)
-- [Rule 5](#rule-5)
-- [Rule 6](#rule-6)
-- [Rule 7](#rule-7)
-- [Rule 8](#rule-8)
-- [Rule 9](#rule-9)
-- [Rule 10](#rule-10)
-- [Rule 11](#rule-11)
-- [Rule 12](#rule-12)
-- [Rule 13](#rule-13)
+- [Fences](#fences)
+- [Label](#label)
+
+## Fences
+
+- **Label** — a fence.
 
 ---
 
-## Area one
+### Label
 
-### Alpha rule
+text
+@@@ file docs/process/INDEX.md
+# Router
 
-R.
+## Loaded every session
 
-### Rule 0
+| File | Carries |
+|---|---|
+| `CLAUDE.md` | x |
+| `docs/process/INDEX.md` | x |
+| `docs/process/session-rhythm.md` | x |
 
-R.
+## One file per part
 
-### Rule 1
+| File | What it holds | When to pull it |
+|---|---|---|
+| `docs/process/authoring-a-spec.md` | x | y |
+| `docs/process/model-routing.md` | x | y |
+@@@ file docs/process/session-rhythm.md
+# Rhythm
 
-R.
+text
+@@@ file docs/process/authoring-a-spec.md
+# Authoring
 
-### Rule 2
+text
+@@@ file docs/process/model-routing.md
+# Model routing
 
-R.
+## The table
 
-### Rule 3
+| Job | Model | Agent |
+|---|---|---|
+| Review | Opus | `reviewer` |
+| Implement | Fable | `implementer`, `model: fable` |
+@@@ file .claude/rules/specs.md
+---
+paths:
+  - "docs/specs/**"
+---
+Files matching these paths are governed by `docs/process/authoring-a-spec.md`.
+Read it before changing one — it is not loaded with CLAUDE.md.
+@@@ file docs/specs/SPEC-001-x.md
+# Spec
 
-R.
-
-### Rule 4
-
-R.
-
-### Rule 5
-
-R.
-
-### Rule 6
-
-R.
-
-### Rule 7
-
-R.
-
-### Rule 8
-
-R.
-
-### Rule 9
-
-R.
-
-### Rule 10
-
-R.
-
-### Rule 11
-
-R.
-
-### Rule 12
-
-R.
-
-### Rule 13
-
-R.
-
+**Status:** Draft
+@@@ file .claude/agents/reviewer.md
+---
+name: reviewer
+description: r
+model: opus
+---
+body
+@@@ file .claude/agents/implementer.md
+---
+name: implementer
+description: i
+model: opus
+---
+body

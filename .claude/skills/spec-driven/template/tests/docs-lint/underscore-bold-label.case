@@ -1,30 +1,109 @@
 @@@ expect exit=1
-@@@ match prose after the first area heading
+@@@ match a bullet that does not open with a **bold label**
 @@@ file CLAUDE.md
-# Project
+# P
+
+Loaded every session.
+
+@docs/process/INDEX.md
+@docs/process/session-rhythm.md
+
+- `@docs/decisions/INDEX.md` — register
 
 ## Key Decisions
 
-One line each; the full entry lives in the register.
+Intro prose.
 
-### Area one
-
-__Never restart__ — We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. We decided after long deliberation that this must never be done, because the alternative was measured and lost events. 
+| Area | Fences |
+|---|---|
+| Area A | `docs/decisions/area-a.md#fences` |
 
 ## Out of Scope
 
 nothing
+@@@ file docs/decisions/INDEX.md
+# Register
 
-@@@ file docs/decisions.md
-# Key Decisions — full register
+## Areas
+
+| Area | Fences | Governs |
+|---|---|---|
+| Area A | `docs/decisions/area-a.md#fences` | none |
+@@@ file docs/decisions/area-a.md
+# Area A — decisions
+
+intro
 
 ## Contents
 
+- [Fences](#fences)
+- [Label](#label)
 
+## Fences
+
+- __Label__ — a fence.
 
 ---
 
-## Area one
+### Label
 
+text
+@@@ file docs/process/INDEX.md
+# Router
 
+## Loaded every session
 
+| File | Carries |
+|---|---|
+| `CLAUDE.md` | x |
+| `docs/process/INDEX.md` | x |
+| `docs/process/session-rhythm.md` | x |
+
+## One file per part
+
+| File | What it holds | When to pull it |
+|---|---|---|
+| `docs/process/authoring-a-spec.md` | x | y |
+| `docs/process/model-routing.md` | x | y |
+@@@ file docs/process/session-rhythm.md
+# Rhythm
+
+text
+@@@ file docs/process/authoring-a-spec.md
+# Authoring
+
+text
+@@@ file docs/process/model-routing.md
+# Model routing
+
+## The table
+
+| Job | Model | Agent |
+|---|---|---|
+| Review | Opus | `reviewer` |
+| Implement | Fable | `implementer`, `model: fable` |
+@@@ file .claude/rules/specs.md
+---
+paths:
+  - "docs/specs/**"
+---
+Files matching these paths are governed by `docs/process/authoring-a-spec.md`.
+Read it before changing one — it is not loaded with CLAUDE.md.
+@@@ file docs/specs/SPEC-001-x.md
+# Spec
+
+**Status:** Draft
+@@@ file .claude/agents/reviewer.md
+---
+name: reviewer
+description: r
+model: opus
+---
+body
+@@@ file .claude/agents/implementer.md
+---
+name: implementer
+description: i
+model: opus
+---
+body

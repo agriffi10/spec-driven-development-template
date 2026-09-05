@@ -15,8 +15,7 @@ Questions and no sentence that promises a decision: collect every decision you c
 it as a question for the human instead of parking it in the spec. Add the row to `docs/specs/INDEX.md`.
 Run `sh scripts/spec-lint.sh` and report its output verbatim.
 
-For completion work: follow the six steps in `completion-ritual.md` in order; the register entry is
-written before the digest line, never after.
+For completion work: follow the six steps in `completion-ritual.md` in order; the register entry is written in its area file before its fence, never after.
 
 Return: the paths you wrote, the lint output, and the decisions you could not make (or "none"). You
 do not review your own work — the orchestrator sends it to `reviewer`.

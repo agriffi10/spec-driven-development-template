@@ -22,7 +22,7 @@ The report:
 - If the brief says what the previous round fixed, do not re-audit it — spend the round on the new work.
 - Run the repo's gates against the branch: formatter, linter, typecheck, tests, `sh scripts/spec-lint.sh`
   on any spec touched, and `sh scripts/docs-lint.sh` on any change touching `CLAUDE.md`, `docs/process/`,
-  `docs/decisions.md`, `.claude/rules/`, `.claude/agents/` or a delivery doc. Report exit codes, not
+  `docs/decisions/`, `.claude/rules/`, `.claude/agents/` or a delivery doc. Report exit codes, not
   summary lines.
 - In the build frame, build the thing: write the code the artifact implies, off the branch under
   review, run the suites, and report contradictions, unspecified shapes and sequencing — that frame
