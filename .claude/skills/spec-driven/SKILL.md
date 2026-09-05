@@ -238,8 +238,9 @@ the remote, parallelise the work.**
 
 The main session is an orchestrator: each artifact goes to a subagent from `.claude/agents/` on the
 model `docs/process/model-routing.md` names for the job — **Sonnet** writes specs and docs-only
-changes (`spec-author`); **Opus** reviews every spec, plan, grouping and diff, both frames
-(`reviewer`); **Opus** plans and implements, **Fable** when the complexity rule triggers (concurrency,
+changes (`spec-author`); **Opus** reviews every spec, plan, grouping and diff, except that the build
+frame of code written or rewritten on Fable, and the review of a plan written on Fable, run on
+Fable, so nothing is reviewed only by weaker models than its author (`reviewer`); **Opus** plans and implements, **Fable** when the complexity rule triggers (concurrency,
 lifecycle or deploy wiring, auth or secrets, irreversible data changes, an execution-harness
 requirement, a boundary the spec did not name, a checked-twice failure, or a rewrite under review
 pressure) — passed as `model: fable` on the invocation (`implementer`); **Haiku** enumerates, measures

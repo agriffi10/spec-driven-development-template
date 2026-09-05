@@ -125,9 +125,11 @@ output as intended and rubber-stamps it. In practice the reviewer is either a ne
 
 **Model routing.** Claude comes in tiers (Haiku, Sonnet, Opus, Fable). The main session is an
 *orchestrator*: it hands each artifact to a subagent on the model the job calls for — Sonnet writes
-specs, Opus reviews and implements, Fable implements when the change is complex, Haiku enumerates —
-from a table in `docs/process/model-routing.md`, with the defaults baked into the agent files under
-`.claude/agents/`. When unsure it goes one tier up, never down.
+specs, Opus reviews and implements, Fable implements when the change is complex (and a separate Fable
+session then runs the build frame of its review, so nothing is reviewed only by weaker models than
+its author), Haiku
+enumerates — from a table in `docs/process/model-routing.md`, with the defaults baked into the agent
+files under `.claude/agents/`. When unsure it goes one tier up, never down.
 
 **Frame.** The angle a reviewer is asked to look from. A reviewer finds what its frame can see, so
 "the reviewer found nothing" only ever means "nothing within the frame I gave it." That is why the
@@ -448,7 +450,7 @@ from the template don't need them.
 | `.github/workflows/ci.yml.example` | **Inert** template for your language's formatter, linter, type-checker and tests (Node and Python jobs included). The `.example` extension means GitHub never runs it; you turn it into a real `ci.yml` at setup. | CI (once you fill it in) |
 | `.github/pull_request_template.md` | PR checklist restating the rules: maps to the plan, no new open questions, **both framed pre-push reviews done**, gates green, owed criteria named, watch to green. | You + Claude |
 | `.claude/rules/*.md` | **Path-scoped pointers**, one per governed tree (specs, delivery docs, the register, the process, the PR queue, the agents). Each fires when Claude opens a matching file with its Read tool and says which process part to read first. A backstop for a session that forgot, not the mechanism. | Claude Code (on Read) |
-| `.claude/agents/*.md` | The **subagent roles** the routing table names — `spec-author` (Sonnet), `reviewer` (Opus), `implementer` (Opus, Fable on demand), `scout` (Haiku) — each carrying its default model and its brief. | Claude Code (when delegating) |
+| `.claude/agents/*.md` | The **subagent roles** the routing table names — `spec-author` (Sonnet), `reviewer` (Opus, Fable on demand), `implementer` (Opus, Fable on demand), `scout` (Haiku) — each carrying its default model and its brief. | Claude Code (when delegating) |
 | `.claude/skills/spec-driven/SKILL.md` | The **skill** — the procedure Claude follows. Claude Code discovers it at this path. | Claude Code (automatically) |
 | `.claude/skills/spec-driven/README.md` | Human-facing note on what the skill folder contains and how to install it. | You |
 | `.claude/skills/spec-driven/template/` | The **canonical copy** of the whole scaffold (see below). | The skill |
