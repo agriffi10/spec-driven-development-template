@@ -53,6 +53,7 @@ for case_file in "$CASES"/*.case; do
       -e 's/^KEY_DECISIONS_MAX_BYTES=.*/KEY_DECISIONS_MAX_BYTES=1200/' \
       -e 's/^DIGEST_MAX_BYTES=.*/DIGEST_MAX_BYTES=300/' \
       -e 's/^DELIVERY_MAX_LINES=.*/DELIVERY_MAX_LINES=10/' \
+      -e 's/^ALWAYS_LOADED_MAX_BYTES=.*/ALWAYS_LOADED_MAX_BYTES=1500/' \
       "$ROOT/scripts/docs-lint.sh" > "$WORK/scripts/docs-lint.sh"
   chmod +x "$WORK/scripts/docs-lint.sh"
 

@@ -10,6 +10,6 @@ to status only — no prose.
 ## Arcs (build order)
 
 Group related specs and record the order to build them in. Keep this section: a spec split for size
-(`process.md` §4) always records its order here, even if you group nothing else.
+(`docs/process/authoring-a-spec.md`) always records its order here, even if you group nothing else.
 
 - **[arc name]:** SPEC-00X → SPEC-00Y → SPEC-00Z  <!-- example — delete this line -->

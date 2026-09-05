@@ -21,17 +21,21 @@ A workflow for shipping features as: **specify → plan → build in reviewable 
 record leanly.** This skill carries the scaffold under `template/` and the rules for operating it. The
 goal is a small always-loaded context (`CLAUDE.md`) backed by layered, on-demand docs.
 
-`template/docs/process.md` is the **pristine** copy of the method, for scaffolding. In a repo that
-has already been scaffolded, read that repo's own **`docs/process.md`** instead, every session — it
-is the contract `CLAUDE.md` summarises, and its *Operational traps* and *Project ground rules*
-sections are filled in per project and exist nowhere else. The jobs below are the operating modes.
+`template/docs/process/` is the **pristine** copy of the method, for scaffolding — one file per part
+behind the router `INDEX.md`. In a repo that has already been scaffolded, that repo's own
+`CLAUDE.md` **imports** its `docs/process/INDEX.md` and `docs/process/session-rhythm.md`, so both are
+in context at launch; pull the other parts when the router's table says, and never the old single
+file — `operational-traps.md` and `ground-rules.md` are filled in per project and exist nowhere
+else. **Every artifact is delegated to a subagent on the model the job calls for** — see §6 below.
+The jobs below are the operating modes.
 
 ## 0. Scaffold a repo (bootstrap)
 
 When a repo has no spec-driven docs yet:
 
 1. Copy the contents of this skill's `template/` into the repo root: `CLAUDE.md`, `docs/`, `scripts/`,
-   `.github/`. **Do not clobber** existing files — if `CLAUDE.md`, a PR template, or a workflow already
+   `.github/`, and `.claude/rules/` + `.claude/agents/` (the path-scoped pointers and the model-routed
+   subagent roles). **Do not clobber** existing files — if `CLAUDE.md`, a PR template, or a workflow already
    exists, merge rather than overwrite, and tell the user what you merged.
    🔴 **If the repo you are scaffolding is the template repo itself**, stop: its root is a generated
    mirror of `template/`, `scripts/sync-from-skill.sh` regenerates it, and edits belong in `template/`
@@ -102,7 +106,8 @@ the gate above is the other half.
 
 Only when told to build (a Draft spec sitting in the repo is not a signal to start).
 
-1. Read `CLAUDE.md` and the repo's own **`docs/process.md`**, then the **current spec in full**. Skim
+1. Read `CLAUDE.md` — its imports bring the process router and the session rhythm with it — then
+   the **current spec in full**. Skim
    `component-inventory.md`; pull only the `architecture.md` section / dependency delivery-doc you
    need — never the whole file.
 2. Confirm CI is green on `main`; investigate failures first.
@@ -159,8 +164,10 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
    the sweep that lists the whole population, and have it report before it applies. A sweep has a
    frame the same way a review does — several sweeps asking the same question are one check, however
    exhaustive each is, and they say nothing about the half of a change that was newly written. **Spot-check a
-   negative claim** ("no test covers this", "nothing imports this") before acting on it and again
-   before writing it down. Full contract and the measurements behind it: `docs/process.md` §3.
+   negative claim** ("no test covers this", "nothing imports this") before acting on it and again   before writing it down. Full contract and the measurements behind it: `docs/process/reviewer-contract.md`.
+   🔴 **In the template repo itself, `sh scripts/check-mirror.sh` is a pre-push gate too** — CI runs it,
+   the scaffold's own `CLAUDE.md` cannot name it (derived projects delete it), and every edit under
+   `template/` owes a `sh scripts/sync-from-skill.sh` before it passes.
 
 ## 3. Watch PRs and watch main
 
@@ -227,6 +234,18 @@ the remote, parallelise the work.**
    Reimplementing this by hand gets one of those backwards. Full protocol and the configuration
    seams for non-GitHub projects: `scripts/pr-queue/PROTOCOL.md`.
 
+## 6. Delegate by model
+
+The main session is an orchestrator: each artifact goes to a subagent from `.claude/agents/` on the
+model `docs/process/model-routing.md` names for the job — **Sonnet** writes specs and docs-only
+changes (`spec-author`); **Opus** reviews every spec, plan, grouping and diff, both frames
+(`reviewer`); **Opus** plans and implements, **Fable** when the complexity rule triggers (concurrency,
+lifecycle or deploy wiring, auth or secrets, irreversible data changes, an execution-harness
+requirement, a boundary the spec did not name, a checked-twice failure, or a rewrite under review
+pressure) — passed as `model: fable` on the invocation (`implementer`); **Haiku** enumerates, measures
+and sweeps (`scout`). When unsure, one tier up, never down. The agent files carry the defaults so a
+plain `@agent-reviewer` gets the right model; the table is the authority when they disagree.
+
 ## spec-lint reference
 
 `scripts/spec-lint.sh [dir]` (default `docs/specs`). **FAIL** (exit 1): a spec missing a required
@@ -243,7 +262,15 @@ continuation lines joined, or a prose paragraph, since keying only on bullets le
 rewritten as prose to escape both this cap and the register cross-check; `docs/decisions.md` missing; a digest label with no `###` entry or an entry
 with no digest label; an entry absent from that file's Contents; a `Status: Completed` spec with no
 `docs/spec-delivery/SPEC-NNN-*.md`; a delivery doc over `DELIVERY_MAX_LINES`; a relative link or `@`
-pointer in `CLAUDE.md` that resolves to nothing. Entries labelled `(example)` are exempt, so a fresh
+pointer in an always-loaded file that resolves to nothing. On the **routed process tier** it also
+fails: a `docs/process/` with no router; a stub at `docs/process.md`; a router row `CLAUDE.md` does
+not import or an import the router does not name; the always-loaded set (derived from the router's
+table) over `ALWAYS_LOADED_MAX_BYTES`; a bare `@` import in any always-loaded file but `CLAUDE.md`;
+a part with no router row or a row with no file; a `.claude/rules/` file without frontmatter at
+byte 0, with an inline or missing `paths:`, an extra key, a glob outside the four allowed forms or
+matching nothing, a body that is not the two-line template, or a pointer to an unrouted part; a
+`.claude/agents/` file without frontmatter, a `name` not equal to its stem, a `model` outside
+`sonnet|opus|haiku|fable`, or one the routing table does not name (and the reverse). Entries labelled `(example)` are exempt, so a fresh
 scaffold is green. **`scripts/docs-lint-test.sh` is its fixture corpus — run it after any change to
 `docs-lint.sh`.** The linter passing against your own docs says nothing about whether its checks
 work; the corpus is what says that. The budgets are **ratchets against accretion**: when one fires because a doc grew a line at a time, cut and re-ratchet at the new

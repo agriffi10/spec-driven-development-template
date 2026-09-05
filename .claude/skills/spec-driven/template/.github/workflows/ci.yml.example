@@ -6,9 +6,9 @@
 # (match CLAUDE.md → Common Commands), then delete this `.example`.
 #
 # Purpose: run the project's quality gates on every PR and push to `main`, so that
-# "land on green CI" (docs/process.md) means the formatter, linter, type-checker, and
+# "land on green CI" (docs/process/session-rhythm.md) means the formatter, linter, type-checker, and
 # tests all passed — not just spec-lint, which runs in its own workflow. (docs-lint is
-# deliberately NOT in CI — it is a local pre-push gate; see docs/process.md §5.)
+# deliberately NOT in CI — it is a local pre-push gate; see docs/process/completion-ritual.md.)
 
 name: CI
 

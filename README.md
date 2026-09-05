@@ -12,9 +12,10 @@ You do not need prior experience with coding agents to use this. The sections be
 concept before it's used.
 
 > **Built for Claude specifically.** It relies on conventions that are Claude's, not generic AI
-> features: a `CLAUDE.md` file that Claude loads automatically at the start of every session,
-> `@docs/…` references that Claude opens only when a task needs them, and a `.claude/skills/` folder
-> that Claude Code discovers on its own. Read with a different assistant, the Markdown still makes
+> features: a `CLAUDE.md` file that Claude loads automatically at the start of every session, `@docs/…`
+> references — two of them imports that load with it, the rest pointers Claude opens only when a
+> task needs them — path-scoped rules in `.claude/rules/`, subagent roles in `.claude/agents/`, and a
+> `.claude/skills/` folder that Claude Code discovers on its own. Read with a different assistant, the Markdown still makes
 > sense, but none of the automatic behavior fires.
 
 ---
@@ -93,8 +94,11 @@ in that repository. It holds your project overview, tech stack, code conventions
 (one line each), and the session workflow. It is deliberately short — when it grows, the detail moves
 into `docs/` behind a pointer.
 
-**`@docs/…` reference.** A line in `CLAUDE.md` like `@docs/architecture.md` is a pointer, not an
-inclusion. Claude opens that file when a task calls for it and otherwise leaves it closed. This is the
+**`@docs/…` reference.** A line in `CLAUDE.md` like `` `@docs/architecture.md` `` — in backticks — is a
+pointer, not an inclusion. Claude opens that file when a task calls for it and otherwise leaves it
+closed. Written bare, outside backticks, the same syntax is an **import** that loads with `CLAUDE.md`
+at launch; this template uses that for exactly two files, the process router and the session rhythm,
+so what every session needs is loaded by mechanism and everything else stays a pointer. This is the
 mechanism that keeps context cheap.
 
 **Skill.** A folder containing a `SKILL.md` file: a written procedure Claude follows when a matching
@@ -118,6 +122,12 @@ dependencies are cited as "SPEC-003 FR-002" rather than by a bare number.
 and asking it to find problems. This matters because an agent reviewing its own work treats its own
 output as intended and rubber-stamps it. In practice the reviewer is either a new session or a
 **subagent** — a helper session the main one spawns, with its own blank context.
+
+**Model routing.** Claude comes in tiers (Haiku, Sonnet, Opus, Fable). The main session is an
+*orchestrator*: it hands each artifact to a subagent on the model the job calls for — Sonnet writes
+specs, Opus reviews and implements, Fable implements when the change is complex, Haiku enumerates —
+from a table in `docs/process/model-routing.md`, with the defaults baked into the agent files under
+`.claude/agents/`. When unsure it goes one tier up, never down.
 
 **Frame.** The angle a reviewer is asked to look from. A reviewer finds what its frame can see, so
 "the reviewer found nothing" only ever means "nothing within the frame I gave it." That is why the
@@ -195,8 +205,9 @@ file layout, which helper to reuse — Claude decides in-session and updates the
 Something that changes behavior you'd notice, or has no clearly-right answer, stops the build and
 comes to you with options and a recommendation.
 
-The full method, with the reasoning behind each rule, is in [`docs/process.md`](docs/process.md).
-Claude reads it every session.
+The full method, with the reasoning behind each rule, is in [`docs/process/`](docs/process/INDEX.md),
+one file per part. The router and the session rhythm load with `CLAUDE.md`; the rest is pulled when
+the router's table says.
 
 ## Quick start
 
@@ -225,8 +236,8 @@ Claude reads it every session.
 7. **Protect `main`.** In Settings → Rules, require pull requests (no direct pushes) and add
    `spec-lint` and your `ci` jobs as required status checks. Nothing in the files can enforce this;
    it's a repository setting.
-8. Fill in the two per-project sections at the bottom of `docs/process.md`: *Operational traps* (§6)
-   and *Project ground rules* (§7). They start as examples and exist nowhere else — the first time a
+8. Fill in the two per-project parts of the process, `docs/process/operational-traps.md` and
+   `docs/process/ground-rules.md`. They start as examples and exist nowhere else — the first time a
    trap bites you, one line there stops it biting the next session.
 9. Write your first spec (see below).
 
@@ -402,7 +413,12 @@ from the template don't need them.
 | Path | What it is | Who reads it |
 |---|---|---|
 | `CLAUDE.md` | **Always-loaded project memory.** Conventions, key decisions, session workflow, and `@docs/…` pointers to everything else. Deliberately short. | Claude, every session (automatically) |
-| `docs/process.md` | The **full method** — spec lifecycle, session rhythm, the reviewer contract, completion ritual, plus per-project sections for operational traps and ground rules. It's the contract `CLAUDE.md` summarizes, so Claude reads it every session. | You + Claude (every session) |
+| `docs/process/INDEX.md` | The **process router**: which files load every session (the authority for that set), one row per part saying when to pull it, and where each kind of truth lives. Imported by `CLAUDE.md`. | You + Claude (every session) |
+| `docs/process/session-rhythm.md` | The **operating loop** from session start to landing the PR. Imported by `CLAUDE.md`. | Claude (every session) |
+| `docs/process/reviewer-contract.md` | The **review gate** in full — counts, frames, rotating the frame, briefing the reviewer, the exit rule, and the evidence. | Claude (before any review) |
+| `docs/process/model-routing.md` | **Which model does which job** — the table, the complexity rule for Fable, the step-up rule. | Claude (before delegating) |
+| `docs/process/spec-lifecycle.md`, `authoring-a-spec.md`, `completion-ritual.md`, `several-agents.md` | The remaining parts: statuses and arcs; what makes a spec buildable; the six completion steps plus the doc-hygiene rules; the PR queue for parallel sessions. | Claude (when the router says) |
+| `docs/process/operational-traps.md`, `ground-rules.md` | The two **per-project** parts — seeded as traps bite and constraints appear. | You + Claude |
 | `docs/architecture.md` | Sectioned **design reference**, an append-only decision record, and Known Constraints. Pull the one section you need, never the whole file. | Claude (on demand) |
 | `docs/decisions.md` | **Key Decisions register** — full entries with reasoning and supersession markers. `CLAUDE.md` carries a one-line digest of each. | Claude (on demand) |
 | `docs/component-inventory.md` | One-line index of **reusable** modules and components, so a new spec reuses instead of rebuilding. | Claude (on demand) |
@@ -419,7 +435,7 @@ from the template don't need them.
 | `docs/templates/multi-agent-briefing.md` | The blank a launch briefing is written from, when several agents run at once. One per session. | You + Claude |
 | `scripts/spec-lint.sh` | **POSIX** shell linter. Fails a spec that's missing a required section or contains an "Open Questions"/"Checkpoint" heading; warns on unfilled placeholders, on requirements with no acceptance criteria anywhere in the file, and on a spec carrying more than eight requirements. No dependencies. | CI + you + Claude |
 | `scripts/docs-lint.sh` | **POSIX** shell linter for the always-loaded tier. Fails when `CLAUDE.md` is over its byte budget, a Key Decisions line has grown into an essay, `docs/decisions.md` is missing or has stopped matching the digest one-for-one, an entry is missing from that file's Contents, a Completed spec has no delivery doc, a delivery doc has become an essay, or a pointer out of `CLAUDE.md` goes nowhere. No dependencies. | you + Claude, before every push |
-| `scripts/docs-lint-test.sh` | **POSIX** fixture corpus for the doc linter — one case per construct, asserting the specific failure text rather than the exit code. Run it whenever you change `docs-lint.sh`; running the linter against your own docs proves your docs pass, not that the checks work. | CI + you + Claude |
+| `scripts/docs-lint-test.sh` | **POSIX** fixture corpus for the doc linter — one case per construct, asserting the specific failure text rather than the exit code. Run it whenever you change `docs-lint.sh`; running the linter against your own docs proves your docs pass, not that the checks work. | you + Claude (when the linter changes) |
 | `tests/docs-lint/*.case` | The fixtures themselves. A `-ok` case asserts the linter stays SILENT: false positives are a large share of what a gate gets wrong. | you + Claude |
 | `scripts/pr-queue/queue.sh` | The **PR queue**: a lock and a first-come-first-served line that keeps one pull request open at a time when several agents share the repo. Runs from outside the repo — `install.sh` puts it there. | Claude (multi-agent runs) |
 | `scripts/pr-queue/pre-push` | The git hook that makes the queue binding rather than advisory. Refuses a push from a participating branch that doesn't hold the lock, and allows everything else. | Git |
@@ -431,6 +447,8 @@ from the template don't need them.
 | `.github/workflows/check-mirror.yml` | Runs the mirror check on every pull request and push to `main`, in **this template repo only**. Deliberately not path-filtered — the failure it exists to catch is a change in a path nobody thought to list. Delete it in a derived project. | CI |
 | `.github/workflows/ci.yml.example` | **Inert** template for your language's formatter, linter, type-checker and tests (Node and Python jobs included). The `.example` extension means GitHub never runs it; you turn it into a real `ci.yml` at setup. | CI (once you fill it in) |
 | `.github/pull_request_template.md` | PR checklist restating the rules: maps to the plan, no new open questions, **both framed pre-push reviews done**, gates green, owed criteria named, watch to green. | You + Claude |
+| `.claude/rules/*.md` | **Path-scoped pointers**, one per governed tree (specs, delivery docs, the register, the process, the PR queue, the agents). Each fires when Claude opens a matching file with its Read tool and says which process part to read first. A backstop for a session that forgot, not the mechanism. | Claude Code (on Read) |
+| `.claude/agents/*.md` | The **subagent roles** the routing table names — `spec-author` (Sonnet), `reviewer` (Opus), `implementer` (Opus, Fable on demand), `scout` (Haiku) — each carrying its default model and its brief. | Claude Code (when delegating) |
 | `.claude/skills/spec-driven/SKILL.md` | The **skill** — the procedure Claude follows. Claude Code discovers it at this path. | Claude Code (automatically) |
 | `.claude/skills/spec-driven/README.md` | Human-facing note on what the skill folder contains and how to install it. | You |
 | `.claude/skills/spec-driven/template/` | The **canonical copy** of the whole scaffold (see below). | The skill |
@@ -484,27 +502,31 @@ which is which tells you what breaks silently if you skip a step.
 
 | Guardrail | Enforced by |
 |---|---|
-| Specs are fully specified before build — no Open Questions | `spec-lint.sh` (CI) + `process.md` |
+| Specs are fully specified before build — no Open Questions | `spec-lint.sh` (CI) + `docs/process/` |
 | Specs are structurally complete (required sections present) | `spec-lint.sh` (CI) |
 | A spec stays one buildable slice — split past eight requirements | `spec-lint.sh` warns (CI); the reviewer decides |
-| Every spec, plan and diff passes a fresh-context review before it moves on | `process.md` + `CLAUDE.md` + `SKILL.md` |
-| The counts: one review on the spec, one on the plan, one on the PR grouping, **two** on the diff | `process.md` + `CLAUDE.md` + `SKILL.md` |
+| Every spec, plan and diff passes a fresh-context review before it moves on | `docs/process/` + `CLAUDE.md` + `SKILL.md` |
+| The counts: one review on the spec, one on the plan, one on the PR grouping, **two** on the diff | `docs/process/` + `CLAUDE.md` + `SKILL.md` |
 | Both diff reviews happened before the push, and owed criteria are named | PR template |
-| The diff reviews gate the **push**, not the merge | `process.md` + `CLAUDE.md` + `SKILL.md` |
-| Builds run off a reviewed plan, straight through — no per-phase checkpoints | `process.md` + `SKILL.md` |
-| Emergent issues triaged by kind: reversible → decide, product-changing → escalate | `process.md` + `CLAUDE.md` |
-| Formatter, linter, type-checker and tests green **before** a push | `process.md` + `CLAUDE.md` + PR template |
-| Every PR watched and merged on green; `main` watched; red `main` fixed first | `process.md` + `CLAUDE.md` + PR template |
-| Domain code follows the right rulebook, loading only what's needed | `best-practices/INDEX.md` + `process.md` |
-| The always-loaded tier stays lean — budget, digest line length, a register behind every digest line | `docs-lint.sh` (local pre-push, **not CI**) + the completion ritual in `process.md` |
+| The diff reviews gate the **push**, not the merge | `docs/process/` + `CLAUDE.md` + `SKILL.md` |
+| Builds run off a reviewed plan, straight through — no per-phase checkpoints | `docs/process/` + `SKILL.md` |
+| Emergent issues triaged by kind: reversible → decide, product-changing → escalate | `docs/process/` + `CLAUDE.md` |
+| Formatter, linter, type-checker and tests green **before** a push | `docs/process/` + `CLAUDE.md` + PR template |
+| Every PR watched and merged on green; `main` watched; red `main` fixed first | `docs/process/` + `CLAUDE.md` + PR template |
+| Domain code follows the right rulebook, loading only what's needed | `best-practices/INDEX.md` + `docs/process/` |
+| The always-loaded tier stays lean — budget, digest line length, a register behind every digest line | `docs-lint.sh` (local pre-push, **not CI**) + `docs/process/completion-ritual.md` |
+| The always-loaded set is exactly what the router's table names — `CLAUDE.md`'s imports match it row for row, the set is within its byte budget, and no imported file imports anything itself | `docs-lint.sh` (local pre-push) |
+| Every process part is a router row and every row is a file; no stub at the old single-file path | `docs-lint.sh` (local pre-push) |
+| Path-scoped rules and agent files keep their shape — frontmatter at byte 0, globs that match something, a body equal to the template, a `model` the routing table allows | `docs-lint.sh` (local pre-push) |
+| Every job runs on the model the routing table names | `docs/process/model-routing.md` + `CLAUDE.md` + the `.claude/agents/` defaults |
 | The doc linter's own checks still fire | `docs-lint-test.sh` (local, run when you change the linter) — a fixture per construct, each asserting its failure text |
-| Any gate you add is itself tested, not just run | `process.md` §3 — a gate run only on what it guards proves the artifacts pass, not that the gate works |
+| Any gate you add is itself tested, not just run | `docs/process/reviewer-contract.md` — a gate run only on what it guards proves the artifacts pass, not that the gate works |
 | One pull request open at a time when several agents share the repo | `scripts/pr-queue/` (the `pre-push` hook) |
 | The root scaffold matches the skill's canonical copy | `check-mirror.sh` (CI) |
 | Your language's own quality gates | the `ci.yml` you create from `ci.yml.example` |
 
-The rows enforced only by documents are the ones worth reading `docs/process.md` for. They hold
-because Claude reads them every session, not because anything fails when they're skipped.
+The rows enforced only by documents are the ones worth reading `docs/process/` for. They hold because the router and the session rhythm load with `CLAUDE.md` every session and the
+other parts are pulled when the router says — not because anything fails when they're skipped.
 
 ## Maintaining and extending
 
@@ -605,4 +627,4 @@ instead of the diff. Exit when a fresh angle finds nothing, not when you reach a
 a round count" governs when to stop *above* the required two, not permission to stop below it. A
 clean review means nothing was found within the frame that reviewer was given. On a spec or a plan,
 one clean review does close the gate. The reasoning, and the measurements behind it, are in
-`docs/process.md` §3.
+`docs/process/reviewer-contract.md`.
