@@ -43,8 +43,7 @@ sends the new plan through again.
   one sentence is a finding that was. **Write a rejection down only when it carries a lesson worth
   keeping** — then it belongs in the register or the spec, as reasoning, not as a paper trail.
 - **The reviewer gets the artifact and its sources, never the author's reasoning.** For a spec: the
-  spec file, its build-order entry in `INDEX.md`, the `architecture.md` sections and `decisions.md`
-  entries it claims to follow, and the specs it depends on. For a plan: the plan, the spec, and
+  spec file, its build-order entry in `INDEX.md`, the `architecture.md` sections and `docs/decisions/` entries it claims to follow, and the specs it depends on. For a plan: the plan, the spec, and
   `component-inventory.md`. For a diff: the diff, the spec's acceptance criteria, and the
   `best-practices/` rules for the domains it touches (route via their INDEX). For a **PR grouping**:
   the reviewed plan and the phase list, and nothing else — the question is only whether the split is
@@ -227,7 +226,7 @@ yields a different class of finding than any reading-based frame.*
   defects. Run both, not one twice.
 - **Every reviewer runs the repo's gates against the branch** — formatter, linter, typecheck, tests,
   `scripts/spec-lint.sh` on any spec it touched, and `scripts/docs-lint.sh` on any change that touches
-  `CLAUDE.md`, `docs/decisions.md` or a delivery doc. Four rounds once reviewed a spec and none ran the
+  `CLAUDE.md`, `docs/decisions/` or a delivery doc. Four rounds once reviewed a spec and none ran the
   repo's doc-layout gate; the branch was red on it throughout, for a reason unrelated to the spec, and
   it took an agent that *built* the change to notice. A review of a change touching gated files runs
   the gates.

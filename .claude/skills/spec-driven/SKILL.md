@@ -9,7 +9,7 @@ description: >-
   (no Open Questions), spec/plan/diff each pass a blocking fresh-context review gate, the diff review
   gates the push rather than the merge, builds run off a reviewed plan straight to completion (no
   per-phase checkpoints), every PR is watched and merged on green, main is always watched, and the
-  always-loaded tier stays lean (budget + a decisions register behind every digest line).
+  always-loaded tier stays lean (budget + a fences-first register file per decision area).
   Triggers on phrases like "set up
   spec-driven", "scaffold the docs structure", "write a spec", "start SPEC-XXX", "build this spec",
   "complete the spec / run the completion ritual", "run several agents at once".
@@ -50,8 +50,9 @@ When a repo has no spec-driven docs yet:
 5. Wire `spec-lint` into CI (add a step to the repo's workflow, or keep the standalone `spec-lint.yml`
    — either is fine, but it must run on PRs). **`docs-lint` is deliberately NOT a CI job**: it is a
    local pre-push gate, so its failures land on the person who caused them rather than on a shared
-   branch where they red unrelated work. Then **re-ratchet all three budgets in `scripts/docs-lint.sh`** — `CLAUDE_MAX_BYTES`,
-   `DIGEST_MAX_BYTES` and `DELIVERY_MAX_LINES` — to what this repo actually measures. The shipped
+   branch where they red unrelated work. Then **re-ratchet all five budgets in `scripts/docs-lint.sh`** — `CLAUDE_MAX_BYTES`,
+   `ALWAYS_LOADED_MAX_BYTES`, `KEY_DECISIONS_MAX_BYTES`, `DIGEST_MAX_BYTES` and `DELIVERY_MAX_LINES` — to
+   what this repo actually measures. The shipped
    defaults are sized for a scaffold whose `CLAUDE.md` is placeholders and whose `docs/spec-delivery/`
    is empty, and a budget far above the measurement never fires.
 6. **Set up language CI (GitHub Actions).** Ask the user *once* what the repo's CI needs — which
@@ -189,8 +190,10 @@ In one pass when a spec is done:
 3. Write a short delivery doc at `docs/spec-delivery/SPEC-XXX-<name>.md` from
    `docs/templates/spec-completion-template.md` — typically under a page (~40–100 lines), no code pasted.
 4. If reusable components were added, add a one-line row to `docs/component-inventory.md`.
-5. A new architectural decision → full entry in `docs/decisions.md` **first**, then one line in
-   `CLAUDE.md` Key Decisions (+ pointer). Never a paragraph, and never the only home of a fact. If it
+5. A new architectural decision → full `###` entry in its area file under `docs/decisions/` **first**
+   (plus its Contents row), then one **fence** under that file's `## Fences`. Never a paragraph, never
+   the only home of a fact, and never a line in `CLAUDE.md` — only a new *area* adds a row to
+   `CLAUDE.md`'s Key Decisions table and to `docs/decisions/INDEX.md`, in the same order. If it
    **supersedes** an earlier decision, add an in-place superseded marker at every doc site still
    stating the old claim.
 6. If it changed the **shape** of the system — a piece added or removed, a boundary moved, a mechanism
@@ -258,10 +261,15 @@ spec with FRs but no acceptance criteria anywhere in it, and a spec carrying mor
 ## docs-lint reference
 
 `scripts/docs-lint.sh` (no arguments; resolves its own repo root). **FAIL** (exit 1), no WARN tier:
-`CLAUDE.md` over `CLAUDE_MAX_BYTES`; a Key Decisions unit over `DIGEST_MAX_BYTES` — a bullet with its
-continuation lines joined, or a prose paragraph, since keying only on bullets let the section be
-rewritten as prose to escape both this cap and the register cross-check; `docs/decisions.md` missing; a digest label with no `###` entry or an entry
-with no digest label; an entry absent from that file's Contents; a `Status: Completed` spec with no
+`CLAUDE.md` over `CLAUDE_MAX_BYTES`; anything in its Key Decisions section but intro prose and one
+`| Area | Fences |` table, or that table empty; `docs/decisions/INDEX.md` missing, empty, or naming
+areas that differ from the table in name, file or order; a stub at `docs/decisions.md`; an area file
+with no row or a row with no file; in an area file: a title not matching the row, a `##` other than
+Contents and Fences, Fences not first in Contents or not first after it, a fence over
+`DIGEST_MAX_BYTES` (a bullet with its continuations joined) or of the wrong shape, a fence with no
+`###` entry or an entry with no fence, an entry absent from the Contents, a pointer in Fences that
+resolves to nothing; an area whose *Governs* globs have no matching rule, or a rule for an area that
+governs none; a `Status: Completed` spec with no
 `docs/spec-delivery/SPEC-NNN-*.md`; a delivery doc over `DELIVERY_MAX_LINES`; a relative link or `@`
 pointer in an always-loaded file that resolves to nothing. On the **routed process tier** it also
 fails: a `docs/process/` with no router; a stub at `docs/process.md`; a router row `CLAUDE.md` does

@@ -1,6 +1,6 @@
 ---
 paths:
-  - "docs/decisions.md"
+  - "docs/decisions/**"
   - "docs/architecture.md"
   - "docs/component-inventory.md"
 ---

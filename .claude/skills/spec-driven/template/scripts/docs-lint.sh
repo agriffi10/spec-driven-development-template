@@ -3,7 +3,7 @@
 #
 # Why this exists as a script rather than a rule. Every check below already existed in
 # prose — in `docs/process/completion-ritual.md` (*Anti-regrowth & doc hygiene*), in `CLAUDE.md`'s own
-# doc-size guardrail, and in `docs/decisions.md`'s rules header — and in the sibling
+# doc-size guardrail, and in the register's rules header (now `docs/decisions/INDEX.md`) — and in the sibling
 # project `log-forge` (published as `log-foundry`) several were violated anyway. Its
 # `CLAUDE.md` grew from 7,350 bytes at `ad898fc8` to 89,340 at `e60b60d`, more than
 # tenfold — most of it while that repo carried only a TWO-SENTENCE version of the rule,
@@ -18,8 +18,9 @@
 # lands on whoever caused it rather than on a shared branch.
 #
 # FAIL (exit 1): the always-loaded file is over budget or has been removed outright, a
-#   Key Decisions unit has become the reasoning, the register is missing or has inverted
-#   with its digest, an entry is unreachable from the Contents, a Completed spec has no
+#   Key Decisions section carries anything but its intro and area table, the register INDEX or an
+#   area file is missing or disagrees with the table, a fence has no entry or an entry no fence,
+#   an entry is unreachable from the Contents, a fence has become the reasoning, a Completed spec has no
 #   delivery doc, a delivery doc has become an essay, a pointer out of an always-loaded file goes
 #   nowhere, the routed process tier has lost its shape (router, imports, parts, rules, agents —
 #   checks 9–13), or a stub has reappeared at the old single-file path.
@@ -57,7 +58,7 @@ cd "$ROOT"
 # reason the budget is here. Lowering the bar to fit the edit is the failure mode, and
 # it is how the sibling project reached 89 KB one justified exception at a time.
 #
-# ON ADOPTION, re-ratchet ALL FOUR to what this repo measures once its real docs
+# ON ADOPTION, re-ratchet ALL FIVE to what this repo measures once its real docs
 # exist, rounded up a little. A budget far above the measurement never fires. The
 # defaults below are set AFTER a structural cut (the process moved out of CLAUDE.md into
 # docs/process/ behind a router), so they are deliberately NOT at the measurement: what
@@ -76,17 +77,20 @@ CLAUDE_MAX_BYTES=11000
 # row to the table.
 ALWAYS_LOADED_MAX_BYTES=26000
 
-# The whole Key Decisions section, measured as bytes. This is the guard that cannot be
-# evaded by reformatting: a per-bullet cap is escaped by splitting one decision into
-# five, and every shape that escaped the old parser still costs bytes here.
-# (scaffold default; re-ratchet on adoption)
-KEY_DECISIONS_MAX_BYTES=12000
+# The whole Key Decisions section, measured as bytes. Since the digest left CLAUDE.md the
+# section is an intro paragraph and one row per AREA, so this bounds the number of areas,
+# not the number of decisions. Derived: the shipped intro is under a kilobyte and a row is
+# under a hundred bytes, so this is room for the intro and a few dozen areas. It sits WELL
+# under CLAUDE_MAX_BYTES on purpose — the previous value was above the file cap, so it could
+# never fire and was still advertised as a fence.
+KEY_DECISIONS_MAX_BYTES=2500
 
-# The longest a single Key Decisions unit may be. Measured on the LOGICAL unit — a
-# bullet with its continuation lines joined, or a prose paragraph — because measuring
+# The longest a single FENCE may be — a bullet under `## Fences` in an area file, with its
+# continuation lines joined. Measured on the LOGICAL unit because measuring
 # the physical line looks equivalent and is not: the moment the section is rewritten as
 # wrapped prose the longest physical line collapses to the wrap width, and the guard can
-# never fire again while still being advertised in the process docs.
+# never fire again while still being advertised in the process docs. Named DIGEST for
+# history: the fences ARE the digest, now beside their entries.
 #
 # BYTES, not characters: awk length() is byte-based in the one-true-awk that ships on
 # BSD and macOS, so em dashes and smart quotes count for more than one. Named for what
@@ -100,7 +104,9 @@ DIGEST_MAX_BYTES=1400
 DELIVERY_MAX_LINES=150
 
 CLAUDE="CLAUDE.md"
-REGISTER="docs/decisions.md"
+REGISTER_DIR="docs/decisions"
+REGISTER_INDEX="$REGISTER_DIR/INDEX.md"
+OLD_REGISTER="docs/decisions.md"
 SPEC_DIR="docs/specs"
 DELIVERY_DIR="docs/spec-delivery"
 PROCESS_DIR="docs/process"
@@ -115,7 +121,7 @@ AGENTS_DIR=".claude/agents"
 # — the bug reads as "the check found nothing" and is invisible in a green run.
 total=""
 FAILS="${TMPDIR:-/tmp}/docs-lint.$$"
-trap 'rm -f "$FAILS"' EXIT INT TERM
+trap 'rm -f "$FAILS" "${TMPDIR:-/tmp}"/docs-lint-kdrows.$$' EXIT INT TERM
 : > "$FAILS"
 
 note() { printf 'FAIL  %s\n' "$1" >> "$FAILS"; }
@@ -137,13 +143,44 @@ report() {
   exit 1
 }
 
+# Shared by checks 4 and 8: every relative link and `@path.md` pointer in a file resolves.
+# Defined here because the register check (4) runs before the always-loaded check (8).
+# Code-span-BLIND on purpose — see the note at check 8.
+check_pointers() {
+  awk '
+    /^[ \t]*(```|~~~)/ { fence = !fence; next }
+    fence { next }
+    {
+      line = $0
+      while (match(line, /\]\([^)]+\)/)) {
+        p = substr(line, RSTART + 2, RLENGTH - 3)
+        line = substr(line, RSTART + RLENGTH)
+        sub(/#.*$/, "", p)
+        if (p != "" && p !~ /^(https?:|mailto:)/ && p !~ /[*?]/) print p
+      }
+      line = $0
+      while (match(line, /@[A-Za-z0-9_.*?\/-]+\.md/)) {
+        p = substr(line, RSTART + 1, RLENGTH - 1)
+        line = substr(line, RSTART + RLENGTH)
+        # A pointer written as a glob (@docs/specs/SPEC-XXX-*.md) names a shape, not a
+        # file. Skipped ON PURPOSE and matched first, so that a real broken pointer is
+        # not silently excused by a character class that happened to exclude the star.
+        if (p !~ /[*?]/) print p
+      }
+    }
+  ' "$1" | sort -u | while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    [ -e "$p" ] || printf 'FAIL  %s points at "%s", which does not exist.\n' "${2:-$1}" "$p" >> "$FAILS"
+  done
+}
+
 # ── 0. The always-loaded file exists ───────────────────────────────────────────
 # A repo with no docs/ yet is simply not scaffolded, and there is nothing to hold. But
 # once docs/ exists, a MISSING CLAUDE.md is a deletion rather than a pre-scaffold state,
 # and going green on the removal of the very file this script constrains is the emptiest
 # pass available.
 if [ ! -f "$CLAUDE" ]; then
-  if [ -d "$SPEC_DIR" ] || [ -f "$REGISTER" ]; then
+  if [ -d "$SPEC_DIR" ] || [ -d "$REGISTER_DIR" ] || [ -f "$OLD_REGISTER" ]; then
     size=0
     note "$CLAUDE does not exist, but docs/ is scaffolded. The always-loaded file has been
       removed, not merely not-yet-written."
@@ -163,7 +200,7 @@ size=$(wc -c < "$CLAUDE") || { echo "error: cannot measure $CLAUDE" >&2; exit 2;
 # pass available.
 if ! grep -q '[^[:space:]]' "$CLAUDE"; then
   note "$CLAUDE is empty. The always-loaded file cannot be emptied any more than it can be
-      deleted: every budget passes trivially and the digest/register cross-check disarms."
+      deleted: every budget passes trivially and the table/register cross-check disarms."
   size=0
   report
 fi
@@ -178,205 +215,320 @@ if [ "$size" -gt "$CLAUDE_MAX_BYTES" ]; then
       headroom rather than pinning at the new measurement, and record why beside the number."
 fi
 
-# ── 2. Key Decisions has a FIXED SHAPE, and is measured whole ────────────────
+# ── 2. Key Decisions is an INTRO and ONE AREA TABLE, measured whole ───────────
 #
-# This replaced a markdown parser, after that parser shipped three rounds of fixes and
-# each round introduced a fresh escape: prose evaded a bullet-only cap; widening the cap
-# to accept indented bullets let a parent-plus-children decision escape; adding boundary
-# rules for tables, blockquotes and fences made every one of those a place where content
-# was consumed and never measured at all. Eight escapes in the end, five of them
-# regressions from the previous fix.
+# The digest left this file: decisions live as FENCES at the top of one register file per
+# area (docs/decisions/<slug>.md), and this section names the areas. The fixed-shape rule
+# stays — it replaced a markdown parser that shipped three rounds of fixes, each opening a
+# fresh escape — and the shape is now smaller: plain prose, then exactly one table with the
+# header `| Area | Fences |` and rows `| <name> | \`docs/decisions/<slug>.md#fences\` |`.
+# Bullets, a second table, prose after the table, blockquotes, headings and fenced blocks
+# are refused by name. Every one of them was a way past a check once.
 #
-# The lesson is that this file's format is OURS. Parsing arbitrary markdown is an
-# unbounded problem; validating a fixed shape is a bounded one. So the section may
-# contain only four things, and anything else fails LOUDLY rather than silently sliding
-# past a cap that cannot see it:
+# The table is the AUTHORITY for the closed set of areas and their order; the register
+# INDEX and the rules are held to it below. An empty table is therefore a parse anchor
+# missing, not an empty set: with no row, every check on the register iterates nothing and
+# passes — so no row FAILS.
 #
-#   - a `### ` area heading at column 0
-#   - a `- **Label** — …` bullet at column 0
-#   - an indented continuation of the bullet above it
-#   - a blank line
-#
-# plus free prose BEFORE the first area heading, which is the section intro. A table, a
-# blockquote, a fenced block, an indented bullet, an ordered list, a task list and
-# `__bold__` are all refused by name. That is not a limitation to work around: every one
-# of them was an escape.
-#
-# The section is also measured WHOLE, against KEY_DECISIONS_MAX_BYTES. A per-unit cap
-# can always be evaded by splitting; a section total cannot be evaded by reformatting,
-# because every escape still costs bytes.
-kd_report=$(awk -v ucap="$DIGEST_MAX_BYTES" -v scap="$KEY_DECISIONS_MAX_BYTES" -v reg="$REGISTER" '
-  function flush(   n) {
-    if (unit == "") return
-    n = length(unit)
-    if (n > ucap)
-      printf "FAIL  A Key Decisions bullet is %d bytes (cap %d): %s…\n      Keep the claim and the fence in the digest; the reasoning goes in %s.\n",
-             n, ucap, substr(unit, 1, 70), reg
-    # A bullet whose ** never closes is a decision the register cross-check cannot see:
-    # it parses as a valid bullet and yields no label, so nothing demands an entry.
-    if (unit ~ /^- \*\*/ && !has_close(unit))
-      printf "FAIL  A Key Decisions bullet never closes its `**` label: %s…\n      An unclosed label yields no label at all, so nothing requires a register entry for it.\n",
-             substr(unit, 1, 70)
-    unit = ""
-  }
-  function has_close(u,   s, i, j, k, p) {
-    s = u; sub(/^- \*\*/, "", s)
-    p = 1
-    while ((j = index(substr(s, p), "**")) > 0) {
-      k = p + j - 1
-      if (substr(s, k + 2, 1) != "*") return (k > 1)
-      p = k + 1
-    }
-    return 0
-  }
+# Terminating conditions (each with a fixture): 2a no section  2b no table row  2c header
+# not | Area | Fences |  2d malformed row  2e duplicate area name  2f duplicate slug  2g a
+# second table  2h content after the table  2i bullet/list in the intro  2j blockquote in
+# the intro  2k indented line in the intro  2l raw HTML in the intro  2m heading inside the
+# section  2n fenced block  2o section over KEY_DECISIONS_MAX_BYTES  2p separator row missing
+# 2q an | Area | Fences | table outside the section
+KD_ROWS="${TMPDIR:-/tmp}/docs-lint-kdrows.$$"
+awk -v scap="$KEY_DECISIONS_MAX_BYTES" '
   function bad(why) {
-    printf "FAIL  Key Decisions, line %d: %s\n      The section has a fixed shape — area headings, `- **Label**` bullets at column 0,\n      indented continuations, blank lines, and plain intro prose before the first heading.\n      Anything else is refused because every one of them was a way past this check.\n      Offending line: %s\n", FNR, why, substr($0, 1, 60)
+    printf "FAIL  Key Decisions, line %d: %s\n      The section is plain intro prose and ONE table (| Area | Fences |) whose rows name an area\n      and its register file — nothing else. A bullet, a second table, prose after the table, a\n      blockquote, a heading or a fenced block is refused: each was a way past this check once.\n      Offending line: %s\n", FNR, why, substr($0, 1, 60)
   }
-  # The section CLOSES on any level-2 heading, tested before the opener. Leaving the
-  # opener first meant a second `## Key Decisions — see also …` line was swallowed at
-  # zero cost while still inside the section: 14 KB of decisions measured as 51 bytes.
-  in_sec && /^## /    { flush(); in_sec = 0 }
-  # Fences are tracked file-wide so a fenced example cannot open a phantom section.
+  in_sec && /^## /    { in_sec = 0 }
   /^[ \t]*(```|~~~)/ { if (in_sec) { bytes += length($0) + 1; bad("a fenced block") }
                       fence = !fence; next }
   fence               { if (in_sec) bytes += length($0) + 1; next }
   !in_sec && /^## Key Decisions/ { if (!fence) { in_sec = 1; found = 1 } next }
+  !in_sec && /^\|[ \t]*Area[ \t]*\|[ \t]*Fences[ \t]*\|/ {
+    printf "FAIL  %s, line %d: an | Area | Fences | table outside the Key Decisions section. The section holds the\n      one area table; a second one elsewhere names areas nothing checks.\n", FILENAME, FNR; next }
   !in_sec             { next }
-  { bytes += length($0) + 1 }
-  /^###[ \t]/          { flush(); seen_area = 1; next }
-  /^[ \t]*\r?$/       { flush(); next }
-  # The intro, before the first area heading, may be PLAIN PROSE and nothing else. It
-  # was previously exempt from every rule, which made it a hole the size of the section
-  # budget — and the shipped scaffold had no area heading at all, so its whole section
-  # sat in that hole with every shape check switched off.
-  !seen_area && /^[|>]/            { bad("a table or blockquote row in the intro") ; next }
-  !seen_area && /^[0-9]+[.)][ \t]/ { bad("an ordered-list item in the intro") ; next }
-  !seen_area && /^[-*+][ \t]/      { bad("a bullet before the first `### ` area heading") ; next }
-  !seen_area && /^[ \t]+[^ \t]/    { bad("an indented line in the intro") ; next }
-  !seen_area && /^</                { bad("raw HTML in the intro") ; next }
-  !seen_area          { next }
-  /^- \*\*/            { flush(); unit = $0; next }
-  /^- /               { bad("a bullet that does not open with a **bold label**") ; next }
-  /^[ \t]+[^ \t]/     { if (unit == "") { bad("indented line with no bullet above it to continue") ; next }
-                        s = $0; sub(/^[ \t]+/, "", s); unit = unit " " s; next }
-  /^[|>]/             { bad("a table or blockquote row") ; next }
-  /^[0-9]+[.)][ \t]/  { bad("an ordered-list item") ; next }
-  /^[*+][ \t]/        { bad("a `*` or `+` bullet — use `-`") ; next }
-                      { bad("prose after the first area heading") ; next }
-  END {
-    flush()
-    # Nothing else in this file notices a section that is missing, misspelled, or hidden
-    # behind an unbalanced fence earlier in the document — and each of those turned every
-    # check above into a silent pass.
-    if (!found)
-      printf "FAIL  No `## Key Decisions` section found. It cannot be renamed, cased differently\n      or hidden behind an unclosed fence earlier in the file: every check on the digest\n      goes quiet when the section cannot be located, which is a silent pass.\n"
-    else if (!seen_area)
-      printf "FAIL  Key Decisions has no `### ` area heading. It is grouped by AREA, not by spec, and\n      the shape checks on bullets only begin at the first heading — a section with none\n      sits entirely in the intro, unvalidated.\n"
-    if (bytes > scap)
-      printf "FAIL  The Key Decisions section is %d bytes (cap %d). It is the bulk of the file that\n      loads every session: move decisions into %s and leave one line each.\n", bytes, scap, reg
+  { bytes += length($0) + 1; sub(/\r$/, "") }
+  /^[ \t]*$/          { if (in_table) { in_table = 0; after_table = 1 } next }
+  /^\|/ {
+    if (after_table) { bad("a second table after the area table"); next }
+    if (!in_table) {
+      in_table = 1; want_sep = 1
+      if ($0 !~ /^\|[ \t]*Area[ \t]*\|[ \t]*Fences[ \t]*\|[ \t]*$/) bad("a table whose header is not | Area | Fences |")
+      next
+    }
+    if (want_sep) { want_sep = 0; if ($0 !~ /^\|[ \t]*:?-+:?[ \t]*\|[ \t]*:?-+:?[ \t]*\|[ \t]*$/) bad("a table without a |---|---| separator row under its header"); next }
+    if ($0 ~ /^\|[ \t]*[^|`][^|`]*\|[ \t]*`docs\/decisions\/[A-Za-z0-9_-]+\.md#fences`[ \t]*\|[ \t]*$/) {
+      name = $0; sub(/^\|[ \t]*/, "", name); sub(/[ \t]*\|.*$/, "", name)
+      slug = $0; sub(/^.*`docs\/decisions\//, "", slug); sub(/\.md#fences`.*$/, "", slug)
+      if (name in names) bad("a duplicate area name: " name)
+      if (slug in slugs) bad("a duplicate register file: docs/decisions/" slug ".md")
+      names[name] = 1; slugs[slug] = 1; rows++
+      printf "ROW\t%s\t%s\n", name, slug
+    } else bad("a row that is not | <area> | `docs/decisions/<slug>.md#fences` | — one area, one file, nothing else in the row")
+    next
   }
-' "$CLAUDE")
-[ -z "$kd_report" ] || printf '%s\n' "$kd_report" >> "$FAILS"
+  in_table            { in_table = 0; after_table = 1 }
+  after_table         { bad("content after the area table"); next }
+  /^[-*+][ \t]/       { bad("a bullet in the intro — a decision belongs in its area file as a fence"); next }
+  /^[0-9]+[.)][ \t]/  { bad("an ordered-list item in the intro"); next }
+  /^>/                { bad("a blockquote in the intro"); next }
+  /^[ \t]+[^ \t]/     { bad("an indented line in the intro"); next }
+  /^</                { bad("raw HTML in the intro"); next }
+  /^#/                { bad("a heading inside the section — areas are table rows, not headings"); next }
+  { next }
+  END {
+    if (!found)
+      printf "FAIL  No `## Key Decisions` section found. It cannot be renamed, cased differently\n      or hidden behind an unclosed fence earlier in the file: every check on the register\n      goes quiet when the section cannot be located, which is a silent pass.\n"
+    else if (!rows)
+      printf "FAIL  Key Decisions has no | Area | Fences | table row. The table is the authority for the set\n      of areas, and with no row every check on the register iterates nothing — an empty table is\n      a missing parse anchor, not an empty set.\n"
+    if (bytes > scap)
+      printf "FAIL  The Key Decisions section is %d bytes (cap %d). It is an intro and one row per AREA —\n      a decision belongs in its area file as a fence, never here.\n", bytes, scap
+  }
+' "$CLAUDE" > "${TMPDIR:-/tmp}/docs-lint-kd.$$"
+grep -v '^ROW	' "${TMPDIR:-/tmp}/docs-lint-kd.$$" >> "$FAILS" || true
+grep '^ROW	' "${TMPDIR:-/tmp}/docs-lint-kd.$$" | cut -f2- > "$KD_ROWS" || true
+rm -f "${TMPDIR:-/tmp}/docs-lint-kd.$$"
 
-# ── 3, 4 & 5. The register: present, not inverted with its digest, all reachable ─
+# ── 3, 4 & 5. The register: INDEX equals the table, every area file fences-first ──
 #
-# The inversion is the specific failure this template shipped into a project and did
-# not catch. That repo had no register at all, so its digest WAS the register: every
-# settled decision landed full-length in the file that loads on every turn. A digest
-# line with no entry behind it is the first step there — and so is the reverse, since
-# an entry nobody digested is a decision no session will be pointed at.
+# The inversion this template once shipped — a digest that WAS the register, every settled
+# decision full-length in the file that loads on every turn — is now structurally
+# impossible: CLAUDE.md carries area names, and each area file carries its fences first and
+# its entries behind them, so the label match is within one file. What is held instead:
 #
-# Both sides skip the scaffold "(example)" placeholder, so a fresh checkout is green
-# before the first real decision lands.
-if [ ! -f "$REGISTER" ]; then
-  note "$REGISTER is missing. Key Decisions in $CLAUDE is a DIGEST — one line per settled
-      decision, pointing at its full entry. With no register the digest becomes the only home
-      of every fact, which is how an always-loaded file turns into the archive."
+#   3a docs/decisions.md still exists (a stub)   3b INDEX missing   3c INDEX has no row
+#   3d INDEX rows differ from the table (name, slug or order)
+#   4a a table row with no file   4b an area file with no row   4c H1 not "# <name> — decisions"
+#   4d a `##` other than Contents and Fences   4e no Contents   4f Contents first item not Fences
+#   4g no Fences / Fences not first after Contents   4h a fence of the wrong shape
+#   4i a fence over DIGEST_MAX_BYTES   4j an unclosed fence label   4k a fence with no entry
+#   4l an entry with no fence   4m an entry absent from Contents   4n a Fences pointer unresolved
+#   4o an area file in a subdirectory   4p a second `## Contents`   4q a fence-shaped bullet outside Fences
+#   4r a Contents anchor no entry carries   ((example) labels are exempt only in a file titled `# (example) …`)
+#   5a an area declaring globs with no rule   5b a rule whose globs differ from Governs
+#   5c a rule for an area declaring none   5d Governs neither `none` nor backticked globs
+#   5e the file at decisions-<slug>.md is not this area's rule (body not template B for it)
+[ ! -e "$OLD_REGISTER" ] || note "$OLD_REGISTER exists. The register is one file per area under $REGISTER_DIR/; there is no
+      stub at the old path — a stale pointer must fail, not land on an empty file."
+if [ ! -f "$REGISTER_INDEX" ]; then
+  note "$REGISTER_INDEX is missing. The register is one file per area behind that index, and the
+      Key Decisions table in $CLAUDE names the areas: without the index there is nothing to hold the
+      table and the files to."
 else
-  # Two files, one pass: NR==FNR is CLAUDE.md, the rest is the register. Comparing the
-  # two sets with comm would want process substitution, which is a bashism.
-  awk -v claude="$CLAUDE" -v reg="$REGISTER" '
-    function trim(s) { sub(/^[ \t\r]+/, "", s); sub(/[ \t\r]+$/, "", s); return s }
-    function emit(   s, i, j, k, p, pad, orig, label) {
-      if (unit == "" || unit !~ /^- \*\*/) { unit = ""; return }
-      s = unit; sub(/^- \*\*/, "", s)
-      # Blank out inline code spans first: a span containing ** would otherwise close
-      # the label early, the same class as the italic-suffix bug below.
-      while (match(s, /`[^`]*`/)) {
-        pad = sprintf("%*s", RLENGTH, "")
-        s = substr(s, 1, RSTART - 1) pad substr(s, RSTART + RLENGTH)
+  IDX_ROWS="${TMPDIR:-/tmp}/docs-lint-idxrows.$$"
+  # Rows of the INDEX table: | name | `docs/decisions/<slug>.md#fences` | governs |. Header and
+  # separator rows carry no backticked fences path and fall out.
+  awk '
+    /^[ \t]*(```|~~~)/ { fence = !fence; next }
+    fence { next }
+    /^\|/ && /`docs\/decisions\/[A-Za-z0-9_-]+\.md#fences`/ {
+      line = $0; sub(/\r$/, "", line)
+      n = split(line, c, /\|/)
+      # c[1] is empty (leading pipe); c[2] name, c[3] fences, c[4] governs
+      name = c[2]; gsub(/^[ \t]+|[ \t]+$/, "", name)
+      slug = c[3]; sub(/^.*`docs\/decisions\//, "", slug); sub(/\.md#fences`.*$/, "", slug)
+      gov = (n >= 5) ? c[4] : ""; gsub(/^[ \t]+|[ \t]+$/, "", gov)
+      printf "%s\t%s\t%s\n", name, slug, gov
+    }
+  ' "$REGISTER_INDEX" > "$IDX_ROWS"
+  if [ ! -s "$IDX_ROWS" ]; then
+    note "$REGISTER_INDEX has no | Area | Fences | Governs | row. With no row the register cannot be held to
+      the table — an empty table is a missing parse anchor, not an empty set."
+  elif ! cmp -s "$KD_ROWS" "$(cut -f1,2 "$IDX_ROWS" > "${TMPDIR:-/tmp}/docs-lint-idx2.$$"; echo "${TMPDIR:-/tmp}/docs-lint-idx2.$$")"; then
+    note "$REGISTER_INDEX names areas that differ from the Key Decisions table in $CLAUDE — by name, file or
+      order. The table is the authority: the index repeats its rows in the same order and adds only the
+      Governs column.
+      table:  $(tr '\n\t' '; ' < "$KD_ROWS")
+      index:  $(cut -f1,2 "$IDX_ROWS" | tr '\n\t' '; ')"
+  fi
+  rm -f "${TMPDIR:-/tmp}/docs-lint-idx2.$$"
+
+  # Every area file is a row, every row a file — and the register is one flat set, so it can be
+  # enumerated by eye and by this loop; a file one directory deeper is invisible to both.
+  find "$REGISTER_DIR" -mindepth 2 -name '*.md' | sort | while IFS= read -r deep; do
+    note "$deep is in a subdirectory of $REGISTER_DIR/. Area files are one flat set, one per table row;
+      a file a level down is a register nothing checks."
+  done
+  for f in "$REGISTER_DIR"/*.md; do
+    [ -f "$f" ] || continue
+    [ "$f" = "$REGISTER_INDEX" ] && continue
+    slug=$(basename "$f" .md)
+    cut -f2 "$KD_ROWS" | grep -qxF "$slug" || note "$f is not a row in the Key Decisions table in $CLAUDE. An area file the table does not
+      name is a register nobody is pointed at — add the row (here and in $REGISTER_INDEX), or move
+      its decisions into an area that has one."
+  done
+
+  while IFS='	' read -r name slug; do
+    [ -n "$slug" ] || continue
+    f="$REGISTER_DIR/$slug.md"
+    if [ ! -f "$f" ]; then
+      note "$CLAUDE routes area \"$name\" to $f, which does not exist. A row with no file sends the next
+      session nowhere."
+      continue
+    fi
+    FENCES="${TMPDIR:-/tmp}/docs-lint-fences.$$"
+    awk -v ucap="$DIGEST_MAX_BYTES" -v name="$name" -v file="$f" -v fences="$FENCES" '
+      function trim(s) { sub(/^[ \t\r]+/, "", s); sub(/[ \t\r]+$/, "", s); return s }
+      function anchor(s,   t) {
+        t = tolower(trim(s)); gsub(/`/, "", t); gsub(/\*/, "", t)
+        gsub(/[^a-z0-9 _-]/, "", t); gsub(/ /, "-", t); return t
       }
-      # The closing ** is the first NOT followed by another *. A label ending in an
-      # italic (...skip *work*) is stored as *work***, and taking the first pair
-      # truncates it by one character — reported as both halves of the cross-check
-      # missing, for a label that is correct.
-      i = 0; p = 1
-      while ((j = index(substr(s, p), "**")) > 0) {
-        k = p + j - 1
-        if (substr(s, k + 2, 1) != "*") { i = k; break }
-        p = k + 1
+      function has_close(u,   s, j, k, p) {
+        s = u; sub(/^- \*\*/, "", s); p = 1
+        while ((j = index(substr(s, p), "**")) > 0) {
+          k = p + j - 1
+          if (substr(s, k + 2, 1) != "*") return (k > 1)
+          p = k + 1
+        }
+        return 0
       }
-      if (i > 1) {
-        orig = unit; sub(/^- \*\*/, "", orig)
-        label = trim(substr(orig, 1, i - 1))
-        if (label !~ /^\(example\)/) digest[label] = 1
+      function label_of(u,   s, i, j, k, p, pad, orig) {
+        s = u; sub(/^- \*\*/, "", s)
+        while (match(s, /`[^`]*`/)) { pad = sprintf("%*s", RLENGTH, ""); s = substr(s, 1, RSTART - 1) pad substr(s, RSTART + RLENGTH) }
+        i = 0; p = 1
+        while ((j = index(substr(s, p), "**")) > 0) {
+          k = p + j - 1
+          if (substr(s, k + 2, 1) != "*") { i = k; break }
+          p = k + 1
+        }
+        if (i <= 1) return ""
+        orig = u; sub(/^- \*\*/, "", orig)
+        return trim(substr(orig, 1, i - 1))
       }
-      unit = ""
-    }
-    function anchor(s,   t) {
-      t = tolower(trim(s))
-      gsub(/`/, "", t); gsub(/\*/, "", t)
-      gsub(/[^a-z0-9 _-]/, "", t)
-      gsub(/ /, "-", t)
-      return t
-    }
-    # ---- first file: the always-loaded digest ----
-    # Check 2 has already refused every shape but `- **Label**` at column 0 with indented
-    # continuations, so this only has to join a wrapped label and find its closing `**`.
-    NR == FNR {
-      if ($0 ~ /^[ \t]*(```|~~~)/) { kfence = !kfence; next }
-      if (kfence) next
-      if (kd && $0 ~ /^## /)        { emit(); kd = 0 }
-      if (!kd && $0 ~ /^## Key Decisions/) { if (!kfence) kd = 1; next }
-      if (!kd) next
-      sub(/\r$/, "")
-      if ($0 ~ /^- /)               { emit(); unit = $0; next }
-      if ($0 ~ /^[ \t]+[^ \t]/)     { if (unit != "") { s = $0; sub(/^[ \t]+/, "", s); unit = unit " " s } next }
-      emit()
-      next
-    }
-    # ---- second file: the register ----
-    # Anchors are collected ONLY from the Contents section. Collecting them from the
-    # whole file let one entry cross-reference another and satisfy the check for it,
-    # so an entry absent from the Contents passed while the message said it was there.
-    /^## Contents/ { in_toc = 1; next }
-    in_toc && /^## / { in_toc = 0 }
-    in_toc && /^[ \t]*---[ \t]*$/ { in_toc = 0 }
-    /^### / {
-      s = trim(substr($0, 5))
-      if (s !~ /^\(example\)/) { entry[s] = 1; head[anchor(s)] = s }
-      next
-    }
-    in_toc {
-      line = $0
-      while (match(line, /\(#[a-z0-9_-]+\)/)) {
-        seen[substr(line, RSTART + 2, RLENGTH - 3)] = 1
-        line = substr(line, RSTART + RLENGTH)
+      function flush(   n, l) {
+        if (unit == "") return
+        n = length(unit)
+        if (n > ucap)
+          printf "FAIL  %s: a fence is %d bytes (cap %d): %s…\n      A fence is the claim and its constraint in one line; the reasoning goes in the entry below it.\n", file, n, ucap, substr(unit, 1, 70)
+        if (!has_close(unit))
+          printf "FAIL  %s: a fence never closes its `**` label: %s…\n      An unclosed label yields no label at all, so nothing requires an entry for it.\n", file, substr(unit, 1, 70)
+        else { l = label_of(unit); if (l != "" && (!example_file || l !~ /^\(example\)/)) fence_lbl[l] = 1 }
+        unit = ""
       }
-    }
-    END {
-      emit()
-      for (l in digest)
-        if (!(l in entry))
-          printf "FAIL  Key Decisions carries \"%s\" with no \"### %s\" in %s.\n      Entry first, line second: a digest line is never the only home of a fact.\n", l, l, reg
-      for (l in entry)
-        if (!(l in digest))
-          printf "FAIL  %s has \"### %s\" with no matching bold label in %s Key Decisions.\n      An entry no session is pointed at is a decision that gets re-litigated.\n", reg, l, claude
-      for (a in head)
-        if (!(a in seen))
-          printf "FAIL  %s: \"### %s\" is absent from the Contents — findable only by reading the\n      whole file, which is the cost the layering exists to avoid.\n", reg, head[a]
-    }
-  ' "$CLAUDE" "$REGISTER" >> "$FAILS"
+      function bad(why) {
+        printf "FAIL  %s, line %d (Fences): %s\n      Fences are `- **Label** — …` bullets at column 0 with indented continuations and blank lines,\n      nothing else — every other construct was a way past the cap once.\n      Offending line: %s\n", file, FNR, why, substr($0, 1, 60)
+      }
+      { sub(/\r$/, "") }
+      /^[ \t]*(```|~~~)/ { if (in_fences) { bad("a fenced block"); } fence = !fence; next }
+      fence { next }
+      FNR == 1 {
+        example_file = ($0 ~ /^# \(example\)/)
+        if ($0 != "# " name " — decisions")
+          printf "FAIL  %s does not open with `# %s — decisions` (the name in the Key Decisions table). The\n      row, the title and any rule name the area identically.\n", file, name
+        next
+      }
+      /^## / {
+        if (in_fences) flush()
+        in_fences = 0; in_toc = 0
+        h = trim(substr($0, 4))
+        if (h == "Contents") {
+          if (toc_seen) printf "FAIL  %s carries a second `## Contents`. One Contents, at the top: a second one lower down would\n      let an entry be reachable from a list nobody reads first.\n", file
+          toc_seen = 1; in_toc = 1; toc_first = 1
+        }
+        else if (h == "Fences") {
+          fences_seen = 1; in_fences = 1
+          if (!toc_seen) fences_before_toc = 1
+          if (toc_seen && sections_since_toc > 0) fences_not_first = 1
+        } else {
+          printf "FAIL  %s carries a `## %s` section. An area file has exactly two: Contents, then Fences; the\n      entries are `###` headings. A fence stated as prose under another section is a fence nothing\n      checks.\n", file, h
+        }
+        if (toc_seen && h != "Contents") sections_since_toc++
+        next
+      }
+      in_toc && /^[ \t]*---[ \t]*$/ { in_toc = 0; next }
+      in_toc {
+        if ($0 ~ /^[ \t]*$/) next
+        if (toc_first) {
+          toc_first = 0
+          if (trim($0) != "- [Fences](#fences)") first_not_fences = 1
+        }
+        line = $0
+        while (match(line, /\(#[a-z0-9_-]+\)/)) { seen[substr(line, RSTART + 2, RLENGTH - 3)] = 1; line = substr(line, RSTART + RLENGTH) }
+        next
+      }
+      /^### / {
+        if (in_fences) { flush(); in_fences = 0 }
+        s = trim(substr($0, 5))
+        allhead[anchor(s)] = 1
+        if (!example_file || s !~ /^\(example\)/) { entry_lbl[s] = 1; head[anchor(s)] = s }
+        next
+      }
+      !in_fences && !in_toc && /^- \*\*[^*]+\*\* — / {
+        printf "FAIL  %s, line %d: a fence-shaped bullet (`- **Label** — …`) outside `## Fences`. A fence stated\n      anywhere else is a fence nothing cross-checks; move it under Fences, or write the entry text\n      without the fence signature.\n", file, FNR; next
+      }
+      in_fences {
+        print > fences
+        if ($0 ~ /^[ \t]*---[ \t]*$/) { flush(); in_fences = 0; next }
+        if ($0 ~ /^[ \t]*\r?$/) { flush(); next }
+        if ($0 ~ /^- \*\*/) { flush(); unit = $0; next }
+        if ($0 ~ /^- /) { bad("a bullet that does not open with a **bold label**"); next }
+        if ($0 ~ /^[ \t]+[^ \t]/) { if (unit == "") { bad("indented line with no fence above it to continue"); next }
+                                    x = $0; sub(/^[ \t]+/, "", x); unit = unit " " x; next }
+        if ($0 ~ /^[|>]/) { bad("a table or blockquote row"); next }
+        if ($0 ~ /^[0-9]+[.)][ \t]/) { bad("an ordered-list item"); next }
+        if ($0 ~ /^[*+][ \t]/) { bad("a `*` or `+` bullet — use `-`"); next }
+        bad("prose in the Fences section"); next
+      }
+      END {
+        flush()
+        if (!toc_seen) printf "FAIL  %s has no `## Contents`. Fences and entries are found through it; without it the file is\n      read whole, which is the cost the layering exists to avoid.\n", file
+        else if (first_not_fences) printf "FAIL  %s: the first item of Contents is not `- [Fences](#fences)`. Fences come first so a session that\n      opens the file for them stops reading after them.\n", file
+        if (!fences_seen) printf "FAIL  %s has no `## Fences` section. Every area file opens with its fences — the one-line claims\n      the always-loaded tier used to carry.\n", file
+        else if (fences_before_toc || fences_not_first) printf "FAIL  %s: `## Fences` is not the first section after `## Contents`. Fences first, entries after.\n", file
+        for (l in fence_lbl) if (!(l in entry_lbl))
+          printf "FAIL  %s: fence \"%s\" has no `### %s` entry in the same file.\n      Entry first, fence second: a fence is never the only home of a fact.\n", file, l, l
+        for (l in entry_lbl) if (!(l in fence_lbl))
+          printf "FAIL  %s: entry \"### %s\" has no fence under `## Fences`.\n      An entry no fence points at is a decision that gets re-litigated.\n", file, l
+        for (a in head) if (!(a in seen))
+          printf "FAIL  %s: \"### %s\" is absent from the Contents — findable only by reading the whole file,\n      which is the cost the layering exists to avoid.\n", file, head[a]
+        for (a in seen) if (a != "fences" && !(a in allhead))
+          printf "FAIL  %s: Contents links to #%s, which no `###` entry carries. A stale anchor sends the reader to\n      the top of the file; fix the link or the heading.\n", file, a
+      }
+    ' "$f" >> "$FAILS"
+    [ -f "$FENCES" ] && check_pointers "$FENCES" "$f (Fences)"
+    rm -f "$FENCES"
+  done < "$KD_ROWS"
+
+  # 5 — Governs ↔ rules. An area that governs a tree has a rule with exactly those globs; an
+  # area that governs none has no rule. Either direction missing fails by name.
+  while IFS='	' read -r name slug gov; do
+    [ -n "$slug" ] || continue
+    rule="$RULES_DIR/decisions-$slug.md"
+    gov=$(printf '%s' "$gov" | sed -e 's/^`none`$/none/')
+    if [ "$gov" = "none" ]; then
+      [ ! -e "$rule" ] || note "$rule exists, but $REGISTER_INDEX says area \"$name\" governs none. Declare the globs
+      in the Governs column, or delete the rule."
+      continue
+    fi
+    want=$(printf '%s\n' "$gov" | tr ',' '\n' | sed -e 's/^[ \t]*`//' -e 's/`[ \t]*$//' | grep -v '^$' | sort -u)
+    if [ -z "$want" ] || printf '%s\n' "$gov" | grep -qv '`'; then
+      note "$REGISTER_INDEX: area \"$name\" has Governs \"$gov\", which is neither \`none\` nor a comma-separated
+      list of backticked globs."
+      continue
+    fi
+    if [ ! -f "$rule" ]; then
+      note "$REGISTER_INDEX says area \"$name\" governs $gov, but $rule does not exist. A governed tree has a
+      path-scoped rule with exactly those globs, so the fences fire when a matching file is opened."
+      continue
+    fi
+    # The file must BE this area's rule — template B naming this area — not merely a rule
+    # with matching globs. Area rules carry the decisions- prefix so they can never collide
+    # with the process rules that share the directory.
+    rbody=$(tr -d '\r' < "$rule" | awk 'NR == 1 { next } b { print; next } /^---$/ { b = 1 }')
+    rexpect=$(printf 'Files matching these paths are governed by the **%s** decisions in `docs/decisions/%s.md`.\nRead its fences first — they are not loaded with CLAUDE.md.' "$name" "$slug")
+    if [ "$rbody" != "$rexpect" ]; then
+      note "$rule is not the rule for area \"$name\": its body is not the area template naming
+      docs/decisions/$slug.md. A rule is bound to its area by its body, not by its globs."
+      continue
+    fi
+    have=$(tr -d '\r' < "$rule" | awk 'NR == 1 { next } /^---$/ { exit } { print }' | sed -n 's/^  - "\([^"]*\)"$/\1/p' | sort -u)
+    [ "$want" = "$have" ] || note "$rule lists globs that differ from what $REGISTER_INDEX says area \"$name\" governs.
+      Governs: $(printf '%s' "$want" | tr '\n' ' ')
+      rule:    $(printf '%s' "$have" | tr '\n' ' ')"
+  done < "$IDX_ROWS"
+  rm -f "$IDX_ROWS"
 fi
 
 # ── 6 & 7. The delivery tier ───────────────────────────────────────────────────
@@ -402,7 +554,7 @@ if [ -d "$SPEC_DIR" ]; then
       if [ -f "$d" ]; then found=1; break; fi
     done
     [ "$found" -eq 1 ] || note "$f is Completed with no delivery doc at $DELIVERY_DIR/$num-*.md.
-      Step 3 of the completion ritual: what shipped belongs one tier down, not in the digest."
+      Step 3 of the completion ritual: what shipped belongs one tier down, not in a fence."
   done
 fi
 
@@ -425,33 +577,6 @@ fi
 # reader follows, so it must resolve. Check 9 below has a code-span-AWARE parser for the
 # opposite question (what does Claude Code actually IMPORT), and the two are different by
 # design — do not unify them.
-check_pointers() {
-  awk '
-    /^[ \t]*(```|~~~)/ { fence = !fence; next }
-    fence { next }
-    {
-      line = $0
-      while (match(line, /\]\([^)]+\)/)) {
-        p = substr(line, RSTART + 2, RLENGTH - 3)
-        line = substr(line, RSTART + RLENGTH)
-        sub(/#.*$/, "", p)
-        if (p != "" && p !~ /^(https?:|mailto:)/ && p !~ /[*?]/) print p
-      }
-      line = $0
-      while (match(line, /@[A-Za-z0-9_.*?\/-]+\.md/)) {
-        p = substr(line, RSTART + 1, RLENGTH - 1)
-        line = substr(line, RSTART + RLENGTH)
-        # A pointer written as a glob (@docs/specs/SPEC-XXX-*.md) names a shape, not a
-        # file. Skipped ON PURPOSE and matched first, so that a real broken pointer is
-        # not silently excused by a character class that happened to exclude the star.
-        if (p !~ /[*?]/) print p
-      }
-    }
-  ' "$1" | sort -u | while IFS= read -r p; do
-    [ -n "$p" ] || continue
-    [ -e "$p" ] || printf 'FAIL  %s points at "%s", which does not exist.\n' "$1" "$p" >> "$FAILS"
-  done
-}
 check_pointers "$CLAUDE"
 
 # ── 9–13. The routed process tier: router, imports, parts, rules, agents ───────
@@ -476,6 +601,8 @@ check_pointers "$CLAUDE"
 #   12c an illegal glob                             12d a glob matching no file
 #   12e a body that is not the template             12f the template names an unrouted part
 #   12g a rule in a subdirectory                    12h an unexpected frontmatter key
+#   12i an area body that is not template B           12j area rule naming a non-row area
+#   12k area rule not named <slug>.md
 #   13a an agent with no frontmatter                13b name not equal to the file stem
 #   13c a model outside the allowed set             13d a routed agent with no file
 #   13e an agent file the routing table omits       13f agents present with no routing table
@@ -647,12 +774,31 @@ if [ -d "$PROCESS_DIR" ]; then
           glob_hits "$g" || note "$r: glob \"$g\" matches no file in the repo. A rule for a tree that does not exist
       never fires and is still advertised as a backstop."
         done
-        # 12e / 12f — the body IS the template, rendered for a routed part.
+        # 12e / 12f — the body IS one of two templates: A, rendered for a routed process part;
+        # B, rendered for a Key Decisions area (name and slug from the table, filename = slug).
         part=$(printf '%s\n' "$body" | sed -n '1s/^Files matching these paths are governed by `docs\/process\/\([A-Za-z0-9_-]*\)\.md`\.$/\1/p')
         expect=$(printf 'Files matching these paths are governed by `docs/process/%s.md`.\nRead it before changing one — it is not loaded with CLAUDE.md.' "$part")
+        aslug=$(printf '%s\n' "$body" | sed -n '1s/^Files matching these paths are governed by the \*\*.*\*\* decisions in `docs\/decisions\/\([A-Za-z0-9_-]*\)\.md`\.$/\1/p')
+        if [ -n "$aslug" ]; then
+          aname=$(printf '%s\n' "$body" | sed -n '1s/^Files matching these paths are governed by the \*\*\(.*\)\*\* decisions in `docs\/decisions\/.*$/\1/p')
+          bexpect=$(printf 'Files matching these paths are governed by the **%s** decisions in `docs/decisions/%s.md`.\nRead its fences first — they are not loaded with CLAUDE.md.' "$aname" "$aslug")
+          if [ "$body" != "$bexpect" ]; then
+            note "$r: the body is not the two-line area template (\"Files matching these paths are governed by the
+      **<Area>** decisions in \`docs/decisions/<slug>.md\`.\" / \"Read its fences first — they are not loaded
+      with CLAUDE.md.\")."
+          elif ! grep -qxF "$(printf '%s\t%s' "$aname" "$aslug")" "$KD_ROWS" 2>/dev/null; then
+            note "$r names area \"$aname\" in docs/decisions/$aslug.md, which is not a row of the Key Decisions
+      table in $CLAUDE (name and file must both match a row)."
+          elif [ "$(basename "$r" .md)" != "decisions-$aslug" ]; then
+            note "$r points at docs/decisions/$aslug.md but is not named decisions-$aslug.md. An area rule is named
+      decisions-<slug>.md — for its register file, and with a prefix no process rule can collide with."
+          fi
+          continue
+        fi
         if [ -z "$part" ] || [ "$body" != "$expect" ]; then
-          note "$r: the body is not the two-line template (\"Files matching these paths are governed by
-      \`docs/process/<part>.md\`.\" / \"Read it before changing one — it is not loaded with CLAUDE.md.\").
+          note "$r: the body is not the two-line process template (\"Files matching these paths are governed by
+      \`docs/process/<part>.md\`.\" / \"Read it before changing one — it is not loaded with CLAUDE.md.\") nor
+      the area template (\"…governed by the **<Area>** decisions in \`docs/decisions/<slug>.md\`.\").
       A committed rule reaches every teammate on every matching Read; a template leaves no room for a
       line that is not a pointer."
         elif [ "$have_parts" -eq 1 ] && ! grep -qxF "$PROCESS_DIR/$part.md" "$PARTS"; then

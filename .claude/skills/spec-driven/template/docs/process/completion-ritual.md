@@ -10,12 +10,14 @@ When a spec is done, in the same pass:
 4. If reusable modules/services/components were added, add a **one-line** row to
    `docs/component-inventory.md` (if the inventory has split into area files, the row goes in the
    file **matching the component's path**).
-5. A *new architectural decision* gets its **full entry in `docs/decisions.md` first, plus a row in
-   that file's `## Contents`** — an entry the Contents does not reach is findable only by reading the
-   whole file, and `docs-lint.sh` fails the PR for it — then **one
-   line** in CLAUDE.md's Key Decisions — the digest line is **never the only home of a fact**, and
-   never a paragraph. A reversal that changes the entry's **heading** must move its Contents row with it —
-   the row is an anchor link, left pointing at nothing otherwise, which docs-lint fails.
+5. A *new architectural decision* gets its **full `###` entry in its area file under `docs/decisions/`
+   first, plus a row in that file's `## Contents`** — an entry the Contents does not reach is findable
+   only by reading the whole file, and `docs-lint.sh` fails the PR for it — then **one fence** under
+   that file's `## Fences`, the claim and its constraint in one line. The fence is **never the only home
+   of a fact**, never a paragraph, and never a line in `CLAUDE.md`: only a new *area* touches `CLAUDE.md`, as a row in its Key Decisions table mirrored — with its
+   *Governs* column — in `docs/decisions/INDEX.md`, and a file copied from `example-area.md`. A reversal
+   that changes the entry's **heading** must move its Contents row and its fence label with it — the
+   row is an anchor link, left pointing at nothing otherwise, which docs-lint fails.
    If the decision **supersedes an earlier one**, update the old register entry in
    place and add a superseded marker (short blockquote: what changed, which spec, where the full
    entry lives) at every doc site that still states the old claim — arc narratives, architecture
@@ -24,7 +26,7 @@ When a spec is done, in the same pass:
 6. **If the decision changed the SHAPE of the system** — a new piece, a piece removed, a boundary
    moved, a mechanism swapped — add a row to `docs/architecture.md` → *Architecture Decision Record*
    **and** update the prose section it contradicts. The row is an index entry: number, title,
-   one-line context, a short note, linking to the `decisions.md` entry. Rows are **append-only and
+   one-line context, a short note, linking to the `docs/decisions/` entry. Rows are **append-only and
    never renumbered**; a superseded decision keeps its row and gains a note naming the row that
    replaced it. Most decisions do **not** qualify — a rule, a fence or a per-feature choice is a
    register entry and nothing more, and a table that grows a row per spec has stopped being an
@@ -45,8 +47,8 @@ this way):
 - **A register is grouped by AREA; ordering it by spec number turns it into a changelog.** The
   question a reader arrives with is "what has been settled about X", never "what did SPEC-143
   decide". A register is the only home of the rejected alternatives and the fences, so a shape that
-  reads as disposable gets treated as disposable. The CLAUDE.md digest and the register **group by
-  the same areas**, so a reader who finds an area in one finds it in the other.
+  reads as disposable gets treated as disposable. The CLAUDE.md table and the register **name the same areas in the same order**, and each area's fences
+  open its own file, so a reader who finds an area in one finds it in the other.
 - **When a doc moves, the pointers that rot unseen are in SOURCE files** — docstrings, infra
   comments, CI steps. A markdown-only sweep reports the tree clean. Grep the path, not the filename,
   and fix the Draft specs too: a Draft is an unbuilt instruction, and pointing one at a deleted file
@@ -54,14 +56,14 @@ this way):
 - **A doc's own statement of when to read it must agree with CLAUDE.md's.** Both are cheap to write
   and neither is checked, so they drift silently and the reader follows the wrong one.
 - **Status never appears in the heading of a doc whose status can change** — an arc, an
-  `architecture.md` section, a `decisions.md` entry. It rots the day the next spec lands, and a
+  `architecture.md` section, a `docs/decisions/` entry. It rots the day the next spec lands, and a
   reader who greps the heading gets an answer that was true once. Status lives in `INDEX.md` and the
   spec header — the two places the completion ritual keeps in step **by hand**, since `spec-lint.sh`
   does not compare them. (A delivery doc's `# Completed Spec — …` title is not this: it names a
   finished record whose status cannot change.)
 - **A heading in a doc read by SUBJECT names the subject, not the spec that produced it** — that is
   `architecture.md` and the rulebooks, where a reader arrives asking how a thing works, never "what
-  did SPEC-168 decide". The scope is deliberate and stops there: a `decisions.md` entry IS a record
+  did SPEC-168 decide". The scope is deliberate and stops there: a `docs/decisions/` entry IS a record
   of what one spec settled, and its number is part of its identity when you arrive from a delivery
   doc or a superseded marker, so those headings keep theirs. A rule stated more broadly than that
   would be violated by most of a mature register on the day it was written, and a rule practice
@@ -92,9 +94,11 @@ this way):
   the mechanism instead is the reviewer rule in `reviewer-contract.md` — *every reviewer runs the repo's gates against
   the branch* — so the gate is enforced by the review that must happen before a push rather than by
   a job after it. A project that wants it mechanical as well as local can call it from the pre-push
-  hook `scripts/pr-queue/pre-push` already installs. It holds `CLAUDE.md` to a byte budget and each Key Decisions
-  **unit** — a bullet with its continuations — to a length, and refuses any construct in that section but an area heading, a bullet, a continuation, a blank line and plain intro prose; requires `docs/decisions.md` to exist, to carry a `###` entry for every digest
-  line and a digest line for every entry, and to list every entry in its Contents; requires every
+  hook `scripts/pr-queue/pre-push` already installs. It holds `CLAUDE.md` to a byte budget and its Key Decisions section to an intro and one area
+  table; requires `docs/decisions/INDEX.md` to name the same areas in the same order, every area to
+  have a file and every file a row; holds each area file to fences-first, each **fence** — a bullet
+  with its continuations — to a length, a `###` entry for every fence and a fence for every entry, every
+  entry in the file's Contents, and the rules to what each area declares it governs; requires every
   Completed spec to have a delivery doc, and holds every doc in `docs/spec-delivery/` to a line cap
   (not only those tied to a Completed spec); and checks that the pointers
   out of `CLAUDE.md` resolve. On the routed process tier it also holds the always-loaded set to the
@@ -112,7 +116,7 @@ this way):
   after a cut is not accretion but fences, and a budget left at the new measurement leaves the next
   change that legitimately needs a line nothing to spend — so it takes one from somewhere else, and
   the gate causes the damage it exists to prevent. Measured in `log-forge`: a cap set at its post-cut
-  size left about two digest lines of room, and was deliberately raised with the reasoning recorded
+  size left about two fence lines of room, and was deliberately raised with the reasoning recorded
   beside the number. Leave headroom after a cut, say why where the number lives, and mark that budget
   as the one **not** at the measurement.
   **A threshold can also be invalidated by its own success.** A cap calibrated against a document

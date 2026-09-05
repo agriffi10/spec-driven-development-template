@@ -8,25 +8,44 @@ Loaded every session.
 @docs/process/INDEX.md
 @docs/process/session-rhythm.md
 
-- `@docs/decisions.md` — register
+- `@docs/decisions/INDEX.md` — register
 
 ## Key Decisions
 
 Intro prose.
 
-### Area
+| Area | Fences |
+|---|---|
+| Area A | `docs/decisions/area-a.md#fences` |
 
-- **(example) Label** — a fence.
-@@@ file docs/decisions.md
+## Out of Scope
+
+nothing
+@@@ file docs/decisions/INDEX.md
 # Register
+
+## Areas
+
+| Area | Fences | Governs |
+|---|---|---|
+| Area A | `docs/decisions/area-a.md#fences` | none |
+@@@ file docs/decisions/area-a.md
+# Area A — decisions
+
+intro
 
 ## Contents
 
-- [(example) Label](#example-label)
+- [Fences](#fences)
+- [Label](#label)
+
+## Fences
+
+- **Label** — a fence.
 
 ---
 
-### (example) Label
+### Label
 
 text
 @@@ file docs/process/INDEX.md

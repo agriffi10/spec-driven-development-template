@@ -90,8 +90,8 @@ reasons less well about the one that mattered. Hence the layered documents: one 
 loaded, everything else is fetched on demand.
 
 **`CLAUDE.md`.** The always-loaded file. Claude reads it automatically at the start of every session
-in that repository. It holds your project overview, tech stack, code conventions, settled decisions
-(one line each), and the session workflow. It is deliberately short — when it grows, the detail moves
+in that repository. It holds your project overview, tech stack, code conventions, the areas your settled decisions
+are grouped into (the decisions themselves live one file per area), and the session workflow. It is deliberately short — when it grows, the detail moves
 into `docs/` behind a pointer.
 
 **`@docs/…` reference.** A line in `CLAUDE.md` like `` `@docs/architecture.md` `` — in backticks — is a
@@ -405,8 +405,9 @@ sh scripts/check-mirror.sh
 ```
 
 `spec-lint.sh` checks every spec in `docs/specs` (pass a different directory as an argument).
-`docs-lint.sh` checks the always-loaded tier: `CLAUDE.md`'s size, the length of each Key Decisions unit (a bullet with its continuations, or a prose paragraph), and the rule that the digest and `docs/decisions.md` are two halves of one thing rather than
-one file doing both jobs. The last two are maintenance scripts for *this* template repository, explained under
+`docs-lint.sh` checks the always-loaded tier: `CLAUDE.md`'s size, that its Key Decisions section is an
+intro and one table of areas, and that each area's register file under `docs/decisions/` opens with its
+fences and carries an entry behind every fence. The last two are maintenance scripts for *this* template repository, explained under
 [Why the scaffold exists in two places](#why-the-scaffold-exists-in-two-places); projects created
 from the template don't need them.
 
@@ -414,7 +415,7 @@ from the template don't need them.
 
 | Path | What it is | Who reads it |
 |---|---|---|
-| `CLAUDE.md` | **Always-loaded project memory.** Conventions, key decisions, session workflow, and `@docs/…` pointers to everything else. Deliberately short. | Claude, every session (automatically) |
+| `CLAUDE.md` | **Always-loaded project memory.** Conventions, the table of decision areas, session workflow, and `@docs/…` pointers to everything else. Deliberately short. | Claude, every session (automatically) |
 | `docs/process/INDEX.md` | The **process router**: which files load every session (the authority for that set), one row per part saying when to pull it, and where each kind of truth lives. Imported by `CLAUDE.md`. | You + Claude (every session) |
 | `docs/process/session-rhythm.md` | The **operating loop** from session start to landing the PR. Imported by `CLAUDE.md`. | Claude (every session) |
 | `docs/process/reviewer-contract.md` | The **review gate** in full — counts, frames, rotating the frame, briefing the reviewer, the exit rule, and the evidence. | Claude (before any review) |
@@ -422,7 +423,8 @@ from the template don't need them.
 | `docs/process/spec-lifecycle.md`, `authoring-a-spec.md`, `completion-ritual.md`, `several-agents.md` | The remaining parts: statuses and arcs; what makes a spec buildable; the six completion steps plus the doc-hygiene rules; the PR queue for parallel sessions. | Claude (when the router says) |
 | `docs/process/operational-traps.md`, `ground-rules.md` | The two **per-project** parts — seeded as traps bite and constraints appear. | You + Claude |
 | `docs/architecture.md` | Sectioned **design reference**, an append-only decision record, and Known Constraints. Pull the one section you need, never the whole file. | Claude (on demand) |
-| `docs/decisions.md` | **Key Decisions register** — full entries with reasoning and supersession markers. `CLAUDE.md` carries a one-line digest of each. | Claude (on demand) |
+| `docs/decisions/INDEX.md` | The **Key Decisions register's index**: the rules for keeping it, and one row per area — name, register file, and what the area governs. Mirrors the table in `CLAUDE.md`. | Claude (on demand) |
+| `docs/decisions/<area>.md` | One **register file per area**: its **Fences** first (one line per decision, the claim and its constraint), then the full entries with reasoning and supersession markers. Read the fences before working in the area. | Claude (on demand) |
 | `docs/component-inventory.md` | One-line index of **reusable** modules and components, so a new spec reuses instead of rebuilding. | Claude (on demand) |
 | `docs/best-practices/INDEX.md` | **Router** for the domain rulebooks: match your task to a domain, then load only the sections you need. | Claude (on demand) |
 | `docs/best-practices/react/react.md` | React 18/19 rulebook (✅/🔴 rules, own internal index). | Claude (on demand) |
@@ -436,7 +438,7 @@ from the template don't need them.
 | `docs/templates/spec-completion-template.md` | The blank a delivery note is written from. | You + Claude |
 | `docs/templates/multi-agent-briefing.md` | The blank a launch briefing is written from, when several agents run at once. One per session. | You + Claude |
 | `scripts/spec-lint.sh` | **POSIX** shell linter. Fails a spec that's missing a required section or contains an "Open Questions"/"Checkpoint" heading; warns on unfilled placeholders, on requirements with no acceptance criteria anywhere in the file, and on a spec carrying more than eight requirements. No dependencies. | CI + you + Claude |
-| `scripts/docs-lint.sh` | **POSIX** shell linter for the always-loaded tier. Fails when `CLAUDE.md` is over its byte budget, a Key Decisions line has grown into an essay, `docs/decisions.md` is missing or has stopped matching the digest one-for-one, an entry is missing from that file's Contents, a Completed spec has no delivery doc, a delivery doc has become an essay, or a pointer out of `CLAUDE.md` goes nowhere. No dependencies. | you + Claude, before every push |
+| `scripts/docs-lint.sh` | **POSIX** shell linter for the always-loaded tier. Fails when `CLAUDE.md` is over its byte budget, its Key Decisions section is anything but an intro and one area table, the register index disagrees with that table, an area file is missing or does not open with its fences, a fence has no entry or has grown into an essay, an entry is missing from its Contents, a Completed spec has no delivery doc, a delivery doc has become an essay, or a pointer out of an always-loaded file goes nowhere. No dependencies. | you + Claude, before every push |
 | `scripts/docs-lint-test.sh` | **POSIX** fixture corpus for the doc linter — one case per construct, asserting the specific failure text rather than the exit code. Run it whenever you change `docs-lint.sh`; running the linter against your own docs proves your docs pass, not that the checks work. | you + Claude (when the linter changes) |
 | `tests/docs-lint/*.case` | The fixtures themselves. A `-ok` case asserts the linter stays SILENT: false positives are a large share of what a gate gets wrong. | you + Claude |
 | `scripts/pr-queue/queue.sh` | The **PR queue**: a lock and a first-come-first-served line that keeps one pull request open at a time when several agents share the repo. Runs from outside the repo — `install.sh` puts it there. | Claude (multi-agent runs) |
@@ -449,7 +451,7 @@ from the template don't need them.
 | `.github/workflows/check-mirror.yml` | Runs the mirror check on every pull request and push to `main`, in **this template repo only**. Deliberately not path-filtered — the failure it exists to catch is a change in a path nobody thought to list. Delete it in a derived project. | CI |
 | `.github/workflows/ci.yml.example` | **Inert** template for your language's formatter, linter, type-checker and tests (Node and Python jobs included). The `.example` extension means GitHub never runs it; you turn it into a real `ci.yml` at setup. | CI (once you fill it in) |
 | `.github/pull_request_template.md` | PR checklist restating the rules: maps to the plan, no new open questions, **both framed pre-push reviews done**, gates green, owed criteria named, watch to green. | You + Claude |
-| `.claude/rules/*.md` | **Path-scoped pointers**, one per governed tree (specs, delivery docs, the register, the process, the PR queue, the agents). Each fires when Claude opens a matching file with its Read tool and says which process part to read first. A backstop for a session that forgot, not the mechanism. | Claude Code (on Read) |
+| `.claude/rules/*.md` | **Path-scoped pointers**, one per governed tree, of two kinds: the process kind (specs, delivery docs, the register, the process, the PR queue, the agents), which says which process part to read first, and `decisions-<area>.md`, one per decision area that declares what it governs, which says to read that area's fences first. Each fires when Claude opens a matching file with its Read tool. A backstop for a session that forgot, not the mechanism. | Claude Code (on Read) |
 | `.claude/agents/*.md` | The **subagent roles** the routing table names — `spec-author` (Sonnet), `reviewer` (Opus, Fable on demand), `implementer` (Opus, Fable on demand), `scout` (Haiku) — each carrying its default model and its brief. | Claude Code (when delegating) |
 | `.claude/skills/spec-driven/SKILL.md` | The **skill** — the procedure Claude follows. Claude Code discovers it at this path. | Claude Code (automatically) |
 | `.claude/skills/spec-driven/README.md` | Human-facing note on what the skill folder contains and how to install it. | You |
@@ -516,7 +518,7 @@ which is which tells you what breaks silently if you skip a step.
 | Formatter, linter, type-checker and tests green **before** a push | `docs/process/` + `CLAUDE.md` + PR template |
 | Every PR watched and merged on green; `main` watched; red `main` fixed first | `docs/process/` + `CLAUDE.md` + PR template |
 | Domain code follows the right rulebook, loading only what's needed | `best-practices/INDEX.md` + `docs/process/` |
-| The always-loaded tier stays lean — budget, digest line length, a register behind every digest line | `docs-lint.sh` (local pre-push, **not CI**) + `docs/process/completion-ritual.md` |
+| The always-loaded tier stays lean — budget, an area table instead of a digest, a fences-first register file per area with an entry behind every fence | `docs-lint.sh` (local pre-push, **not CI**) + `docs/process/completion-ritual.md` |
 | The always-loaded set is exactly what the router's table names — `CLAUDE.md`'s imports match it row for row, the set is within its byte budget, and no imported file imports anything itself | `docs-lint.sh` (local pre-push) |
 | Every process part is a router row and every row is a file; no stub at the old single-file path | `docs-lint.sh` (local pre-push) |
 | Path-scoped rules and agent files keep their shape — frontmatter at byte 0, globs that match something, a body equal to the template, a `model` the routing table allows | `docs-lint.sh` (local pre-push) |
@@ -543,9 +545,10 @@ imperative ✅/🔴 rules. Then add **one row** to `docs/best-practices/INDEX.md
 the detail belongs in the doc.
 
 **Keeping `CLAUDE.md` lean.** This is the file loaded on every session, so its size is a running cost.
-A new architectural decision gets its **full entry in `docs/decisions.md` first**, then **one line** in
-`CLAUDE.md` — never a paragraph, and never the only home of a fact. If an edit pushes a section past a
-few lines, the detail belongs in `docs/` behind a pointer.
+A new architectural decision gets its **full entry in its area file under `docs/decisions/` first**,
+then **one fence** at the top of that file — never a paragraph, never the only home of a fact, and
+never a line in `CLAUDE.md`, which names only the areas. If an edit pushes a section past a few lines,
+the detail belongs in `docs/` behind a pointer.
 
 **Recording what a spec delivered.** The completion ritual exists to stop the always-loaded tier
 regrowing one spec at a time. `docs/specs/INDEX.md` holds status rows only, and Key Decisions is
@@ -605,9 +608,10 @@ detail into `docs/` behind a pointer, then re-set `CLAUDE_MAX_BYTES` in `scripts
 the file measures afterwards. Raising the cap to admit the edit in hand is exactly the failure the
 budget exists to catch, and it is how a sibling project's always-loaded file reached 87 KB.
 
-**docs-lint says a Key Decisions line has no entry in `docs/decisions.md`.** Write the full entry
-first, then leave the one-line digest pointing at it. A digest line that is the only home of a fact
-has quietly turned the always-loaded file into the archive.
+**docs-lint says a fence has no entry, or refuses something in `CLAUDE.md`'s Key Decisions.** A decision
+is a `###` entry in its area file under `docs/decisions/` first, then a one-line fence at the top of
+that same file — never a line in `CLAUDE.md`, which carries only the table of areas. A fence that is
+the only home of a fact has quietly turned the register's front page into the archive.
 
 **A push was refused with "PUSH REFUSED — you do not hold the PR queue lock".** The PR queue is
 installed and that branch is in a multi-agent run, so it has to take its turn: `queue.sh ticket`,

@@ -11,7 +11,7 @@ pulled **on demand**, when the router's table says:
 - `@docs/process/model-routing.md` — which model does which job (pull before delegating anything)
 - `@docs/process/completion-ritual.md` — the six steps at spec completion + the doc-hygiene rules
 - `@docs/architecture.md` — system design decisions + Known Constraints (read the section you need)
-- `@docs/decisions.md` — the Key Decisions register in full (the digest below is one line each)
+- `@docs/decisions/INDEX.md` — the Key Decisions register: one file per area, fences first (the table below names the areas)
 - `@docs/specs/INDEX.md` — the spec index + status (one row per spec)
 - `@docs/specs/SPEC-XXX-*.md` — the spec you're implementing
 - `@docs/component-inventory.md` — reusable modules/services/components already built
@@ -63,18 +63,16 @@ Index + status: `@docs/specs/INDEX.md`. Each spec file's header carries its own 
 
 ## Key Decisions (settled — don't re-litigate)
 
-One line each — a digest of the full entry in `@docs/decisions.md`; read the entry before working in
-that area. A line here is **never the only home of a fact**, and never a paragraph.
+Settled decisions live in `docs/decisions/`, **one file per area**. Each area file opens with its
+**Fences** — one line per decision, the claim and its constraint — and carries the full entries
+behind them. **Read an area's fences before working in it.** A new decision is a fence and an entry
+in its area file, never a line here; a new *area* is a new row here and in `docs/decisions/INDEX.md`,
+in the same order. This table is the authority for the set of areas; `scripts/docs-lint.sh` holds
+the register and the rules to it, and refuses anything in this section but this prose and the table.
 
-**Grouped by AREA, not by spec.** `scripts/docs-lint.sh` holds this section to that shape: an
-`### ` area heading, `- **Label** — …` bullets at column 0, indented continuations, blank lines,
-and plain prose here in the intro. A table, blockquote, fenced block, ordered list or bare bullet
-is refused — each one was a way past the checks. Rename the area below and replace the example.
-
-### (example) Area name
-
-- **(example) Decision label** — the claim and its fence in one line, matching the `###` heading of
-  its full entry in `@docs/decisions.md`. Delete this once the first real decision lands.
+| Area | Fences |
+|---|---|
+| (example) Area name | `docs/decisions/example-area.md#fences` |
 
 ## Out of Scope (don't build)
 
@@ -92,6 +90,6 @@ is refused — each one was a way past the checks. Rename the area below and rep
 
 **PRs & main:** before pushing, get the diff through the review gate above, and get the formatter, linter, typecheck and unit tests green locally, plus `sh scripts/spec-lint.sh` and **`sh scripts/docs-lint.sh` — always, before every PR, since nothing in CI runs it** (and `sh scripts/docs-lint-test.sh` whenever you touch the linter). Watch every PR to completion and merge it as soon as CI is green — never open-and-abandon. **Key the watch on the current head sha** — a bare `gh pr checks --watch` can exit clean against the *previous* commit's checks. `main` is always watched: after any merge confirm it went green, and if `main` fails, diagnose immediately and fix it with a new PR before anything else. **When several agent sessions share this repo**, install `scripts/pr-queue/install.sh` once and the remote is serialised by a PR queue — one PR open at a time, taken in the order agents asked, `main` green before the next — and you get in line only once your gates and reviews are green, because the queue is not a review. Until it is installed the queue is inert. Protocol and the four commands: `scripts/pr-queue/PROTOCOL.md`; brief each session from `@docs/templates/multi-agent-briefing.md`.
 
-**On spec completion:** run the six steps in `@docs/process/completion-ritual.md` — status, INDEX row, delivery doc, inventory row, register entry **before** its digest line, and an ADR row only when the system's shape changed.
+**On spec completion:** run the six steps in `@docs/process/completion-ritual.md` — status, INDEX row, delivery doc, inventory row, register entry **before** its fence in the area file, and an ADR row only when the system's shape changed.
 
-**Doc-size guardrail:** this file and its two imports are every session's fixed cost. `scripts/docs-lint.sh` holds the set **the router's table names** to a byte budget, holds Key Decisions to its shape with a register entry behind every line (`@docs/decisions.md`), and holds `docs/process/`, `.claude/rules/` and `.claude/agents/` to theirs — run it locally before every push, it is not a CI job. When a budget fires, move detail down a tier behind a pointer and re-ratchet; after a structural cut leave headroom and say why beside the number. Full rule set: `@docs/process/completion-ritual.md` → *Anti-regrowth & doc hygiene*.
+**Doc-size guardrail:** this file and its two imports are every session's fixed cost. `scripts/docs-lint.sh` holds the set **the router's table names** to a byte budget, holds Key Decisions to an intro and one area table, holds every area file in `@docs/decisions/INDEX.md` to fences-first with an entry behind every fence, and holds `docs/process/`, `.claude/rules/` and `.claude/agents/` to theirs — run it locally before every push, it is not a CI job. When a budget fires, move detail down a tier behind a pointer and re-ratchet; after a structural cut leave headroom and say why beside the number. Full rule set: `@docs/process/completion-ritual.md` → *Anti-regrowth & doc hygiene*.
