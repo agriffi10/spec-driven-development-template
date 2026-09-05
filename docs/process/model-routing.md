@@ -19,11 +19,11 @@ the Agent tool overrides the default — that is how the Fable rows below are ap
 | Write or revise a spec | Sonnet | `spec-author` |
 | Review a spec (its one gate) | Opus | `reviewer` |
 | Write the implementation plan | Opus — Fable when the **spec alone** triggers the complexity rule | `implementer` |
-| Review the plan; review the PR grouping | Opus | `reviewer` |
+| Review the plan; review the PR grouping | Opus — **Fable when the plan was written on Fable** | `reviewer`, `model: fable` per invocation |
 | Implement — default | Opus | `implementer` |
 | Implement — the complexity rule triggers | Fable | `implementer`, `model: fable` per invocation |
 | Diff review, frame 1 — read the change against the criteria and the rulebooks | Opus | `reviewer` |
-| Diff review, frame 2 — build it and run the suites | Opus | `reviewer` |
+| Diff review, frame 2 — build it and run the suites | Opus — **Fable when any of the code under review was written or rewritten on Fable** | `reviewer`, `model: fable` per invocation |
 | A rewrite under review pressure — a *replacement*, not a fix in place | Fable | `implementer`, `model: fable` |
 | Completion ritual, delivery doc, any docs-only change | Sonnet | `spec-author` |
 | Enumerate a population, measure, sweep, find every site of a rule | Haiku | `scout` |
@@ -59,8 +59,14 @@ the tier is exhausted, which is the same signal the rotation rule reads, so both
 
 - **Never down.** Nothing is delegated to a tier below the table's row for that job. If a row's
   model is unavailable, go up, not down.
-- **The user's standing rule is that Opus reviews code**, both frames, including code an implementer
-  wrote on Fable. The step-up rule is the pressure valve when that reviewer's findings recur.
+- **Nothing is reviewed only by models weaker than its author.** Opus reviews. When any of the code
+  was written or rewritten on Fable — by the implementer or by a replacement under review pressure —
+  the build frame (frame 2) runs on Fable too, and a plan written on Fable is reviewed on Fable. The
+  diff's reading frame stays on Opus, so the two frames still differ in more than model. The
+  orchestrator knows which model it delegated to; the PR template records it, so a session that did
+  not delegate the build can still route frame 2. The step-up rule is the pressure valve when a reviewer's
+  findings recur; when the rotated frame is already on Fable the step-up is spent, and the exit is a
+  different frame or an escalation to the human, never another round.
 - **Never set `CLAUDE_CODE_SUBAGENT_MODEL_FORCE`** in this repo's settings: it makes every agent
   ignore its `model` and silently overrides every row above.
 - `scripts/docs-lint.sh` holds the agent files to their shape: frontmatter at byte 0, `name` equal

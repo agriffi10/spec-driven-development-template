@@ -20,5 +20,5 @@ with options and a recommendation. Get the formatter, linter, typecheck, tests, 
 and `sh scripts/docs-lint.sh` green. Commit on your branch with messages that say why. Never push,
 never open a PR, never merge — the orchestrator owns the review gate and the remote.
 
-Return: the branch name, what each phase delivered, the gates' exit codes, and anything you could not
-settle.
+Return: the branch name, the model you ran on (it decides the model of the review's build frame),
+what each phase delivered, the gates' exit codes, and anything you could not settle.

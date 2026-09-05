@@ -17,6 +17,8 @@
       gate on the artifact, not this one.
 - [ ] Every finding **fixed or flagged** out loud; nothing dropped silently
 - [ ] Any acceptance criterion that could not settle pre-push is listed under **Owed** below
+- Implementer model: **Opus | Fable** — if any code was written or rewritten on Fable, the build
+      frame ran on Fable (`docs/process/model-routing.md`); edit this line, it is a claim
 
 ### Owed (criteria that can only settle on the green run)
 <!-- One line each, or "none". These block the merge, not the push. Edit this line —
