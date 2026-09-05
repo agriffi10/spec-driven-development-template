@@ -18,7 +18,7 @@ set -eu
 SPEC_DIR="${1:-docs/specs}"
 
 # Above this many FRs, a spec has usually stopped being one buildable slice and
-# wants splitting into two specs recorded as an arc (docs/process.md §4).
+# wants splitting into two specs recorded as an arc (docs/process/authoring-a-spec.md).
 FR_CEILING=8
 fail=0
 warn=0

@@ -2,7 +2,7 @@
 # docs-lint.sh — hold the ALWAYS-LOADED tier to the shape the layering assumes.
 #
 # Why this exists as a script rather than a rule. Every check below already existed in
-# prose — in `docs/process.md` §5 (*Anti-regrowth & doc hygiene*), in `CLAUDE.md`'s own
+# prose — in `docs/process/completion-ritual.md` (*Anti-regrowth & doc hygiene*), in `CLAUDE.md`'s own
 # doc-size guardrail, and in `docs/decisions.md`'s rules header — and in the sibling
 # project `log-forge` (published as `log-foundry`) several were violated anyway. Its
 # `CLAUDE.md` grew from 7,350 bytes at `ad898fc8` to 89,340 at `e60b60d`, more than
@@ -20,8 +20,9 @@
 # FAIL (exit 1): the always-loaded file is over budget or has been removed outright, a
 #   Key Decisions unit has become the reasoning, the register is missing or has inverted
 #   with its digest, an entry is unreachable from the Contents, a Completed spec has no
-#   delivery doc, a delivery doc has become an essay, or a pointer out of CLAUDE.md goes
-#   nowhere.
+#   delivery doc, a delivery doc has become an essay, a pointer out of an always-loaded file goes
+#   nowhere, the routed process tier has lost its shape (router, imports, parts, rules, agents —
+#   checks 9–13), or a stub has reappeared at the old single-file path.
 #
 # There is no WARN tier: `spec-lint.sh` owns the soft per-spec judgements, and every rule
 # here is a shape the layering depends on — a shape is either held or it isn't.
@@ -56,13 +57,24 @@ cd "$ROOT"
 # reason the budget is here. Lowering the bar to fit the edit is the failure mode, and
 # it is how the sibling project reached 89 KB one justified exception at a time.
 #
-# ON ADOPTION, re-ratchet ALL THREE to what this repo measures once its real docs
+# ON ADOPTION, re-ratchet ALL FOUR to what this repo measures once its real docs
 # exist, rounded up a little. A budget far above the measurement never fires. The
-# defaults below are deliberately loose because THIS repo ships a scaffold: its
-# CLAUDE.md is placeholders, its Key Decisions holds one example line, and
-# docs/spec-delivery/ is empty, so ratcheting them here would fire on the next edit to
-# the template itself rather than on anything a project did wrong.
-CLAUDE_MAX_BYTES=16000
+# defaults below are set AFTER a structural cut (the process moved out of CLAUDE.md into
+# docs/process/ behind a router), so they are deliberately NOT at the measurement: what
+# remains in these files is fences, and a cap pinned at the post-cut size would make the
+# first filled-in Project Overview take its bytes from somewhere else. Each carries room,
+# stated in words rather than as a number that goes stale: CLAUDE_MAX_BYTES has room for
+# a filled Project Overview, Layout, Tech Stack and Code Conventions plus one
+# current-work paragraph; ALWAYS_LOADED_MAX_BYTES has that same room plus two rows in
+# the router. Re-derive both after any further structural change — a cap that can no
+# longer fail is still advertised as a fence.
+CLAUDE_MAX_BYTES=11000
+
+# The whole always-loaded set — CLAUDE.md plus every file the router's "Loaded every
+# session" table names (the same files CLAUDE.md imports). Derived from that table at
+# run time, never transcribed here: a transcribed copy passed a plant that added a third
+# row to the table.
+ALWAYS_LOADED_MAX_BYTES=26000
 
 # The whole Key Decisions section, measured as bytes. This is the guard that cannot be
 # evaded by reformatting: a per-bullet cap is escaped by splitting one decision into
@@ -74,7 +86,7 @@ KEY_DECISIONS_MAX_BYTES=12000
 # bullet with its continuation lines joined, or a prose paragraph — because measuring
 # the physical line looks equivalent and is not: the moment the section is rewritten as
 # wrapped prose the longest physical line collapses to the wrap width, and the guard can
-# never fire again while still being advertised in process.md.
+# never fire again while still being advertised in the process docs.
 #
 # BYTES, not characters: awk length() is byte-based in the one-true-awk that ships on
 # BSD and macOS, so em dashes and smart quotes count for more than one. Named for what
@@ -91,10 +103,17 @@ CLAUDE="CLAUDE.md"
 REGISTER="docs/decisions.md"
 SPEC_DIR="docs/specs"
 DELIVERY_DIR="docs/spec-delivery"
+PROCESS_DIR="docs/process"
+ROUTER="$PROCESS_DIR/INDEX.md"
+ROUTING="$PROCESS_DIR/model-routing.md"
+OLD_PROCESS="docs/process.md"
+RULES_DIR=".claude/rules"
+AGENTS_DIR=".claude/agents"
 
 # Every failure lands in one file rather than incrementing a counter. A `| while` loop
 # runs in a subshell, so a count raised inside one is lost the moment the pipeline ends
 # — the bug reads as "the check found nothing" and is invisible in a green run.
+total=""
 FAILS="${TMPDIR:-/tmp}/docs-lint.$$"
 trap 'rm -f "$FAILS"' EXIT INT TERM
 : > "$FAILS"
@@ -107,7 +126,11 @@ report() {
   [ "$count" -gt 0 ] && cat "$FAILS"
   echo "----"
   if [ "$count" -eq 0 ]; then
-    echo "docs-lint: ok — $CLAUDE is $size/$CLAUDE_MAX_BYTES bytes."
+    if [ -n "${total:-}" ]; then
+      echo "docs-lint: ok — $CLAUDE is $size/$CLAUDE_MAX_BYTES bytes; the always-loaded set is $total/$ALWAYS_LOADED_MAX_BYTES."
+    else
+      echo "docs-lint: ok — $CLAUDE is $size/$CLAUDE_MAX_BYTES bytes."
+    fi
     exit 0
   fi
   echo "docs-lint: $count check(s) failed."
@@ -392,35 +415,302 @@ if [ -d "$DELIVERY_DIR" ]; then
   done
 fi
 
-# ── 8. Pointers out of the always-loaded file ──────────────────────────────────
-# CLAUDE.md only, deliberately. A pointer that goes nowhere defeats the layering this
-# file defends: a session sent to a missing register reads the digest and stops there.
-# Link-checking every doc in the repo is a different job with a far wider false-positive
-# surface, and is not this script business.
-awk '
-  /^[ \t]*(```|~~~)/ { fence = !fence; next }
-  fence { next }
-  {
-    line = $0
-    while (match(line, /\]\([^)]+\)/)) {
-      p = substr(line, RSTART + 2, RLENGTH - 3)
-      line = substr(line, RSTART + RLENGTH)
-      sub(/#.*$/, "", p)
-      if (p != "" && p !~ /^(https?:|mailto:)/ && p !~ /[*?]/) print p
+# ── 8. Pointers out of the always-loaded files ─────────────────────────────────
+# The always-loaded set only, deliberately. A pointer that goes nowhere defeats the
+# layering these files defend: a session sent to a missing register reads the digest and
+# stops there. Link-checking every doc in the repo is a different job with a far wider
+# false-positive surface, and is not this script business.
+#
+# This parser is code-span-BLIND on purpose: a pointer written in backticks is still one a
+# reader follows, so it must resolve. Check 9 below has a code-span-AWARE parser for the
+# opposite question (what does Claude Code actually IMPORT), and the two are different by
+# design — do not unify them.
+check_pointers() {
+  awk '
+    /^[ \t]*(```|~~~)/ { fence = !fence; next }
+    fence { next }
+    {
+      line = $0
+      while (match(line, /\]\([^)]+\)/)) {
+        p = substr(line, RSTART + 2, RLENGTH - 3)
+        line = substr(line, RSTART + RLENGTH)
+        sub(/#.*$/, "", p)
+        if (p != "" && p !~ /^(https?:|mailto:)/ && p !~ /[*?]/) print p
+      }
+      line = $0
+      while (match(line, /@[A-Za-z0-9_.*?\/-]+\.md/)) {
+        p = substr(line, RSTART + 1, RLENGTH - 1)
+        line = substr(line, RSTART + RLENGTH)
+        # A pointer written as a glob (@docs/specs/SPEC-XXX-*.md) names a shape, not a
+        # file. Skipped ON PURPOSE and matched first, so that a real broken pointer is
+        # not silently excused by a character class that happened to exclude the star.
+        if (p !~ /[*?]/) print p
+      }
     }
-    line = $0
-    while (match(line, /@[A-Za-z0-9_.*?\/-]+\.md/)) {
-      p = substr(line, RSTART + 1, RLENGTH - 1)
-      line = substr(line, RSTART + RLENGTH)
-      # A pointer written as a glob (@docs/specs/SPEC-XXX-*.md) names a shape, not a
-      # file. Skipped ON PURPOSE and matched first, so that a real broken pointer is
-      # not silently excused by a character class that happened to exclude the star.
-      if (p !~ /[*?]/) print p
+  ' "$1" | sort -u | while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    [ -e "$p" ] || printf 'FAIL  %s points at "%s", which does not exist.\n' "$1" "$p" >> "$FAILS"
+  done
+}
+check_pointers "$CLAUDE"
+
+# ── 9–13. The routed process tier: router, imports, parts, rules, agents ───────
+#
+# `docs/process/` is one file per part behind a router (INDEX.md). Two of them load WITH
+# CLAUDE.md as bare `@` imports — the router "Loaded every session" table is the authority
+# for which — and the rest are pulled when the router "One file per part" table says.
+# Every check here holds a shape the routing depends on. All are gated on the DIRECTORY
+# existing, never on the router file: gating on the file would let one change delete the
+# router and the two import lines together and take every check below quiet with it. A
+# directory with no router fails by name.
+#
+# Terminating conditions, each with a fixture in tests/docs-lint/ — count them, do not
+# guess (a check with two exits is satisfied by a fixture exercising either):
+#   9a  the table does not name CLAUDE.md          9b  a table row CLAUDE.md does not import
+#   9c  an import the table does not name           9d  the set is over ALWAYS_LOADED_MAX_BYTES
+#   9e  a bare @ import in a non-CLAUDE set file    9f  a pointer in a set file goes nowhere
+#   10a a part with no router row                   10b a router row with no file
+#   11  a stub at the old single-file path           11b docs/process/ exists with no router
+#   9h  no Loaded-every-session table (heading is a parse anchor)   10c no One-file-per-part table
+#   12a frontmatter not at byte 0                   12b paths missing or written inline
+#   12c an illegal glob                             12d a glob matching no file
+#   12e a body that is not the template             12f the template names an unrouted part
+#   12g a rule in a subdirectory                    12h an unexpected frontmatter key
+#   13a an agent with no frontmatter                13b name not equal to the file stem
+#   13c a model outside the allowed set             13d a routed agent with no file
+#   13e an agent file the routing table omits       13f agents present with no routing table
+#   12c also covers a trailing-slash glob; CRLF rule files are normalised before comparing (crlf -ok case)
+if [ -d "$PROCESS_DIR" ]; then
+  # 11 — no stub. A file at the old path is where a stale pointer lands softly and a new
+  # paragraph accretes; a stale pointer should FAIL check 8, not find an empty file.
+  [ ! -e "$OLD_PROCESS" ] || note "$OLD_PROCESS exists beside $PROCESS_DIR/. There is no stub at the old
+      path: a stale pointer must fail, not land on an empty file, and a new paragraph must land
+      in a routed part."
+  if [ ! -f "$ROUTER" ]; then
+    note "$PROCESS_DIR/ exists with no $ROUTER. The router is the authority for what loads every
+      session and for which parts exist; without it every check on the routed tier is blind."
+  else
+    # Table rows: the first backticked token of each `| ... |` row under a heading, until
+    # the next `## `. Header and separator rows carry no backtick and fall out on their own.
+    table_paths() {
+      awk -v h="$2" '
+        index($0, h) == 1 { t = 1; next }
+        t && /^## / { t = 0 }
+        t && /^\|[ \t]*`[^`]+`/ { match($0, /`[^`]+`/); print substr($0, RSTART + 1, RLENGTH - 2) }
+      ' "$1"
     }
-  }
-' "$CLAUDE" | sort -u | while IFS= read -r p; do
-  [ -n "$p" ] || continue
-  [ -e "$p" ] || printf 'FAIL  %s points at "%s", which does not exist.\n' "$CLAUDE" "$p" >> "$FAILS"
-done
+    LOADED="${TMPDIR:-/tmp}/docs-lint-loaded.$$"; PARTS="${TMPDIR:-/tmp}/docs-lint-parts.$$"
+    IMPORTS="${TMPDIR:-/tmp}/docs-lint-imports.$$"
+    table_paths "$ROUTER" "## Loaded every session" | sort -u > "$LOADED"
+    table_paths "$ROUTER" "## One file per part"    | sort -u > "$PARTS"
+    # 9h / 10c — the two headings are PARSE ANCHORS. A renamed or re-cased heading yields an
+    # empty table, and an empty table would make every check below report a confident falsehood
+    # (rows "missing" that are present, rules "unrouted" that are fine). Assert the anchor and
+    # skip what depends on it; the Key Decisions check guards its own heading the same way.
+    have_loaded=1; have_parts=1
+    if [ ! -s "$LOADED" ]; then
+      have_loaded=0
+      note "$ROUTER has no \`## Loaded every session\` table with backticked-path rows. The heading is a
+      parse anchor (exact text, exact case) and the rows must backtick the path — without it the
+      always-loaded set cannot be derived and checks 9a–9f do not run."
+    fi
+    if [ ! -s "$PARTS" ]; then
+      have_parts=0
+      note "$ROUTER has no \`## One file per part\` table with backticked-path rows. The heading is a
+      parse anchor (exact text, exact case) and the rows must backtick the path — without it no part
+      is routed and checks 10a and 12f do not run."
+    fi
+
+    # 9a — the set must name the file whose imports define it.
+    [ "$have_loaded" -eq 0 ] || grep -qx "$CLAUDE" "$LOADED" || note "$ROUTER: the Loaded-every-session table does not name $CLAUDE (rows must
+      backtick the path). The table is the authority for the always-loaded set, and the set starts
+      with the file that imports the rest."
+
+    # Imports: bare `@path.md` outside code spans and fences — what Claude Code actually loads.
+    # Code-span-AWARE, unlike check 8, and on purpose (see the note there).
+    bare_imports() {
+      awk '
+        /^[ \t]*(```|~~~)/ { fence = !fence; next }
+        fence { next }
+        {
+          line = $0
+          while (match(line, /`[^`]*`/)) {
+            pad = sprintf("%*s", RLENGTH, "")
+            line = substr(line, 1, RSTART - 1) pad substr(line, RSTART + RLENGTH)
+          }
+          while (match(line, /@[A-Za-z0-9_.\/-]+\.md/)) {
+            pre = (RSTART > 1) ? substr(line, RSTART - 1, 1) : " "
+            p = substr(line, RSTART + 1, RLENGTH - 1)
+            line = substr(line, RSTART + RLENGTH)
+            if (pre !~ /[A-Za-z0-9]/) print p
+          }
+        }
+      ' "$1" | sort -u
+    }
+    bare_imports "$CLAUDE" > "$IMPORTS"
+    if [ "$have_loaded" -eq 1 ]; then
+    # 9b / 9c — the two sets agree row for row.
+    while IFS= read -r p; do
+      [ -n "$p" ] && [ "$p" != "$CLAUDE" ] || continue
+      grep -qxF "$p" "$IMPORTS" || note "$ROUTER names \"$p\" as loaded every session, but $CLAUDE does not import
+      it (a bare @$p outside backticks). The table and the imports must agree row for row."
+    done < "$LOADED"
+    while IFS= read -r p; do
+      [ -n "$p" ] || continue
+      grep -qxF "$p" "$LOADED" || note "$CLAUDE imports \"$p\" (a bare @ outside backticks), which the router
+      Loaded-every-session table does not name (rows must backtick the path). An import IS an
+      always-loaded file — add the row and make the case, or put the pointer in backticks."
+    done < "$IMPORTS"
+    # 9d / 9e / 9f — over the set: budget, no nested imports, pointers resolve.
+    total=0
+    while IFS= read -r p; do
+      [ -n "$p" ] || continue
+      [ -f "$p" ] || continue   # a missing set file is reported by 9b/check 8, not here
+      n=$(wc -c < "$p" | tr -d '[:space:]'); total=$((total + n))
+      if [ "$p" != "$CLAUDE" ]; then
+        if [ -s "$(bare_imports "$p" > "${TMPDIR:-/tmp}/docs-lint-nested.$$"; echo "${TMPDIR:-/tmp}/docs-lint-nested.$$")" ]; then
+          note "$p carries a bare @ import ($(head -1 "${TMPDIR:-/tmp}/docs-lint-nested.$$")). Only $CLAUDE imports; an import in
+      an always-loaded file pulls its target in at launch too, through recursion, which is the cost
+      this layout exists to avoid. Put the pointer in backticks."
+        fi
+        rm -f "${TMPDIR:-/tmp}/docs-lint-nested.$$"
+        check_pointers "$p"
+      fi
+    done < "$LOADED"
+    [ "$total" -le "$ALWAYS_LOADED_MAX_BYTES" ] || note "The always-loaded set ($(tr '\n' ' ' < "$LOADED")) is $total bytes against a
+      $ALWAYS_LOADED_MAX_BYTES budget. Every byte here is paid on every session: move a part behind
+      the router, or shorten what the table names — and re-ratchet with headroom, never to fit the
+      edit in hand."
+    fi
+# 10a / 10b — router rows and part files are the same set.
+    for f in "$PROCESS_DIR"/*.md; do
+      [ -f "$f" ] || continue
+      [ "$f" = "$ROUTER" ] && continue
+      grep -qxF "$f" "$LOADED" && continue   # always-loaded parts are routed by the OTHER table
+      [ "$have_parts" -eq 1 ] && [ "$have_loaded" -eq 1 ] || continue   # a missing table is reported once above, not once per part
+      grep -qxF "$f" "$PARTS" || note "$f is not a row in the router One-file-per-part table. An unrouted part is where
+      the next paragraph of process accretes unread — add the row (what it holds, when to pull it)."
+    done
+    while IFS= read -r p; do
+      [ -n "$p" ] || continue
+      [ -f "$p" ] || note "$ROUTER routes to \"$p\", which does not exist. A row with no file sends the next
+      session nowhere."
+    done < "$PARTS"
+
+    # 12 — rules: one path-scoped pointer per governed tree, body equal to the template.
+    if [ -d "$RULES_DIR" ]; then
+      FILES="${TMPDIR:-/tmp}/docs-lint-files.$$"
+      find . -path ./.git -prune -o -type f -print | sed 's|^\./||' > "$FILES"
+      # Does any file match a glob of one of the four allowed forms? Anchored on a literal
+      # prefix and a literal extension, so no glob engine is involved and nothing is
+      # translated: a translation is where two implementations disagree.
+      glob_hits() {
+        case "$1" in
+          */'**')      p="${1%/\*\*}/";              awk -v p="$p" 'index($0, p) == 1 { f = 1; exit } END { exit !f }' "$FILES" ;;
+          */'**/*.'*)  p="${1%/\*\*/\*.*}/"; e=".${1##*/\*\*/\*.}"
+                       awk -v p="$p" -v e="$e" 'index($0, p) == 1 && substr($0, length($0) - length(e) + 1) == e { f = 1; exit } END { exit !f }' "$FILES" ;;
+          */'*.'*)     p="${1%/\*.*}/"; e=".${1##*/\*.}"
+                       awk -v p="$p" -v e="$e" 'index($0, p) == 1 && index(substr($0, length(p) + 1), "/") == 0 && substr($0, length($0) - length(e) + 1) == e { f = 1; exit } END { exit !f }' "$FILES" ;;
+          *)           grep -qxF "$1" "$FILES" ;;
+        esac
+      }
+      find "$RULES_DIR" -name '*.md' | sort | while IFS= read -r r; do
+        rel="${r#$RULES_DIR/}"
+        case "$rel" in */*) note "$r is in a subdirectory of $RULES_DIR/. Rules are one flat set, one per governed
+      tree, so the set can be enumerated by eye and by this script."; continue ;; esac
+        # 12a — frontmatter opens the file. Anything before it makes the rule ALWAYS-loaded.
+        if [ "$(sed -n '1p' "$r" | tr -d '\r')" != "---" ]; then
+          note "$r does not open with frontmatter at byte 0. Without it Claude Code loads the rule
+      into EVERY session, which turns a scoped pointer into always-loaded prose."
+          continue
+        fi
+        fm=$(tr -d '\r' < "$r" | awk 'NR == 1 { next } /^---$/ { exit } { print }')
+        body=$(tr -d '\r' < "$r" | awk 'NR == 1 { next } b { print; next } /^---$/ { b = 1 }')
+        # 12b / 12h — the frontmatter is `paths:` and its globs, nothing else.
+        printf '%s\n' "$fm" | grep -qx 'paths:' || { note "$r has no \`paths:\` block list in its frontmatter (an inline \`paths: [...]\`
+      is refused too). A rule without a block-list paths is always-loaded, or unparseable — both
+      silently."; continue; }
+        printf '%s\n' "$fm" | grep -v -E '^paths:$|^  - "[^"]+"$' | grep -q . && note "$r carries a frontmatter line that is not \`paths:\` or a \`  - \"glob\"\` entry:
+      $(printf '%s\n' "$fm" | grep -v -E '^paths:$|^  - "[^"]+"$' | head -1). A rule is a pointer and nothing else."
+        # 12c / 12d — each glob is one of four literal-prefixed forms, and matches something.
+        printf '%s\n' "$fm" | sed -n 's/^  - "\([^"]*\)"$/\1/p' | while IFS= read -r g; do
+          case "$g" in
+            *'{'*|*'}'*|*'['*|*']'*|'*'*|'/'*|*'/'|'.'|'..'|*'/./'*|*'/../'*)
+              note "$r: glob \"$g\" is not allowed. Globs are \`dir/**\`, \`dir/**/*.ext\`, \`dir/*.ext\` or
+      an exact path, with a literal first segment — braces and brackets are where two glob engines
+      disagree, a leading wildcard scopes a rule to the whole repo, and a trailing slash names a
+      directory, which no rule can match."; continue ;;
+            */'**'|*/'**/*.'*|*/'*.'*) ;;
+            *'*'*|*'?'*) note "$r: glob \"$g\" is not one of the four allowed forms (\`dir/**\`, \`dir/**/*.ext\`,
+      \`dir/*.ext\`, exact path)."; continue ;;
+          esac
+          glob_hits "$g" || note "$r: glob \"$g\" matches no file in the repo. A rule for a tree that does not exist
+      never fires and is still advertised as a backstop."
+        done
+        # 12e / 12f — the body IS the template, rendered for a routed part.
+        part=$(printf '%s\n' "$body" | sed -n '1s/^Files matching these paths are governed by `docs\/process\/\([A-Za-z0-9_-]*\)\.md`\.$/\1/p')
+        expect=$(printf 'Files matching these paths are governed by `docs/process/%s.md`.\nRead it before changing one — it is not loaded with CLAUDE.md.' "$part")
+        if [ -z "$part" ] || [ "$body" != "$expect" ]; then
+          note "$r: the body is not the two-line template (\"Files matching these paths are governed by
+      \`docs/process/<part>.md\`.\" / \"Read it before changing one — it is not loaded with CLAUDE.md.\").
+      A committed rule reaches every teammate on every matching Read; a template leaves no room for a
+      line that is not a pointer."
+        elif [ "$have_parts" -eq 1 ] && ! grep -qxF "$PROCESS_DIR/$part.md" "$PARTS"; then
+          note "$r points at docs/process/$part.md, which is not a row in the One-file-per-part table. A rule
+      may only route to an on-demand part — an always-loaded file needs no rule, and a pointer to it
+      would say something false about when it is read."
+        fi
+      done
+      rm -f "$FILES"
+    fi
+
+    # 13 — agents: the roles the routing table names, each carrying an allowed model.
+    # 13d runs whenever the TABLE exists, whether or not any agent file does: with the
+    # roles directory gone entirely, a table routing to four ghosts must still fail.
+    ROUTED="${TMPDIR:-/tmp}/docs-lint-routed.$$"
+    : > "$ROUTED"
+    if [ -f "$ROUTING" ]; then
+      awk -F'|' '
+        index($0, "## The table") == 1 { t = 1; next }
+        t && /^## / { t = 0 }
+        t && NF >= 4 {
+          c = $4
+          while (match(c, /`[a-z][a-z0-9-]*`/)) { print substr(c, RSTART + 1, RLENGTH - 2); c = substr(c, RSTART + RLENGTH) }
+        }
+      ' "$ROUTING" | sort -u > "$ROUTED"
+      while IFS= read -r n; do
+        [ -n "$n" ] || continue
+        [ -f "$AGENTS_DIR/$n.md" ] || note "$ROUTING routes to agent \`$n\`, but $AGENTS_DIR/$n.md does not exist."
+      done < "$ROUTED"
+    fi
+    if [ -d "$AGENTS_DIR" ] && ls "$AGENTS_DIR"/*.md >/dev/null 2>&1; then
+      if [ ! -f "$ROUTING" ]; then
+        note "$AGENTS_DIR/ has agent files but $ROUTING does not exist. The routing table is what says
+      which job each agent and model is for; agents without it are habit, not routing."
+      else
+        for a in "$AGENTS_DIR"/*.md; do
+          stem=$(basename "$a" .md)
+          if [ "$(sed -n '1p' "$a" | tr -d '\r')" != "---" ]; then
+            note "$a has no frontmatter at byte 0, so it declares no name and no model — the
+      routing table cannot bind to it."; continue
+          fi
+          name=$(tr -d '\r' < "$a" | awk 'NR == 1 { next } /^---$/ { exit } /^name:/ { sub(/^name:[ \t]*/, ""); print }')
+          model=$(tr -d '\r' < "$a" | awk 'NR == 1 { next } /^---$/ { exit } /^model:/ { sub(/^model:[ \t]*/, ""); print }')
+          [ "$name" = "$stem" ] || note "$a declares name \"$name\" but is named $stem.md. The routing table names
+      agents by file stem; a mismatch routes to nothing."
+          case "$model" in
+            sonnet|opus|haiku|fable) ;;
+            *) note "$a declares model \"$model\". Allowed: sonnet, opus, haiku, fable. \`inherit\` and an empty
+      model both take whatever the parent runs on, which is exactly what routing by job exists to stop." ;;
+          esac
+          grep -qxF "$stem" "$ROUTED" || note "$a is not named in $ROUTING (## The table, Agent column). An agent the table
+      does not route to is a role nobody is told to use."
+        done
+      fi
+    fi
+    rm -f "$ROUTED"
+    rm -f "$LOADED" "$PARTS" "$IMPORTS"
+  fi
+fi
 
 report

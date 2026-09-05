@@ -12,8 +12,8 @@
 
 ## Review (before this branch was pushed)
 - [ ] **Two** fresh-context reviews of this diff, in **different frames**, before the push — every
-      diff gets two, including a spec-only or docs-only one (`docs/process.md` §3 names the two
-      frames for a diff with no code in it). The single review a spec or plan gets is the earlier
+      diff gets two, including a spec-only or docs-only one (`docs/process/reviewer-contract.md` names the
+      two frames for a diff with no code in it). The single review a spec or plan gets is the earlier
       gate on the artifact, not this one.
 - [ ] Every finding **fixed or flagged** out loud; nothing dropped silently
 - [ ] Any acceptance criterion that could not settle pre-push is listed under **Owed** below
