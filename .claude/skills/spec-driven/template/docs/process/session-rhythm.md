@@ -54,7 +54,8 @@ four before the first push.
 - Before pushing, run the project's **formatter, linter, typecheck and unit tests** locally and get
   them green. These quality gates are a pre-push step — don't push red and leave CI to discover it.
   **`sh scripts/docs-lint.sh` is in that set and nothing in CI runs it** — plus
-  `sh scripts/docs-lint-test.sh` whenever the linter itself changed.
+  `sh scripts/docs-lint-test.sh` whenever the linter itself changed, and
+  `sh scripts/pr-queue-test.sh` whenever the queue or its hook changed.
 - Work the **reviewed** plan's phases in order, **straight through to completion**. Summarize a phase
   in passing where it is worth saying, but do not end the turn on it — a summary that ends the turn
   *is* a request for approval, whatever its wording says. Re-review the plan only if the phase

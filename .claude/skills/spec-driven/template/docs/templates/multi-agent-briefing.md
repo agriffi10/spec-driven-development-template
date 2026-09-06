@@ -52,7 +52,9 @@ keyed on the head sha, merge, confirm `main` went green — not just the push. T
 lock because the wait is exactly when peers merge: rebase before you get in line and you push a base
 that went stale while you queued, with every remote check still green. The gates run again for the
 same reason — the rebase pulls in the peer work you were told above to expect conflicts from, and your
-reviews closed against the base you had before it. Full protocol: `[queue-dir]/PROTOCOL.md`. One
+reviews closed against the base you had before it. The `pre-push` hook refuses a push that does not
+contain the remote's current `main`, so a forgotten fetch costs you a refusal and not a stale PR.
+Full protocol: `[queue-dir]/PROTOCOL.md`. One
 ticket per PR: if your spec needs several, release between them so the others interleave. If `turn` reports the trunk `IS RED`, stop and
 escalate; a red `main` is fixed before anything else merges.
 

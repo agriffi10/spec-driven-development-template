@@ -75,6 +75,14 @@ unfetched `origin/main` cannot show you that — re-run your gates, push, open t
 If your spec needs more than one PR, take a ticket per PR and release between them, so the others
 interleave rather than waiting out your whole spec.
 
+**The hook enforces the fetch, so the rebase is not on your memory.** `pre-push` refuses a push whose
+commits do not contain the remote's current `main`, and says so with the remedy. It reads the remote
+with `ls-remote` and never fetches for you: fetching from a hook would move refs the other worktrees
+share. A branch outside the enforced pattern is not policed at all, but a policed branch whose remote
+could not be read is refused rather than waved through — consent fails open, evidence fails closed.
+`PR_QUEUE_BYPASS=1` overrides both refusals. The corpus for those checks is
+`scripts/pr-queue-test.sh` in the repo, which drives real pushes and asserts each refusal's text.
+
 ## Release on every exit path
 
 Including failure, including abandonment, including "I am stuck and asking the human". A lock held by
