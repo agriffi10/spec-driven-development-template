@@ -41,7 +41,7 @@ When a repo has no spec-driven docs yet:
    mirror of `template/`, `scripts/sync-from-skill.sh` regenerates it, and edits belong in `template/`
    followed by a sync. Steps 3 and 6 below would fill in the mirror and delete `ci.yml.example`, which
    must survive there.
-2. `chmod +x scripts/spec-lint.sh scripts/docs-lint.sh scripts/docs-lint-test.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh`.
+2. `chmod +x scripts/spec-lint.sh scripts/docs-lint.sh scripts/docs-lint-test.sh scripts/pr-queue-test.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh`.
 3. Fill in the placeholders in `CLAUDE.md` (Project Overview, Layout, Tech Stack, Code Conventions,
    Common Commands) from what the repo actually is — detect the language/build/test/lint tooling from
    the manifest (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, …) rather than guessing.
@@ -112,7 +112,8 @@ Only when told to build (a Draft spec sitting in the repo is not a signal to sta
    `component-inventory.md`; pull only the `architecture.md` section / dependency delivery-doc you
    need — never the whole file.
 2. Confirm CI is green on `main`; investigate failures first.
-3. Branch from fresh `main`, and set the spec's `Status: In Progress` + its `INDEX.md` row in that
+3. `git fetch origin` first, then branch off `origin/main` — not off your local `main`, which the
+   fetch does not move — and set the spec's `Status: In Progress` + its `INDEX.md` row in that
    first commit — nothing gates that transition, so it is missed by being skipped.
 4. **Generate an implementation plan from the spec's phases and validate it against the spec** — every
    FR + acceptance criterion covered, reuse used, nothing out of scope. **Then send the plan to one
@@ -211,8 +212,11 @@ the remote, parallelise the work.**
 
 1. **Install the queue once, before launching anyone:** `sh scripts/pr-queue/install.sh '<branch-regex>'`
    (default `^spec-`). **That regex is the setting that silently disables everything** — the hook
-   enforces only against branches matching it and allows every other push, so it must match the
-   branch names you hand out in step 2, and nothing reports the mismatch if it does not.
+   enforces only against branches matching it and leaves every other push alone, so it must match
+   the branch names you hand out in step 2, and nothing reports the mismatch if it does not. For a
+   branch it does police, the hook refuses two things: a push by a session that does not hold the
+   lock, and a push whose commits do not contain the remote's current `main`. The corpus for those
+   checks is `sh scripts/pr-queue-test.sh`.
    It copies `queue.sh`, `pre-push` and `PROTOCOL.md` to a shared directory under `$HOME` — outside
    every worktree and outside the repo, because a lock inside a worktree is invisible to peers and a
    lock inside the repo is a file that itself conflicts — and points a `.git/hooks/pre-push` wrapper
@@ -227,13 +231,16 @@ the remote, parallelise the work.**
    poll `queue.sh turn SPEC-XXX` with the Monitor tool's until-loop (blocking `sleep` is unavailable
    in the Bash tool, and each `turn` call is the heartbeat that keeps its place), `queue.sh acquire`
    once that exits 0, then `queue.sh release` on **every** exit path including failure. The lock
-   covers the whole PR lifecycle — rebase, push, open, watch to green, merge, confirm `main` — not
-   just the push, and it is one ticket per PR so a multi-PR spec does not hold the line throughout.
+   covers the whole PR lifecycle — fetch, rebase, re-run your gates, push, open, watch to green,
+   merge, confirm `main` — not just the push, and it is one ticket per PR so a multi-PR spec does
+   not hold the line throughout. The fetch is inside the lock because the wait is when peers merge.
 4. **If `turn` reports the trunk `IS RED`, stop and escalate.** A red `main` is fixed before anything
    else merges.
 5. **Do not hand-roll the shell.** Every remote check fails closed on purpose (a `gh` that *errors*
-   returns empty output, which reads as "no PRs open"), and enforcement fails open on purpose (linked
-   worktrees share `.git/hooks`, so the hook fires for sessions that never agreed to the queue).
+   returns empty output, which reads as "no PRs open"). Enforcement fails open on **consent** —
+   linked worktrees share `.git/hooks`, so the hook fires for sessions that never agreed to the
+   queue, and a branch outside the pattern pushes freely — and closed on **evidence**: for a branch
+   it does police, a remote it could not read is never read as "your base is current".
    Reimplementing this by hand gets one of those backwards. Full protocol and the configuration
    seams for non-GitHub projects: `scripts/pr-queue/PROTOCOL.md`.
 
