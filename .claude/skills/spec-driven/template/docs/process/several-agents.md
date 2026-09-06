@@ -18,8 +18,9 @@ whole idea, and the invariant is **one PR open at a time, taken in the order age
   your turn *and* the remote is clear, `acquire` takes the lock, `release` drops it — on **every**
   exit path, including failure. Poll `turn`, never `acquire`; each `turn` call is also the heartbeat
   that keeps your place. A holder that stops is this design's one real failure.
-- **The lock covers the whole PR lifecycle** — rebase, push, open, watch to green, merge, confirm
-  `main` — not just the push. One ticket per PR, released between them, so a multi-PR spec does not
+- **The lock covers the whole PR lifecycle** — fetch, rebase, re-run your gates, push, open, watch
+  to green, merge, confirm `main` — not just the push. The fetch is inside the lock because the wait
+  is when peers merge. One ticket per PR, released between them, so a multi-PR spec does not
   hold the line for its whole duration.
 - **The queue is not a review.** It is the last thing between an already-reviewed branch and the
   remote. The local gates and both diff reviews still come first, in that order.
