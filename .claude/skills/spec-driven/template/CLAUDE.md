@@ -82,7 +82,7 @@ the register and the rules to it, and refuses anything in this section but this 
 
 ## Session Workflow
 
-**Start:** the session rhythm (`@docs/process/session-rhythm.md`) is loaded with this file — follow it literally: read the spec you're building in full, confirm CI is green on `main`, branch from fresh `main` (in a multi-agent run, in your **own worktree** off `origin/main`, never the shared checkout), set the spec `In Progress` in that first commit, plan, and put the plan and the PR grouping through the reviewer gate before the first line of code. If this file and the rhythm disagree, this file wins — fix the drift there in the same session.
+**Start:** the session rhythm (`@docs/process/session-rhythm.md`) is loaded with this file — follow it literally: read the spec you're building in full, confirm CI is green on `main`, branch off freshly fetched `origin/main` (in a multi-agent run, in your **own worktree**, never the shared checkout), set the spec `In Progress` in that first commit, plan, and put the plan and the PR grouping through the reviewer gate before the first line of code. If this file and the rhythm disagree, this file wins — fix the drift there in the same session.
 
 **Delegate, and pick the model by the job:** the main session orchestrates. Each artifact — spec, plan, code, every review, every sweep — goes to a subagent from `.claude/agents/` on the model `@docs/process/model-routing.md` names for that job (Sonnet writes specs and docs; Opus reviews, and Fable builds-and-reviews what Fable wrote; Opus implements, Fable when the complexity rule triggers; Haiku enumerates). When unsure, one tier up, never down.
 

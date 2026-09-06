@@ -67,9 +67,10 @@ never looks like a bug in the queue.
 
 ## What the lock covers
 
-The **whole** PR lifecycle, not just the push: rebase onto fresh `main`, re-run your gates, push,
-open the PR, watch it to green **keyed on the head sha**, merge, then confirm `main` itself went
-green. Then release.
+The **whole** PR lifecycle, not just the push: `git fetch origin` and rebase onto the ref you just
+fetched — `main` moves under you while you wait for the lock and while you hold it, and an
+unfetched `origin/main` cannot show you that — re-run your gates, push, open the PR, watch it to green
+**keyed on the head sha**, merge, then confirm `main` itself went green. Then release.
 
 If your spec needs more than one PR, take a ticket per PR and release between them, so the others
 interleave rather than waiting out your whole spec.

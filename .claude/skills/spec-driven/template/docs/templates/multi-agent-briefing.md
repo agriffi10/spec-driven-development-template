@@ -12,15 +12,19 @@ parallel run.
 
 You are building **SPEC-XXX** in a run with [N] other agent sessions against one repo.
 
-**Your worktree.** Work in your own worktree, created off fresh `origin/main`:
+**Your worktree.** Work in your own worktree, created off fresh `origin/main`. Fetch first: `origin/main`
+is a local ref, only as fresh as your last fetch, so branching off it without fetching starts you on
+whatever `main` was the last time anyone looked — and the command below will not complain.
 
 ```
+git fetch origin
 git worktree add [path]/wt-spec-XXX -b spec-XXX/[short-name] origin/main
 ```
 
 Never work in the shared checkout, never switch, reset or checkout a branch you did not create there,
-and never delete or force-push a peer's branch. Rebase onto fresh `origin/main` before you push —
-`main` will have moved while you worked.
+and never delete or force-push a peer's branch. Fetch again and rebase onto `origin/main` before you
+push — `main` will have moved while you worked, and only a fetch tells you how far. Under the queue
+below, that rebase belongs *after* you take the lock, not before.
 
 **Who else is running.** [One line per peer: session, spec, branch. "You are the only one" is also an
 answer, and a useful one.]
@@ -43,8 +47,11 @@ The queue serialises the remote — it is not a review, and it does not replace 
 [queue-dir]/queue.sh release SPEC-XXX     # on EVERY exit path, including failure and abandonment
 ```
 
-The lock covers the whole PR lifecycle — rebase, push, open, watch to green keyed on the head sha,
-merge, confirm `main` went green — not just the push. One ticket per PR: if your spec needs several,
+The lock covers the whole PR lifecycle — fetch, rebase, push, open, watch to green keyed on the head
+sha, merge, confirm `main` went green — not just the push. The fetch is *inside* the lock because the
+wait is exactly when peers merge: rebase before you get in line and you push a base that went stale
+while you queued, with every remote check still green. Full protocol: `[queue-dir]/PROTOCOL.md`.
+One ticket per PR: if your spec needs several,
 release between them so the others interleave. If `turn` reports the trunk `IS RED`, stop and
 escalate; a red `main` is fixed before anything else merges.
 
