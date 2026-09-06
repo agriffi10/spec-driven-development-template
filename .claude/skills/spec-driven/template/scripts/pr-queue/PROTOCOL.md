@@ -80,6 +80,9 @@ commits do not contain the remote's current `main`, and says so with the remedy.
 with `ls-remote` and never fetches for you: fetching from a hook would move refs the other worktrees
 share. A branch outside the enforced pattern is not policed at all, but a policed branch whose remote
 could not be read is refused rather than waved through — consent fails open, evidence fails closed.
+A remote that has branches but not the trunk named in `main-branch` is the same case: that is a
+queue pointed at a trunk which does not exist, and reading it as "empty repo, nothing to be behind"
+would disable the check for the whole repository without saying so.
 `PR_QUEUE_BYPASS=1` overrides both refusals. The corpus for those checks is
 `scripts/pr-queue-test.sh` in the repo, which drives real pushes and asserts each refusal's text.
 

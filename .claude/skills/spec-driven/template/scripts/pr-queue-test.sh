@@ -44,16 +44,20 @@ pass=0; fail=0; rc=0; out=""
 # new_repo <case> — a bare origin holding one commit on main, a clone of it, and the queue
 # installed at $D/queue enforcing the given pattern (default '^spec-').
 new_repo() {
-  D="$WORK/$1"; pattern="${2:-^spec-}"
+  D="$WORK/$1"; pattern="${2:-^spec-}"; trunk="${3:-main}"
   rm -rf "$D"; mkdir -p "$D"
   git init -q --bare "$D/origin.git"
   git init -q "$D/repo"
-  git -C "$D/repo" symbolic-ref HEAD refs/heads/main
+  git -C "$D/repo" symbolic-ref HEAD "refs/heads/$trunk"
   git -C "$D/repo" config user.email t@example.com
   git -C "$D/repo" config user.name  Tester
   git -C "$D/repo" remote add origin "$D/origin.git"
   echo base > "$D/repo/f"; git -C "$D/repo" add f; git -C "$D/repo" commit -qm base
-  git -C "$D/repo" push -q origin main
+  git -C "$D/repo" push -q origin "$trunk"
+  git -C "$D/origin.git" symbolic-ref HEAD "refs/heads/$trunk"
+  printf '%s\n' "$trunk" > "$D/trunk"
+  # Deliberately `init` + `remote add`, not `clone`: that is the checkout shape where
+  # refs/remotes/origin/HEAD never exists, so install.sh has to ask the remote for the trunk name.
   ( cd "$D/repo" && PR_QUEUE_DIR="$D/queue" sh "$SRC/install.sh" "$pattern" >/dev/null )
 }
 
@@ -66,7 +70,7 @@ peer_advances() {
   git -C "$D/peer" config user.email p@example.com
   git -C "$D/peer" config user.name  Peer
   echo peer >> "$D/peer/f"; git -C "$D/peer" add f; git -C "$D/peer" commit -qm peer
-  git -C "$D/peer" push -q origin main
+  git -C "$D/peer" push -q origin "$(cat "$D/trunk")"
 }
 
 # hold_lock <case> <branch> — the lock as cmd_acquire writes it.
@@ -79,7 +83,7 @@ hold_lock() {
 # work_branch <case> <branch> — branch off the CURRENT local main and add a commit.
 work_branch() {
   D="$WORK/$1"
-  git -C "$D/repo" checkout -q -b "$2" main
+  git -C "$D/repo" checkout -q -b "$2"
   echo work >> "$D/repo/g"; git -C "$D/repo" add g; git -C "$D/repo" commit -qm work
 }
 
@@ -270,6 +274,84 @@ if run push-main-rewritten; then
   git -C "$WORK/push-main-rewritten/repo" fetch -q origin
   try_push push-main-rewritten --force main
   refuses push-main-rewritten "your base is behind"
+fi
+
+# The check must read the ref BEING PUSHED, not HEAD. The hook says so in a comment; without
+# these two, substituting HEAD for the pushed sha passes the whole corpus, because every other
+# case happens to push the branch it is standing on.
+if run push-from-other-branch; then
+  new_repo push-from-other-branch; work_branch push-from-other-branch spec-1/x
+  hold_lock push-from-other-branch spec-1/x
+  peer_advances push-from-other-branch
+  git -C "$WORK/push-from-other-branch/repo" fetch -q origin
+  git -C "$WORK/push-from-other-branch/repo" checkout -q -B current origin/main
+  try_push push-from-other-branch spec-1/x
+  refuses push-from-other-branch "your base is behind"
+fi
+
+if run push-detached-head; then
+  new_repo push-detached-head; work_branch push-detached-head spec-1/x
+  hold_lock push-detached-head spec-1/x
+  peer_advances push-detached-head
+  git -C "$WORK/push-detached-head/repo" fetch -q origin
+  git -C "$WORK/push-detached-head/repo" checkout -q --detach origin/main
+  try_push push-detached-head spec-1/x:refs/heads/spec-1/x
+  refuses push-detached-head "your base is behind"
+fi
+
+# A trunk that is not called `main`. install.sh must infer it, and the check must then work
+# against it — hardcoding MAIN=main in the hook passes every other case in this file.
+if run trunk-not-main; then
+  new_repo trunk-not-main '^spec-' master; work_branch trunk-not-main spec-1/x
+  hold_lock trunk-not-main spec-1/x
+  peer_advances trunk-not-main
+  git -C "$WORK/trunk-not-main/repo" fetch -q origin
+  try_push trunk-not-main spec-1/x
+  refuses trunk-not-main "your base is behind"
+fi
+
+# A trunk the remote does not have is a MISCONFIGURED queue, not an empty repo. Reading the one
+# as the other silently disables the check for the whole repository.
+if run trunk-missing; then
+  new_repo trunk-missing; work_branch trunk-missing spec-1/x
+  hold_lock trunk-missing spec-1/x
+  printf 'nosuch\n' > "$WORK/trunk-missing/queue/main-branch"
+  try_push trunk-missing spec-1/x
+  refuses trunk-missing "has no branch named"
+fi
+
+# `remote.origin.pushurl` makes the fetch url and the push target different repositories. The
+# base must be measured against the one being pushed to.
+if run pushurl-split; then
+  new_repo pushurl-split; work_branch pushurl-split spec-1/x
+  hold_lock pushurl-split spec-1/x
+  git clone -q --bare "$WORK/pushurl-split/origin.git" "$WORK/pushurl-split/frozen.git"
+  peer_advances pushurl-split
+  git -C "$WORK/pushurl-split/repo" remote set-url origin "$WORK/pushurl-split/frozen.git"
+  git -C "$WORK/pushurl-split/repo" remote set-url --push origin "$WORK/pushurl-split/origin.git"
+  git -C "$WORK/pushurl-split/repo" fetch -q origin
+  try_push pushurl-split spec-1/x
+  refuses pushurl-split "your base is behind"
+fi
+
+# The holder is compared as a whole string. A substring test would let spec-1/x push under a lock
+# held by spec-1/xyz, and the existing not-holder case cannot see the difference.
+if run holder-substring; then
+  new_repo holder-substring; work_branch holder-substring spec-1/x
+  hold_lock holder-substring spec-1/xyz
+  try_push holder-substring spec-1/x
+  refuses holder-substring "you do not hold the PR queue lock"
+fi
+
+# ls-remote matches a ref pattern by TAIL, so a branch named `decoy/refs/heads/main` answers a
+# query for `refs/heads/main`. Selecting the wrong line refuses a push whose base is current.
+if run decoy-ref-ok; then
+  new_repo decoy-ref-ok; work_branch decoy-ref-ok spec-1/x
+  hold_lock decoy-ref-ok spec-1/x
+  ( cd "$WORK/decoy-ref-ok/repo" &&
+      PR_QUEUE_BYPASS=1 git push -q origin main:refs/heads/decoy/refs/heads/main 2>/dev/null )
+  try_push decoy-ref-ok spec-1/x
+  silent decoy-ref-ok
 fi
 
 echo "----"
