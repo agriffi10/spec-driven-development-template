@@ -66,6 +66,11 @@ done
 IFS="$oldifs"
 
 MAIN="$(git -C "$REPO" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##')"
+# origin/HEAD does not exist in a checkout made by `git init` + `git remote add`, and it goes stale
+# when the remote renames its default branch. Ask the remote before falling back to a guess: a
+# wrong trunk name here is what makes pre-push refuse every push in the repo it was installed for.
+[ -n "$MAIN" ] || MAIN="$(git -C "$REPO" ls-remote --symref origin HEAD 2>/dev/null |
+                            awk '$1 == "ref:" { sub("^refs/heads/", "", $2); print $2; exit }')"
 [ -n "$MAIN" ] || MAIN=main
 
 cp "$SRC/queue.sh" "$SRC/pre-push" "$SRC/PROTOCOL.md" "$Q/"

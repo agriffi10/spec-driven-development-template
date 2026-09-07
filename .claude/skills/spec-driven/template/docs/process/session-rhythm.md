@@ -11,10 +11,14 @@ happen).
 2. Skim `component-inventory.md` for reuse; pull only the `architecture.md` section / dependency
    delivery-doc you actually need.
 3. Confirm CI is green on `main`. Investigate failures before building.
-4. **Branch from fresh `main`** — and in a multi-agent run, in your **own worktree** off
-   `origin/main`, never the shared checkout and never a peer's branch (`several-agents.md`) — then set the spec header's `Status: In Progress` plus its `INDEX.md`
-   row in the same commit — that transition is what makes "exactly one spec in flight" (`spec-lifecycle.md`) legible
-   to the next session, and nothing gates it, so it is missed by being skipped rather than by failing.
+4. **Branch from fresh `main`** — `git fetch origin` first, then branch off `origin/main` and not
+   off your local `main`. The fetch moves `origin/main` and never touches the local branch, so
+   branching off `main` after a fetch still starts you wherever you last pulled, exits 0, and reads
+   as compliance. In a multi-agent run, cut your **own worktree** off `origin/main`, never the
+   shared checkout and never a peer's branch (`several-agents.md`) — then set the spec header's
+   `Status: In Progress` plus its `INDEX.md` row in the same commit — that transition is what makes
+   "exactly one spec in flight" (`spec-lifecycle.md`) legible to the next session, and nothing gates
+   it, so it is missed by being skipped rather than by failing.
 5. **Generate and validate a plan before writing code.** Turn the spec's Implementation Phases into a
    concrete implementation plan, then validate it against the spec — every FR + acceptance criterion is
    covered, reuse from `component-inventory.md` is used, and nothing out of scope crept in. The plan —
@@ -50,7 +54,8 @@ four before the first push.
 - Before pushing, run the project's **formatter, linter, typecheck and unit tests** locally and get
   them green. These quality gates are a pre-push step — don't push red and leave CI to discover it.
   **`sh scripts/docs-lint.sh` is in that set and nothing in CI runs it** — plus
-  `sh scripts/docs-lint-test.sh` whenever the linter itself changed.
+  `sh scripts/docs-lint-test.sh` whenever the linter itself changed, and
+  `sh scripts/pr-queue-test.sh` whenever the queue or its hook changed.
 - Work the **reviewed** plan's phases in order, **straight through to completion**. Summarize a phase
   in passing where it is worth saying, but do not end the turn on it — a summary that ends the turn
   *is* a request for approval, whatever its wording says. Re-review the plan only if the phase

@@ -1,12 +1,23 @@
 #!/bin/bash
-# pre-push — makes the PR queue real rather than advisory. Refuses a push of a participating
-# branch by a session that does not hold the lock.
+# pre-push — makes the PR queue real rather than advisory. Two refusals, for the two ways a
+# push goes wrong under a shared checkout:
 #
-# It FAILS OPEN by design, and the reason is worktrees: linked worktrees share `.git/hooks`
+#   LOCK       a participating branch pushed by a session that does not hold the lock.
+#   FRESHNESS  a push whose commits do not contain the remote's current main. The docs told
+#              sessions to rebase onto fresh `main` for a long time and nothing checked, so a
+#              branch rebased BEFORE a queue wait — during which peers merge, by design —
+#              pushed a stale base with `turn`, this hook and CI all reporting green. Prose was
+#              the only guard, and three review frames each found another place it had leaked.
+#
+# It FAILS OPEN on CONSENT, and the reason is worktrees: linked worktrees share `.git/hooks`
 # through the common git dir, so this hook fires for every session on the checkout — including
 # ones that never agreed to the queue and have never heard of it. Blocking those would be a worse
 # failure than the one it prevents. So a branch outside the configured pattern, a missing queue,
 # an unreadable one, and an explicit bypass all allow the push.
+#
+# It FAILS CLOSED on EVIDENCE. Those are different questions: consent asks whether this branch is
+# ours to police, evidence asks whether we could tell. A remote we could not read is never read as
+# "your base is current", the same way queue.sh never reads a failed check as "main is green".
 #
 # It lives in the queue directory and is reached by a wrapper in .git/hooks that execs it, so
 # enforcement cannot outlive the queue it enforces: delete the queue and the wrapper
@@ -14,6 +25,12 @@
 
 Q="$(cd "$(dirname "$0")" && pwd)"
 PATTERN="$(cat "$Q/enforce-branches" 2>/dev/null)"
+MAIN="$(cat "$Q/main-branch" 2>/dev/null)"; [ -n "$MAIN" ] || MAIN=main
+REMOTE="${1:-origin}"           # the name, for the messages
+# git passes the name as $1 and the URL actually being pushed to as $2, and `remote.X.pushurl`
+# makes those different repositories — `ls-remote <name>` would resolve the FETCH url and measure
+# the push against a repo it is not going to.
+REMOTE_URL="${2:-${1:-origin}}"
 
 [ -d "$Q" ] || exit 0                              # no queue — enforce nothing
 [ -n "$PATTERN" ] || exit 0                        # no pattern configured — enforce nothing
@@ -25,22 +42,75 @@ holder_branch=""
 [ -d "$Q/lock" ] &&
   holder_branch="$(awk '$1=="branch" { $1=""; sub(/^ /,""); print; exit }' "$Q/lock/holder" 2>/dev/null)"
 
+# The remote's current main, read ONCE, before the loop — every ref in one push is measured
+# against the same remote state. `git ls-remote` rather than a fetch, for the reason queue.sh
+# gives at its own remote checks: it reads the remote's head without touching local refs, which
+# several worktrees pushing at once would race on through FETCH_HEAD. It also means this hook
+# never moves a ref. (In a partial clone the `cat-file` below can lazily fetch the commit object
+# itself — a round trip, but still no ref moved, which is the race the comment is about.)
+#
+# Exit status and emptiness mean DIFFERENT things and are kept apart: non-zero is "the check
+# could not run" (fail closed), while zero-with-no-output is "the remote has no such branch",
+# which is a repo whose main does not exist yet and nothing to be behind.
+main_sha=""; main_readable=1; trunk_missing=0
+if main_ls="$(git ls-remote "$REMOTE_URL" "refs/heads/$MAIN" 2>/dev/null)"; then
+  # Exact match on the ref name. ls-remote's pattern is a TAIL match, so a remote branch called
+  # `decoy/refs/heads/main` comes back on this query too, and `cut -f1` would splice two shas into
+  # one string — which then fails every downstream test and refuses every push, while printing a
+  # sha the reader can see is fine.
+  main_sha="$(printf '%s\n' "$main_ls" | awk -v r="refs/heads/$MAIN" '$2 == r { print $1; exit }')"
+  if [ -z "$main_sha" ]; then
+    # Empty is TWO different situations and reading the second as the first is how this check goes
+    # silent: a remote with no branches at all has nothing to be behind, while a remote with
+    # branches but no $MAIN means the queue is pointed at a trunk that does not exist — a stale
+    # `origin/HEAD` at install time is enough to cause it. The second must refuse, or every push
+    # in such a repo sails through a gate the docs advertise.
+    if heads="$(git ls-remote --heads "$REMOTE_URL" 2>/dev/null)"; then
+      [ -n "$heads" ] && trunk_missing=1
+    else
+      main_readable=0
+    fi
+  fi
+else
+  main_readable=0
+fi
+
 # git names the refs actually being pushed on STDIN, one
 # "<local ref> <local sha> <remote ref> <remote sha>" line per ref. Read those rather than the
 # checked-out branch: `git push origin spec-x/y` from a different branch, and
 # `git push origin HEAD:refs/heads/spec-x/y` from a detached HEAD, both bypass a HEAD-based check.
-refused=""
-while read -r _lref _lsha rref _rsha; do
+refused=""; stale=""; unreadable=""; unfetched=""; notrunk=""
+while read -r _lref lsha rref _rsha; do
   [ -n "$rref" ] || continue
   case "$rref" in refs/heads/*) branch="${rref#refs/heads/}" ;; *) continue ;; esac
   echo "$branch" | grep -qE "$PATTERN" || continue   # not a participating branch — not our business
-  [ "$branch" = "$holder_branch" ] && continue
-  refused="$refused $branch"
+  if [ "$branch" != "$holder_branch" ]; then refused="$refused $branch"; continue; fi
+
+  # A deletion carries an all-zero local sha and no commit to measure.
+  case "$lsha" in *[!0]*) ;; *) continue ;; esac
+  # No special case for $MAIN itself. One was written and removed: it survived mutation because
+  # no fixture could exercise it — an ordinary push of $MAIN already contains the remote's $MAIN
+  # and passes the ancestry test on its own. What the special case DID cover was a $MAIN
+  # force-pushed backwards over commits the remote has, which is a peer's work being dropped, and
+  # refusing that is the behaviour this repo wants everywhere else.
+
+  if [ "$main_readable" -eq 0 ]; then unreadable="$unreadable $branch"; continue; fi
+  if [ "$trunk_missing" -eq 1 ]; then notrunk="$notrunk $branch"; continue; fi
+  [ -n "$main_sha" ] || continue                   # a remote with no branches — nothing to be behind
+
+  # Not having the object at all is itself proof of staleness: it means this checkout has never
+  # fetched the commit main is on. Checked first because `merge-base` cannot answer without it,
+  # and would exit non-zero for "missing object" and "not an ancestor" alike.
+  if ! git cat-file -e "$main_sha^{commit}" 2>/dev/null; then
+    stale="$stale $branch"; unfetched="$unfetched $branch"; continue
+  fi
+  git merge-base --is-ancestor "$main_sha" "$lsha" 2>/dev/null || stale="$stale $branch"
 done
 
-[ -n "$refused" ] || exit 0
+[ -n "$refused$stale$unreadable$notrunk" ] || exit 0
 
-cat >&2 <<MSG
+if [ -n "$refused" ]; then
+  cat >&2 <<MSG
 
   PUSH REFUSED — you do not hold the PR queue lock.
 
@@ -60,4 +130,58 @@ cat >&2 <<MSG
   Emergency override: PR_QUEUE_BYPASS=1 git push ...
 
 MSG
+fi
+
+if [ -n "$stale" ]; then
+  cat >&2 <<MSG
+
+  PUSH REFUSED — your base is behind $REMOTE/$MAIN.
+
+  Stale ref(s):$stale
+  $REMOTE/$MAIN is at ${main_sha:0:7}, which your push does not contain.
+
+  $MAIN moved while you worked, or while you waited for the lock — the wait is exactly when
+  peers merge.${unfetched:+
+  This checkout has never fetched that commit at all, so no rebase here has seen it.} Your local gates and both diff reviews were measured against the base you had
+  before it moved, so rebasing is not a formality:
+
+      git fetch $REMOTE
+      git rebase $REMOTE/$MAIN
+      ... re-run your gates, then push again
+
+  Emergency override: PR_QUEUE_BYPASS=1 git push ...
+
+MSG
+fi
+
+if [ -n "$notrunk" ]; then
+  cat >&2 <<MSG
+
+  PUSH REFUSED — $REMOTE has no branch named "$MAIN", so your base could not be checked.
+
+  Unchecked ref(s):$notrunk
+
+  The queue is configured for a trunk this remote does not have. $Q/main-branch says "$MAIN";
+  `git ls-remote --heads $REMOTE` says otherwise. Fix that file (install.sh guesses it from
+  origin/HEAD, which is stale in a checkout whose default branch was renamed), or override:
+
+      PR_QUEUE_BYPASS=1 git push ...
+
+MSG
+fi
+
+if [ -n "$unreadable" ]; then
+  cat >&2 <<MSG
+
+  PUSH REFUSED — could not read $REMOTE/$MAIN, so your base could not be checked.
+
+  Unchecked ref(s):$unreadable
+
+  A check that could not run is not evidence that it passed. Fix the remote access and push
+  again, or override deliberately:
+
+      PR_QUEUE_BYPASS=1 git push ...
+
+MSG
+fi
 exit 1

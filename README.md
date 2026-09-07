@@ -357,7 +357,7 @@ reminded. If you already have a `pre-push` hook of your own, it says so and prin
 
 **Briefing each session.** Fill in `docs/templates/multi-agent-briefing.md` per session and paste it
 as that session's first message. It covers what a session cannot work out for itself: to work in its
-own worktree off a fresh `main`, who else is running and on what, which files two of them will both
+own worktree off a freshly fetched `origin/main`, who else is running and on what, which files two of them will both
 edit, that its own tests and reviews come before the queue rather than instead of it — and that a
 conflict is never resolved by deleting a peer's work. A session that isn't told does the sensible
 thing for a session working alone, which is precisely what breaks a parallel run.
@@ -442,7 +442,8 @@ from the template don't need them.
 | `scripts/docs-lint-test.sh` | **POSIX** fixture corpus for the doc linter — one case per construct, asserting the specific failure text rather than the exit code. Run it whenever you change `docs-lint.sh`; running the linter against your own docs proves your docs pass, not that the checks work. | you + Claude (when the linter changes) |
 | `tests/docs-lint/*.case` | The fixtures themselves. A `-ok` case asserts the linter stays SILENT: false positives are a large share of what a gate gets wrong. | you + Claude |
 | `scripts/pr-queue/queue.sh` | The **PR queue**: a lock and a first-come-first-served line that keeps one pull request open at a time when several agents share the repo. Runs from outside the repo — `install.sh` puts it there. | Claude (multi-agent runs) |
-| `scripts/pr-queue/pre-push` | The git hook that makes the queue binding rather than advisory. Refuses a push from a participating branch that doesn't hold the lock, and allows everything else. | Git |
+| `scripts/pr-queue/pre-push` | The git hook that makes the queue binding rather than advisory. Refuses a push from a participating branch that doesn't hold the lock, and one whose commits don't contain the remote's current `main` — the stale base a queue wait quietly creates. Branches outside the pattern are left alone; a remote it couldn't read is refused, not waved through. | Git |
+| `scripts/pr-queue-test.sh` | **POSIX** fixture corpus for that hook — real pushes to real bare repos, each case asserting the specific refusal text, plus the silence cases that catch a check turning into a false positive. Run it whenever you change the queue or the hook. | you + Claude (when the queue changes) |
 | `scripts/pr-queue/install.sh` | One-time setup for a multi-agent run: places the queue outside the repo and installs the hook wrapper. | You + Claude |
 | `scripts/pr-queue/PROTOCOL.md` | The protocol the agents read: the four commands, what the lock covers, the configuration seams, and the stale-entry rules. | Claude (multi-agent runs) |
 | `scripts/sync-from-skill.sh` | Maintenance for **this template repo only** — regenerates the root scaffold from the skill's canonical copy. Delete it in a derived project. | Maintainers of this template |
@@ -526,6 +527,7 @@ which is which tells you what breaks silently if you skip a step.
 | The doc linter's own checks still fire | `docs-lint-test.sh` (local, run when you change the linter) — a fixture per construct, each asserting its failure text |
 | Any gate you add is itself tested, not just run | `docs/process/reviewer-contract.md` — a gate run only on what it guards proves the artifacts pass, not that the gate works |
 | One pull request open at a time when several agents share the repo | `scripts/pr-queue/` (the `pre-push` hook) |
+| A branch is rebased on current `main` before it reaches the remote | `scripts/pr-queue/pre-push`, **for branches matching the enforced pattern in a checkout where the queue is installed** — a solo session, a repo that never installs it, and a branch outside the pattern are all still on prose alone. Nothing checks this server-side; GitHub's "require branches to be up to date" is the setting that would |
 | The root scaffold matches the skill's canonical copy | `check-mirror.sh` (CI) |
 | Your language's own quality gates | the `ci.yml` you create from `ci.yml.example` |
 

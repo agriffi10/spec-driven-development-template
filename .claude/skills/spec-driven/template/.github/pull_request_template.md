@@ -31,6 +31,7 @@
 - [ ] `sh scripts/spec-lint.sh` passes
 - [ ] `sh scripts/docs-lint.sh` passes
 - [ ] `sh scripts/docs-lint-test.sh` passes (only if you changed the linter)
+- [ ] `sh scripts/pr-queue-test.sh` passes (only if you changed the queue or its hook)
 - [ ] Any gate this PR adds ships fixtures asserting its failure text, including a silence case
 
 ## Landing

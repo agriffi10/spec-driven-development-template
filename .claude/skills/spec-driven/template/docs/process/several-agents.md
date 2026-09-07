@@ -18,16 +18,23 @@ whole idea, and the invariant is **one PR open at a time, taken in the order age
   your turn *and* the remote is clear, `acquire` takes the lock, `release` drops it — on **every**
   exit path, including failure. Poll `turn`, never `acquire`; each `turn` call is also the heartbeat
   that keeps your place. A holder that stops is this design's one real failure.
-- **The lock covers the whole PR lifecycle** — rebase, push, open, watch to green, merge, confirm
-  `main` — not just the push. One ticket per PR, released between them, so a multi-PR spec does not
+- **The lock covers the whole PR lifecycle** — fetch, rebase, re-run your gates, push, open, watch
+  to green, merge, confirm `main` — not just the push. The fetch is inside the lock because the wait
+  is when peers merge. One ticket per PR, released between them, so a multi-PR spec does not
   hold the line for its whole duration.
 - **The queue is not a review.** It is the last thing between an already-reviewed branch and the
   remote. The local gates and both diff reviews still come first, in that order.
-- **Every remote check fails closed; enforcement fails open.** The lock only orders the agents that
-  take it, so `turn` asks the remote directly too — and a `gh` that *errors* returns empty output,
-  which reads as "no PRs open" unless you check the exit status. Enforcement is the opposite case:
-  linked worktrees share `.git/hooks` through the common git dir, so the hook fires for sessions that
-  never agreed to the queue, and blocking those would be worse than the problem it solves.
+- **Every remote check fails closed; enforcement fails open on CONSENT and closed on EVIDENCE.**
+  The lock only orders the agents that take it, so `turn` asks the remote directly too — and a `gh`
+  that *errors* returns empty output, which reads as "no PRs open" unless you check the exit status.
+  Consent is the opposite case: linked worktrees share `.git/hooks` through the common git dir, so
+  the hook fires for sessions that never agreed to the queue, and blocking those would be worse than
+  the problem it solves — a branch outside the pattern pushes freely. But for a branch the hook does
+  police, a remote it could not read is never read as "your base is current".
+- **The hook checks your base, not just your lock.** It refuses a push whose commits do not contain
+  the remote's current `main`, because the queue *guarantees* a wait during which peers merge. Prose
+  told sessions to rebase for a long time and nothing checked; `scripts/pr-queue-test.sh` is the
+  corpus that keeps the check honest.
 - **Brief each session explicitly** from `docs/templates/multi-agent-briefing.md`: its own worktree
   off fresh `origin/main`, who else is running and on what, the files two agents will both edit, and
   that a rebase conflict is never resolved by discarding a peer's work. An unbriefed session does the

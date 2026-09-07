@@ -67,12 +67,24 @@ never looks like a bug in the queue.
 
 ## What the lock covers
 
-The **whole** PR lifecycle, not just the push: rebase onto fresh `main`, re-run your gates, push,
-open the PR, watch it to green **keyed on the head sha**, merge, then confirm `main` itself went
-green. Then release.
+The **whole** PR lifecycle, not just the push: `git fetch origin` and rebase onto the ref you just
+fetched — `main` moves under you while you wait for the lock and while you hold it, and an
+unfetched `origin/main` cannot show you that — re-run your gates, push, open the PR, watch it to green
+**keyed on the head sha**, merge, then confirm `main` itself went green. Then release.
 
 If your spec needs more than one PR, take a ticket per PR and release between them, so the others
 interleave rather than waiting out your whole spec.
+
+**The hook enforces the fetch, so the rebase is not on your memory.** `pre-push` refuses a push whose
+commits do not contain the remote's current `main`, and says so with the remedy. It reads the remote
+with `ls-remote` and never fetches for you: fetching from a hook would move refs the other worktrees
+share. A branch outside the enforced pattern is not policed at all, but a policed branch whose remote
+could not be read is refused rather than waved through — consent fails open, evidence fails closed.
+A remote that has branches but not the trunk named in `main-branch` is the same case: that is a
+queue pointed at a trunk which does not exist, and reading it as "empty repo, nothing to be behind"
+would disable the check for the whole repository without saying so.
+`PR_QUEUE_BYPASS=1` overrides both refusals. The corpus for those checks is
+`scripts/pr-queue-test.sh` in the repo, which drives real pushes and asserts each refusal's text.
 
 ## Release on every exit path
 
