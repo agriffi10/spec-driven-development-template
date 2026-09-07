@@ -12,7 +12,8 @@ description: >-
   always-loaded tier stays lean (budget + a fences-first register file per decision area).
   Triggers on phrases like "set up
   spec-driven", "scaffold the docs structure", "write a spec", "start SPEC-XXX", "build this spec",
-  "complete the spec / run the completion ritual", "run several agents at once".
+  "complete the spec / run the completion ritual", "run several agents at once", "which model
+  should review this".
 ---
 
 # Spec-Driven Development
@@ -24,18 +25,21 @@ goal is a small always-loaded context (`CLAUDE.md`) backed by layered, on-demand
 `template/docs/process/` is the **pristine** copy of the method, for scaffolding — one file per part
 behind the router `INDEX.md`. In a repo that has already been scaffolded, that repo's own
 `CLAUDE.md` **imports** its `docs/process/INDEX.md` and `docs/process/session-rhythm.md`, so both are
-in context at launch; pull the other parts when the router's table says, and never the old single
-file — `operational-traps.md` and `ground-rules.md` are filled in per project and exist nowhere
-else. **Every artifact is delegated to a subagent on the model the job calls for** — see §6 below.
+in context at launch; pull the other parts when the router's table says, and never a single
+`docs/process.md` — that layout predates the router, and `docs-lint.sh` fails a repo that still has
+one. `operational-traps.md` and `ground-rules.md` are filled in per project and exist nowhere else. **Every artifact is delegated to a subagent on the model the job calls for** — see §6 below.
 The jobs below are the operating modes.
 
 ## 0. Scaffold a repo (bootstrap)
 
 When a repo has no spec-driven docs yet:
 
-1. Copy the contents of this skill's `template/` into the repo root: `CLAUDE.md`, `docs/`, `scripts/`,
-   `.github/`, and `.claude/rules/` + `.claude/agents/` (the path-scoped pointers and the model-routed
-   subagent roles). **Do not clobber** existing files — if `CLAUDE.md`, a PR template, or a workflow already
+1. Copy **everything** under this skill's `template/` into the repo root — `CLAUDE.md`, `docs/`,
+   `scripts/`, `tests/`, `.github/`, and `.claude/rules/` + `.claude/agents/` (the path-scoped
+   pointers and the model-routed subagent roles). Copy the whole tree rather than working from a
+   list: `sync-from-skill.sh` does (`cp -R`), and the list that used to stand here omitted `tests/`,
+   which ships `docs-lint-test.sh` with no fixtures — it finds nothing, passes, and exits 0, so the
+   scaffold arrives with a gate-corpus that proves nothing. **Do not clobber** existing files — if `CLAUDE.md`, a PR template, or a workflow already
    exists, merge rather than overwrite, and tell the user what you merged.
    🔴 **If the repo you are scaffolding is the template repo itself**, stop: its root is a generated
    mirror of `template/`, `scripts/sync-from-skill.sh` regenerates it, and edits belong in `template/`
@@ -54,7 +58,9 @@ When a repo has no spec-driven docs yet:
    `ALWAYS_LOADED_MAX_BYTES`, `KEY_DECISIONS_MAX_BYTES`, `DIGEST_MAX_BYTES` and `DELIVERY_MAX_LINES` — to
    what this repo actually measures. The shipped
    defaults are sized for a scaffold whose `CLAUDE.md` is placeholders and whose `docs/spec-delivery/`
-   is empty, and a budget far above the measurement never fires.
+   is empty, and a budget far above the measurement never fires. `DELIVERY_MAX_LINES` is the
+   exception — there is no delivery doc to measure yet, so leave it at its default and ratchet it
+   after the first spec completes.
 6. **Set up language CI (GitHub Actions).** Ask the user *once* what the repo's CI needs — which
    languages/runtimes, and the install / format-check / lint / typecheck / test commands (default to
    `CLAUDE.md` → Common Commands). From `.github/workflows/ci.yml.example`, produce a real
@@ -63,7 +69,10 @@ When a repo has no spec-driven docs yet:
    that would fail — if a check doesn't apply, drop it. This makes "land on green CI" cover the language
    gates, not just spec-lint.
 7. Run `sh scripts/spec-lint.sh` and `sh scripts/docs-lint.sh` to confirm both pass (each no-ops or
-   passes cleanly on a fresh scaffold).
+   passes cleanly on a fresh scaffold). Then run `sh scripts/docs-lint-test.sh` and
+   `sh scripts/pr-queue-test.sh` and **check the case COUNTS, not the exit status** — both report
+   "N passed"; an N of 0 means the fixtures did not arrive, and an empty corpus exits 0 exactly like
+   a healthy one.
 
 Keep the always-loaded tier (`CLAUDE.md`) lean — it must not regrow into a wall of prose. `docs-lint.sh`
 now enforces that rather than asking you to remember it. In a project that ran this template the
@@ -99,7 +108,8 @@ things that are true of operating this skill rather than of the method.
 
 ## 1. Author a spec
 
-Write from `template/docs/templates/spec-template.md`, then follow `authoring-a-spec.md` — it carries
+Write from `docs/templates/spec-template.md` (before scaffolding, this skill's
+`template/docs/templates/spec-template.md`), then follow `docs/process/authoring-a-spec.md` — it carries
 what makes a spec buildable, the 3–6 FR aim and the split above 8, and the reviewer gate that stands
 between Draft and Draft-ready. Add a row to `docs/specs/INDEX.md`, and run `sh scripts/spec-lint.sh`
 before handing off.
