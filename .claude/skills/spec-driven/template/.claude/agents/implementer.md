@@ -17,7 +17,8 @@ the plan rests on that nobody has checked.
 For a build: work the reviewed plan's phases in order, straight through. Triage emergent issues by
 kind — reversible or technical, decide and note it; product-changing or ambiguous, STOP and return
 with options and a recommendation. Get the formatter, linter, typecheck, tests, `sh scripts/spec-lint.sh`
-and `sh scripts/docs-lint.sh` green. Commit on your branch with messages that say why. Never push,
+and `sh scripts/docs-lint.sh` green, plus whatever CI will run on the branch (`.github/workflows/`) —
+that list is a floor, not the set. Commit on your branch with messages that say why. Never push,
 never open a PR, never merge — the orchestrator owns the review gate and the remote.
 
 Return: the branch name, the model you ran on (it decides the model of the review's build frame),

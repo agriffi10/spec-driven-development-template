@@ -35,7 +35,8 @@ Resolve by **keeping both changes**; never resolve a conflict by discarding a pe
 right resolution is not obvious, stop and escalate rather than guess.
 
 **Your gates come first, and the queue is last.** In order: the formatter, linter, type-check and
-tests green locally; then the fresh-context diff reviews (`docs/process/reviewer-contract.md`); *then* get in line.
+tests green locally, plus `sh scripts/spec-lint.sh`, `sh scripts/docs-lint.sh` and whatever CI will run
+on the branch — that list is a floor, not the set; then the fresh-context diff reviews (`docs/process/reviewer-contract.md`); *then* get in line.
 The queue serialises the remote — it is not a review, and it does not replace one.
 
 **The queue.** One PR open on the remote at a time, taken in the order agents asked:

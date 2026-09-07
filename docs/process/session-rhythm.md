@@ -56,6 +56,11 @@ four before the first push.
   **`sh scripts/docs-lint.sh` is in that set and nothing in CI runs it** — plus
   `sh scripts/docs-lint-test.sh` whenever the linter itself changed, and
   `sh scripts/pr-queue-test.sh` whenever the queue or its hook changed.
+- **The gates a document names are a floor, not the set — before every push, also run locally
+  whatever CI will run on the branch.** A gate no list names is the one that goes unrun, and green
+  from the named gates says nothing about it. Read `.github/workflows/` for the jobs that will
+  actually run, not just this list — including after a rebase, when a job can newly go red on work
+  that was green before `main` moved.
 - Work the **reviewed** plan's phases in order, **straight through to completion**. Summarize a phase
   in passing where it is worth saying, but do not end the turn on it — a summary that ends the turn
   *is* a request for approval, whatever its wording says. Re-review the plan only if the phase

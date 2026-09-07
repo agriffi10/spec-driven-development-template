@@ -233,7 +233,8 @@ yields a different class of finding than any reading-based frame.*
   `CLAUDE.md`, `docs/decisions/` or a delivery doc. Four rounds once reviewed a spec and none ran the
   repo's doc-layout gate; the branch was red on it throughout, for a reason unrelated to the spec, and
   it took an agent that *built* the change to notice. A review of a change touching gated files runs
-  the gates.
+  the gates. **That list of gates is a floor:** also run whatever CI will run on the branch
+  (`.github/workflows/`), which may be a gate no document names.
 
 **Adjudicating two FRs that cannot both hold**
 

@@ -528,7 +528,7 @@ which is which tells you what breaks silently if you skip a step.
 | Any gate you add is itself tested, not just run | `docs/process/reviewer-contract.md` — a gate run only on what it guards proves the artifacts pass, not that the gate works |
 | One pull request open at a time when several agents share the repo | `scripts/pr-queue/` (the `pre-push` hook) |
 | A branch is rebased on current `main` before it reaches the remote | `scripts/pr-queue/pre-push`, **for branches matching the enforced pattern in a checkout where the queue is installed** — a solo session, a repo that never installs it, and a branch outside the pattern are all still on prose alone. Nothing checks this server-side; GitHub's "require branches to be up to date" is the setting that would |
-| The root scaffold matches the skill's canonical copy | `check-mirror.sh` (CI) |
+| The root scaffold matches the skill's canonical copy | `check-mirror.sh` (CI **and** local pre-push — the other gates cannot see the mirror) |
 | Your language's own quality gates | the `ci.yml` you create from `ci.yml.example` |
 
 The rows enforced only by documents are the ones worth reading `docs/process/` for. They hold because the router and the session rhythm load with `CLAUDE.md` every session and the
@@ -537,8 +537,13 @@ other parts are pulled when the router says — not because anything fails when 
 ## Maintaining and extending
 
 **Changing the scaffold.** Edit the canonical copy under `.claude/skills/spec-driven/template/`, run
-`sh scripts/sync-from-skill.sh`, and commit both copies. `check-mirror.sh` runs in CI and goes red on
-a one-sided change in either direction. A **deletion or rename** in the payload needs the stale root
+`sh scripts/sync-from-skill.sh`, and commit both copies. Run `sh scripts/check-mirror.sh` **before
+pushing** rather than leaving it to CI. No other gate can see the mirror: `spec-lint.sh` reads only
+`docs/specs/`, and `docs-lint.sh` compares the two scaffolds not at all — it lints the root copy, so a
+one-sided edit passes it whichever side you edited. `check-mirror.sh` is the only gate that
+compares them, and it goes red on a one-sided change in either direction. A session hand-edited the
+root scaffold here and got every other gate green on a change that had broken the mirror; a reviewer
+caught it before the push, and nothing else would have until CI. A **deletion or rename** in the payload needs the stale root
 file removed by hand — the sync will not do it.
 
 **Adding a best-practices domain.** Create `docs/best-practices/<domain>/<domain>.md` written the way
@@ -577,8 +582,13 @@ happens to be ninth. If the spec genuinely can't be divided, say why in one line
 Scope* and let the reviewer accept or reject it. "It's all one feature" is the claim to be most
 skeptical of, since it's what every over-scoped spec says about itself.
 
-**`check-mirror` is red.** Read the finding type. `MISSING`, `DIFFERS` or `MODE` means you edited the
-payload and didn't sync: run `sh scripts/sync-from-skill.sh`, review the diff, commit both copies.
+**`check-mirror` is red.** Read the finding type, then work out **which side you edited** — the
+repair depends on it. `MISSING`, `DIFFERS` or `MODE` after a *payload* edit means you didn't sync: run
+`sh scripts/sync-from-skill.sh`, review the diff, commit both copies. `DIFFERS` or `MODE` after a
+*root* edit means you hand-edited a generated file, and syncing would discard your work and then
+report green: move the change into `.claude/skills/spec-driven/template/` first, then sync.
+(`MISSING` has only the one cause — a payload file absent from the root — so sync is always its
+repair.)
 `ORPHAN` means a root file has no counterpart in the payload, usually left behind by a deletion —
 remove it by hand, restore it to the payload if the deletion was a mistake, or add it to `ROOT_ONLY`
 in the script if it's genuinely root-only. Two rarer types: `DELETED` means a payload file is still

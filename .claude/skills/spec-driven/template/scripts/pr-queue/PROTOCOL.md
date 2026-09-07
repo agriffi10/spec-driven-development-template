@@ -14,8 +14,9 @@ subtly wrong in a way that fails *open*, which is the one failure mode that matt
 
 ## Before you get in line
 
-Your own gates come first: formatter, linter, type-check, unit tests, and the fresh-context diff
-reviews. **The queue is the last thing between a reviewed branch and the remote, never a substitute
+Your own gates come first: formatter, linter, type-check, unit tests, `sh scripts/spec-lint.sh`,
+`sh scripts/docs-lint.sh`, whatever CI will run on the branch (`.github/workflows/`), and the
+fresh-context diff reviews — that list of gates is a floor, not the set. **The queue is the last thing between a reviewed branch and the remote, never a substitute
 for the review.** Get in line when you are ready to push, not before — a ticket taken early holds up
 everyone behind you while you are still writing code.
 
