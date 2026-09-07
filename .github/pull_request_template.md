@@ -32,6 +32,8 @@
 - [ ] `sh scripts/docs-lint.sh` passes
 - [ ] `sh scripts/docs-lint-test.sh` passes (only if you changed the linter)
 - [ ] `sh scripts/pr-queue-test.sh` passes (only if you changed the queue or its hook)
+- [ ] Every CI job that *can* run locally was run locally first — this list is a floor, not the set
+      (name any job that cannot, rather than ticking it)
 - [ ] Any gate this PR adds ships fixtures asserting its failure text, including a silence case
 
 ## Landing
