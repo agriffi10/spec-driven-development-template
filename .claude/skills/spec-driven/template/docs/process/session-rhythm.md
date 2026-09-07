@@ -60,7 +60,8 @@ four before the first push.
   in passing where it is worth saying, but do not end the turn on it — a summary that ends the turn
   *is* a request for approval, whatever its wording says. Re-review the plan only if the phase
   changed it — a phase that revises the plan has produced a new artifact, and it goes through the
-  gate as one.
+  gate as one. A spec revised mid-build does this from the other side: if a phase now delivers a
+  requirement the spec no longer carries, that plan is a new artifact too.
 - **An acceptance criterion that cannot settle before the push does not pass the pre-push review —
   it is recorded as owed.** A criterion closing "against a green CI run" is undecidable while the
   branch is still local, and the failure mode is a reviewer ticking it vacuously, which is the exact
@@ -82,6 +83,10 @@ four before the first push.
     with no clearly-right answer): **stop and escalate to the human.** Don't silently pick — surface the
     options with a recommendation. Auto-deciding these is how an autonomous run drifts away from what
     was actually wanted.
+  - **The spec contradicting itself** (two FRs that cannot both hold): a spec defect, not a preference
+    call, and the tie-break is evidence — implement **each** reading, run the suite, and record the
+    verdict in the spec. One reading run to red settles nothing. `reviewer-contract.md` (*Adjudicating two FRs that cannot both hold*) carries the
+    method, and the three outcomes that escalate instead of settling.
 
 **Landing the spec — watch PRs and watch `main`**
 - **A branch reaches the remote already reviewed.** The gate above is the precondition for the push,

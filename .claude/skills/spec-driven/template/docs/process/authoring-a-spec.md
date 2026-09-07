@@ -48,5 +48,5 @@ Specs are written from `docs/templates/spec-template.md`. What makes a spec *bui
 a required section or that contains an "Open Questions" / "Checkpoint" heading, and **warns** on
 unfilled placeholders, a spec with FRs but no acceptance criteria anywhere in it, and a spec
 carrying more than 8 FRs. It cannot see a vacuous acceptance criterion, an acceptance criterion
-missing from one FR while its neighbours have them, or a decision promised in a declarative
-sentence — that is what the reviewer gate is for.
+missing from one FR while its neighbours have them, two FRs that cannot both hold, or a decision
+promised in a declarative sentence — that is what the reviewer gate is for.
