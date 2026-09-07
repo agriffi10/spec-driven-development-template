@@ -55,7 +55,8 @@ four before the first push.
   them green. These quality gates are a pre-push step — don't push red and leave CI to discover it.
   **`sh scripts/docs-lint.sh` is in that set and nothing in CI runs it** — plus
   `sh scripts/docs-lint-test.sh` whenever the linter itself changed, and
-  `sh scripts/pr-queue-test.sh` whenever the queue or its hook changed.
+  `sh scripts/pr-queue-test.sh` whenever the queue or its hook changed, and
+  `sh scripts/pr-queue/install-test.sh` whenever its installer changed.
 - **The gates a document names are a floor, not the set — before every push, also run locally
   whatever CI will run on the branch.** A gate no list names is the one that goes unrun, and green
   from the named gates says nothing about it. Read `.github/workflows/` for the jobs that will

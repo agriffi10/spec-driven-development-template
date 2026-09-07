@@ -25,7 +25,8 @@ chmod +x "$ROOT/scripts/spec-lint.sh" \
          "$ROOT/scripts/pr-queue-test.sh" \
          "$ROOT/scripts/pr-queue/queue.sh" \
          "$ROOT/scripts/pr-queue/pre-push" \
-         "$ROOT/scripts/pr-queue/install.sh"
+         "$ROOT/scripts/pr-queue/install.sh" \
+         "$ROOT/scripts/pr-queue/install-test.sh"
 
 echo "Synced root scaffold from .claude/skills/spec-driven/template/."
 echo "Review 'git diff' before committing."

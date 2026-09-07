@@ -142,6 +142,9 @@ main_green() {
 # never grepped: a substring match would let `spec-207/qu` push under `spec-207/queue`'s lock.
 holder_field() { awk -v k="$1" '$1==k { $1=""; sub(/^ /,""); print; exit }' "$LOCK/holder" 2>/dev/null; }
 my_branch()    { git -C "$PWD" branch --show-current 2>/dev/null; }
+write_holder() { { printf 'spec %s\n'   "$1"
+                   printf 'branch %s\n' "$2"
+                   printf 'since %s\n'  "$3"; } > "$LOCK/holder"; }
 
 my_ticket() {  # prints the ticket dir for a spec, empty if it has none
   local spec="$1" t
@@ -265,24 +268,61 @@ cmd_turn() {
 }
 
 cmd_acquire() {
-  local spec="$1" out branch
+  local spec="$1" out branch pattern
   # The lock records the branch it covers and pre-push compares against it, so a lock taken from
   # outside a worktree would name no branch and would refuse its own holder's push.
   branch="$(my_branch)"
   [ -n "$branch" ] || {
     echo "REFUSED — run this from your worktree, on the branch you are about to push."; return 1; }
+  # The trunk is the one branch pre-push never enforces, so a lock recorded on it can authorise no
+  # push at all — it would hand out a lock that silently does nothing. Being on it here almost
+  # always means the shared checkout rather than a build worktree.
+  [ "$branch" = "$MAIN" ] && {
+    cat <<MSG
+REFUSED — you are on $MAIN, which is the shared checkout rather than a build worktree.
+
+  cwd: $PWD
+
+pre-push never enforces $MAIN, so a lock stamped with it covers nothing. cd into the worktree you
+built in and acquire from there, in the SAME command — a tool that resets cwd between calls will
+otherwise put you back here.
+MSG
+    return 1; }
+  # The lock and the hook only line up while `enforce-branches` covers the branch being locked.
+  # At the installed default it covers every branch and this never fires; narrow the pattern and
+  # a lock can once again be held on a branch nothing enforces, which is the original defect
+  # wearing a different hat. A WARNING rather than a refusal: a project may narrow it deliberately,
+  # and a queue that is advisory on purpose is not a queue that is broken.
+  pattern="$(cat "$Q/enforce-branches" 2>/dev/null)"
+  if [ -z "$pattern" ]; then
+    # The TOTAL form of the same problem, and the one that used to say nothing at all: with no
+    # pattern the hook enforces no branch whatsoever, so every lock this queue hands out is
+    # advisory. That deserves a louder note than a merely narrow pattern, not a quieter one.
+    echo "  WARNING: $Q/enforce-branches is empty or missing, so pre-push enforces NOTHING." >&2
+    echo "           This lock orders the agents that take one and stops nobody at all." >&2
+  elif ! echo "$branch" | grep -qE "$pattern"; then
+    echo "  note: pre-push does not enforce '$branch' — it is outside enforce-branches, so this" >&2
+    echo "        lock orders the agents that take one and stops nobody else pushing it." >&2
+  fi
   out="$(cmd_turn "$spec")" || { echo "BUSY — $out"; return 1; }
   # mkdir IS the atomicity: it either creates or fails, with no window between the two. A
   # test-then-create has a gap, and agents polling on similar cadences land in it.
   if ! mkdir "$LOCK" 2>/dev/null; then
     # Already ours means this is a retry, not a race — `turn` reports READY to the holder, so a
     # turn-then-acquire loop would otherwise spin forever against its own lock.
-    [ "$(holder_field spec)" = "$spec" ] && { echo "ACQUIRED (already yours)"; return 0; }
+    #
+    # It also RE-STAMPS the branch, keeping the original `since` so the lock does not get younger
+    # by being re-acquired. That is the recovery for a lock taken from the wrong directory: it
+    # names a branch pre-push will never match, so the holder is refused its own push, and
+    # re-acquiring from the right worktree is the way back that does not cost a place in the line.
+    if [ "$(holder_field spec)" = "$spec" ]; then
+      write_holder "$spec" "$branch" "$(holder_field since)"
+      note "$spec re-stamped its lock onto $branch"
+      echo "ACQUIRED (already yours, on $branch)"; return 0
+    fi
     echo "BUSY — lost the race to [$(holder_field spec)]"; return 1
   fi
-  { printf 'spec %s\n'   "$spec"
-    printf 'branch %s\n' "$branch"
-    printf 'since %s\n'  "$(now)"; } > "$LOCK/holder"
+  write_holder "$spec" "$branch" "$(now)"
   note "$spec ACQUIRED the lock on $branch"
   echo "ACQUIRED — release it when the PR is merged and $MAIN is green, on every exit path"
 }

@@ -9,19 +9,39 @@
 #              pushed a stale base with `turn`, this hook and CI all reporting green. Prose was
 #              the only guard, and three review frames each found another place it had leaked.
 #
+# WHAT PARTICIPATES, and why it is not a list of prefixes. `enforce-branches` holds an ERE, and
+# the installer defaults it to every branch. An allowlist of branch prefixes was the first design
+# and it fails OPEN, silently: name a few branch families, and the day naming moves on, every push
+# stops being anybody's business while the queue goes on looking healthy. Measured twice: one
+# consumer's first deployment named the prefixes of five specs, and once those closed the hook
+# exited 0 for every branch anyone pushed; the template's own default matched neither of the two
+# branch conventions its consumers use, so it installed cleanly and enforced nothing.
+#
+# WHAT IS EXEMPT, and from which refusal — each because of what a pull request can come of it:
+#   · a push to a remote that is not this checkout's origin (a fork, a backup, a scratch repo)
+#     is exempt from both: this queue serialises ONE remote;
+#   · the TRUNK is exempt from the LOCK — merging needs no lock, and a lock stamped with the trunk
+#     would authorise nothing — but NOT from freshness: a trunk force-pushed backwards over
+#     commits the remote has is a peer's work being dropped, and that is refused like any stale
+#     push;
+#   · a branch DELETION is exempt from FRESHNESS — there is no commit to measure — but NOT from
+#     the lock: a session that does not hold the lock deleting the branch under review closes
+#     the very PR the lock exists to protect.
+# A tag falls out for free: this only ever inspects `refs/heads/*`.
+#
 # It FAILS OPEN on CONSENT, and the reason is worktrees: linked worktrees share `.git/hooks`
 # through the common git dir, so this hook fires for every session on the checkout — including
 # ones that never agreed to the queue and have never heard of it. Blocking those would be a worse
-# failure than the one it prevents. So a branch outside the configured pattern, a missing queue,
-# an unreadable one, and an explicit bypass all allow the push.
+# failure than the one it prevents. So a branch outside the configured pattern, an empty pattern,
+# and an explicit bypass all allow the push. The MISSING-QUEUE case is not handled here and cannot
+# be: this file lives in the queue directory, so a deleted queue takes it with it. What allows
+# that push is the wrapper `install.sh` writes into `.git/hooks`, which execs this only if it is
+# still there — enforcement cannot outlive the queue it enforces.
 #
 # It FAILS CLOSED on EVIDENCE. Those are different questions: consent asks whether this branch is
 # ours to police, evidence asks whether we could tell. A remote we could not read is never read as
-# "your base is current", the same way queue.sh never reads a failed check as "main is green".
-#
-# It lives in the queue directory and is reached by a wrapper in .git/hooks that execs it, so
-# enforcement cannot outlive the queue it enforces: delete the queue and the wrapper
-# becomes a no-op. `install.sh` writes both.
+# "your base is current", the same way queue.sh never reads a failed check as "main is green" —
+# and a pattern grep cannot compile is never read as "no branch matches".
 
 Q="$(cd "$(dirname "$0")" && pwd)"
 PATTERN="$(cat "$Q/enforce-branches" 2>/dev/null)"
@@ -32,15 +52,50 @@ REMOTE="${1:-origin}"           # the name, for the messages
 # the push against a repo it is not going to.
 REMOTE_URL="${2:-${1:-origin}}"
 
-[ -d "$Q" ] || exit 0                              # no queue — enforce nothing
 [ -n "$PATTERN" ] || exit 0                        # no pattern configured — enforce nothing
 [ "${PR_QUEUE_BYPASS:-}" = "1" ] && { echo "pre-push: PR_QUEUE_BYPASS=1 — queue check skipped" >&2; exit 0; }
 
-# The holder's branch is compared as a string, never grepped: a substring match would let
-# `spec-207/qu` push under the lock held by `spec-207/queue`.
+# This queue serialises ONE remote — the checkout's origin — so a push anywhere else can open no
+# pull request and is none of its business. The comparison reads origin from git rather than from
+# a file beside this one on purpose: a stored URL that went stale would exempt every push and look
+# exactly like a healthy queue. Both spellings are read because a `pushurl` makes them differ, and
+# `--all` on both because a remote may carry SEVERAL urls: git then runs this hook once per url.
+# A checkout whose origin cannot be read is enforced — origin is the overwhelmingly likely target,
+# and the bypass is one line above this.
+#
+# The spellings are normalised first. A trailing slash and a trailing `.git` are the two ways an
+# honest session writes the same remote, and treating either as foreign would exempt a push going
+# straight to origin — silently, which is this file's whole subject. Deliberately NOT normalised:
+# scheme, host, and the scp-style `git@host:path` form against `ssh://git@host/path`. Those are
+# re-spellings rather than typos, a parser for them is more failure surface than the exemption is
+# worth, and anyone re-spelling their origin to dodge this already has `PR_QUEUE_BYPASS=1`. The
+# check exists to stop honest pushes being refused, not to stop dishonest ones.
+norm_url() { printf '%s' "$1" | sed -e 's#/*$##' -e 's#\.git$##' -e 's#/*$##'; }
+ORIGINS="$(git remote get-url --all origin 2>/dev/null
+           git remote get-url --push --all origin 2>/dev/null)"
+TARGET="$(norm_url "${2:-}")"
+if [ -n "${2:-}" ] && [ -n "$ORIGINS" ]; then
+  matched=0
+  # A heredoc rather than a pipe: a piped `while` runs in a subshell and `matched` would never
+  # come back, which reads as "no url matched" and exempts every push.
+  while IFS= read -r origin_url; do
+    [ -n "$origin_url" ] || continue
+    [ "$(norm_url "$origin_url")" = "$TARGET" ] && { matched=1; break; }
+  done <<ORIGIN_URLS
+$ORIGINS
+ORIGIN_URLS
+  [ "$matched" = 1 ] || exit 0                     # not this checkout's origin — not our business
+fi
+
+# The holder's branch is compared as a STRING, never grepped: a substring match would let
+# `spec-207/qu` push under the lock held by `spec-207/queue`. The spec id is read too, because the
+# refusal below has to name the argument `queue.sh` takes.
+holder_spec=""
 holder_branch=""
-[ -d "$Q/lock" ] &&
+if [ -d "$Q/lock" ]; then
+  holder_spec="$(awk '$1=="spec"   { $1=""; sub(/^ /,""); print; exit }' "$Q/lock/holder" 2>/dev/null)"
   holder_branch="$(awk '$1=="branch" { $1=""; sub(/^ /,""); print; exit }' "$Q/lock/holder" 2>/dev/null)"
+fi
 
 # The remote's current main, read ONCE, before the loop — every ref in one push is measured
 # against the same remote state. `git ls-remote` rather than a fetch, for the reason queue.sh
@@ -79,20 +134,45 @@ fi
 # "<local ref> <local sha> <remote ref> <remote sha>" line per ref. Read those rather than the
 # checked-out branch: `git push origin spec-x/y` from a different branch, and
 # `git push origin HEAD:refs/heads/spec-x/y` from a detached HEAD, both bypass a HEAD-based check.
-refused=""; stale=""; unreadable=""; unfetched=""; notrunk=""
-while read -r _lref lsha rref _rsha; do
+#
+# Every decision below keys on the REMOTE ref, which is the one that decides what appears on the
+# remote. `git push origin mine:main` is a push to the trunk however it is spelled locally, and
+# `git push origin main:refs/heads/topic` is a topic branch however it is spelled locally.
+refused=""; stale=""; unreadable=""; unfetched=""; notrunk=""; deltrunk=""; badpat=0
+while read -r lref lsha rref _rsha; do
   [ -n "$rref" ] || continue
   case "$rref" in refs/heads/*) branch="${rref#refs/heads/}" ;; *) continue ;; esac
-  echo "$branch" | grep -qE "$PATTERN" || continue   # not a participating branch — not our business
-  if [ "$branch" != "$holder_branch" ]; then refused="$refused $branch"; continue; fi
-
-  # A deletion carries an all-zero local sha and no commit to measure.
-  case "$lsha" in *[!0]*) ;; *) continue ;; esac
-  # No special case for $MAIN itself. One was written and removed: it survived mutation because
-  # no fixture could exercise it — an ordinary push of $MAIN already contains the remote's $MAIN
-  # and passes the ancestry test on its own. What the special case DID cover was a $MAIN
-  # force-pushed backwards over commits the remote has, which is a peer's work being dropped, and
-  # refusing that is the behaviour this repo wants everywhere else.
+  # git supplies `(delete)` as the local ref of a deletion, and an all-zero local object beside
+  # it. The literal is used because the zero object's WIDTH is 40 or 64 characters depending on
+  # the repository's hash algorithm, and a check that quietly stops matching when a repo moves to
+  # sha256 is the shape of bug this file is about.
+  if [ "$branch" = "$MAIN" ]; then
+    # THE TRUNK, ahead of the pattern and the lock. Its two refusals guard the remote's integrity
+    # rather than the queue's consent, so they hold whatever the pattern says short of empty: a
+    # pattern narrowed to a few prefixes must not quietly turn a force-push of the trunk back into
+    # a peer's work being dropped. It needs no lock — merging is a push of the trunk, and a lock
+    # stamped with it would cover nothing (queue.sh refuses to acquire on it). A deletion of the
+    # trunk is the limit case of a trunk pushed backwards: every commit the remote has, and no
+    # commit for the ancestry test, so without this line the freshness check would wave it through.
+    if [ "$lref" = "(delete)" ]; then deltrunk="$deltrunk $branch"; continue; fi
+  else
+    # grep answers three ways and only one of them means "not participating". A malformed ERE —
+    # `spec-[` is enough — exits 2, and treating that as no-match exempts EVERY branch while the
+    # queue looks installed, which is the exact failure this file exists to stop. So exit 2 is a
+    # refusal of its own: a pattern nobody can evaluate refuses loudly instead of allowing silently.
+    # `install.sh` refuses to write one, so this is reachable only by editing the file by hand.
+    echo "$branch" | grep -qE "$PATTERN"
+    case $? in
+      1) continue ;;                                 # not a participating branch — not our business
+      0) ;;                                          # participating
+      *) badpat=1; continue ;;                       # grep could not answer — fail closed
+    esac
+    # Every participating branch, a deletion of one included, needs the holder's lock: a session
+    # that does not hold it deleting the branch under review closes the PR the lock protects.
+    if [ "$branch" != "$holder_branch" ]; then refused="$refused $branch"; continue; fi
+    # A deletion has no commit to measure.
+    [ "$lref" = "(delete)" ] && continue
+  fi
 
   if [ "$main_readable" -eq 0 ]; then unreadable="$unreadable $branch"; continue; fi
   if [ "$trunk_missing" -eq 1 ]; then notrunk="$notrunk $branch"; continue; fi
@@ -107,16 +187,72 @@ while read -r _lref lsha rref _rsha; do
   git merge-base --is-ancestor "$main_sha" "$lsha" 2>/dev/null || stale="$stale $branch"
 done
 
-[ -n "$refused$stale$unreadable$notrunk" ] || exit 0
+[ -n "$refused$stale$unreadable$notrunk$deltrunk" ] || [ "$badpat" -eq 1 ] || exit 0
+
+if [ -n "$deltrunk" ]; then
+  cat >&2 <<MSG
+
+  PUSH REFUSED — deleting $REMOTE/$MAIN would drop every commit the remote has on it.
+
+  Refused ref(s):$deltrunk
+
+  A deletion of the trunk is the limit case of a trunk pushed backwards over a peer's work, which
+  this hook refuses everywhere else. If the trunk really is being retired, override deliberately:
+
+      PR_QUEUE_BYPASS=1 git push ...
+
+MSG
+fi
+
+if [ "$badpat" -eq 1 ]; then
+  cat >&2 <<MSG
+
+  PUSH REFUSED — $Q/enforce-branches is not an ERE grep can compile, so no push can be judged.
+
+  Pattern: $PATTERN
+
+  A pattern that cannot be evaluated would otherwise exempt every branch while the queue looked
+  installed. Fix the file — \`sh scripts/pr-queue/install.sh '.'\` writes the default — or
+  override deliberately:
+
+      PR_QUEUE_BYPASS=1 git push ...
+
+MSG
+fi
 
 if [ -n "$refused" ]; then
+  if [ -d "$Q/lock" ] && [ -z "$holder_spec" ] && [ -z "$holder_branch" ]; then
+    # A lock exists whose holder file says nothing this can read. Reporting it as free would send
+    # the reader looking for a race that is not happening; the usual cause is a re-install under a
+    # held lock, which swapped the scripts and left a holder in the previous format behind.
+    held="(unreadable — a lock is held but its holder file parses to nothing)"
+    # Do NOT tell the reader to wait for the reap. It only breaks a lock when there is also no open
+    # PR and the trunk is green, and a lock holder is by definition a session with a PR up — so the
+    # wait can be indefinite. Removing the lock by hand is the real recovery, and it is a decision
+    # someone should take deliberately rather than a step to follow.
+    mine="  No release can name that lock while it is unreadable. Recovering means removing
+  $Q/lock by hand, which takes someone else's lock with it — escalate rather than do it quietly.
+"
+  elif [ -n "$holder_spec" ] || [ -n "$holder_branch" ]; then
+    held="${holder_spec:-?} on ${holder_branch:-(no branch recorded)}"
+    # The one recovery that is not obvious. A lock acquired from the wrong directory records a
+    # branch this hook will never match, and the session then holds a lock that authorises nothing.
+    # Re-acquiring from the right worktree re-stamps it; without this line the reader reaches for
+    # the bypass, and a gate people routinely override is worse than one that is honestly off.
+    mine="  If that lock is yours, re-run \`$Q/queue.sh acquire $holder_spec\` from THIS worktree —
+  acquiring again re-stamps the branch the lock covers.
+"
+  else
+    held="(free)"
+    mine=""
+  fi
   cat >&2 <<MSG
 
   PUSH REFUSED — you do not hold the PR queue lock.
 
   Refused ref(s):$refused
-  Lock holder:   ${holder_branch:-(free)}
-
+  Lock holder:   $held
+$mine
   Several agent sessions share this repo and only one PR may be open at a time.
   Get in line, wait for your turn, then push:
 
@@ -142,7 +278,7 @@ if [ -n "$stale" ]; then
 
   $MAIN moved while you worked, or while you waited for the lock — the wait is exactly when
   peers merge.${unfetched:+
-  This checkout has never fetched that commit at all, so no rebase here has seen it.} Your local gates and both diff reviews were measured against the base you had
+  This checkout has never fetched that commit at all — or it is a shallow clone — so no rebase here has seen it.} Your local gates and both diff reviews were measured against the base you had
   before it moved, so rebasing is not a formality:
 
       git fetch $REMOTE
@@ -162,7 +298,7 @@ if [ -n "$notrunk" ]; then
   Unchecked ref(s):$notrunk
 
   The queue is configured for a trunk this remote does not have. $Q/main-branch says "$MAIN";
-  `git ls-remote --heads $REMOTE` says otherwise. Fix that file (install.sh guesses it from
+  \`git ls-remote --heads $REMOTE\` says otherwise. Fix that file (install.sh guesses it from
   origin/HEAD, which is stale in a checkout whose default branch was renamed), or override:
 
       PR_QUEUE_BYPASS=1 git push ...
