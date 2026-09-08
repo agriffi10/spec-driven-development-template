@@ -38,9 +38,8 @@ When a repo has no spec-driven docs yet:
    `scripts/`, `tests/`, `.github/`, and `.claude/rules/` + `.claude/agents/` (the path-scoped
    pointers and the model-routed subagent roles). Copy the whole tree rather than working from a
    list: `sync-from-skill.sh` does (`cp -R`), and the list that used to stand here omitted `tests/`,
-   which ships both fixture corpora — without it `docs-lint-test.sh` finds nothing, passes, and
-   exits 0, and `spec-lint-test.sh` fails its case floor — so the scaffold arrives with a
-   gate-corpus that proves nothing, or none at all. **Do not clobber** existing files — if `CLAUDE.md`, a PR template, or a workflow already
+   which ships both fixture corpora — without it `docs-lint-test.sh` and `spec-lint-test.sh` each
+   fail their case floor, which is the runner refusing to print a success line over nothing. **Do not clobber** existing files — if `CLAUDE.md`, a PR template, or a workflow already
    exists, merge rather than overwrite, and tell the user what you merged.
    🔴 **If the repo you are scaffolding is the template repo itself**, stop: its root is a generated
    mirror of `template/`, `scripts/sync-from-skill.sh` regenerates it, and edits belong in `template/`
@@ -71,9 +70,10 @@ When a repo has no spec-driven docs yet:
    gates, not just spec-lint.
 7. Run `sh scripts/spec-lint.sh` and `sh scripts/docs-lint.sh` to confirm both pass (each no-ops or
    passes cleanly on a fresh scaffold). Then run `sh scripts/spec-lint-test.sh`, `sh scripts/docs-lint-test.sh`,
-   `sh scripts/pr-queue-test.sh` and `sh scripts/pr-queue/install-test.sh` and **check the case
-   COUNTS, not the exit status** — each reports "N passed"; an N of 0 means the fixtures did not
-   arrive, and an empty corpus exits 0 exactly like a healthy one.
+   `sh scripts/pr-queue-test.sh` and `sh scripts/pr-queue/install-test.sh`. The two doc-linter
+   corpora hold a case floor and fail when the fixtures did not arrive; for the two queue corpora
+   **check the case COUNTS, not the exit status** — each reports "N passed", and an N of 0 there
+   exits 0 exactly like a healthy one.
 
 Keep the always-loaded tier (`CLAUDE.md`) lean — it must not regrow into a wall of prose. `docs-lint.sh`
 now enforces that rather than asking you to remember it. In a project that ran this template the
@@ -182,8 +182,9 @@ areas that differ from the table in name, file or order; a stub at `docs/decisio
 with no row or a row with no file; in an area file: a title not matching the row, a `##` other than
 Contents and Fences, Fences not first in Contents or not first after it, a fence over
 `DIGEST_MAX_BYTES` (a bullet with its continuations joined) or of the wrong shape, a fence with no
-`###` entry or an entry with no fence, an entry absent from the Contents, a pointer in Fences that
-resolves to nothing; an area whose *Governs* globs have no matching rule, or a rule for an area that
+`###` entry or an entry with no fence, an entry absent from the Contents, a Contents row that names
+one entry and links to another, an entry whose opening bold label contradicts its heading, a pointer
+in Fences that resolves to nothing; an area whose *Governs* globs have no matching rule, or a rule for an area that
 governs none; a `Status: Completed` spec with no
 `docs/spec-delivery/SPEC-NNN-*.md`; a delivery doc over `DELIVERY_MAX_LINES`; a relative link or `@`
 pointer in an always-loaded file that resolves to nothing. On the **routed process tier** it also
@@ -194,7 +195,12 @@ a part with no router row or a row with no file; a `.claude/rules/` file without
 byte 0, with an inline or missing `paths:`, an extra key, a glob outside the four allowed forms or
 matching nothing, a body that is not the two-line template, or a pointer to an unrouted part; a
 `.claude/agents/` file without frontmatter, a `name` not equal to its stem, a `model` outside
-`sonnet|opus|haiku|fable`, or one the routing table does not name (and the reverse). Entries labelled `(example)` are exempt, so a fresh
+`sonnet|opus|haiku|fable`, or one the routing table does not name (and the reverse); a part, rule,
+agent or area file in a subdirectory of its tree (dotfiles there are checked like any other file);
+and, in any standing doc, script or workflow file, a dated measurement — `measured` or `as of`
+beside an ISO date — with no short commit SHA in the same paragraph, bullet or comment block
+(frozen records under `docs/specs`, `docs/spec-delivery` and `docs/templates` are exempt, and so
+is `tests/`). Entries labelled `(example)` are exempt, so a fresh
 scaffold is green. **`scripts/docs-lint-test.sh` is its fixture corpus — run it after any change to
 `docs-lint.sh`.** The linter passing against your own docs says nothing about whether its checks
 work; the corpus is what says that. The budgets are **ratchets against accretion**: when one fires because a doc grew a line at a time, cut and re-ratchet at the new

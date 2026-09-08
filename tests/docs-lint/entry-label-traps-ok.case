@@ -1,0 +1,50 @@
+@@@ expect exit=0
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+Intro prose; every decision is a fence in its area file.
+
+| Area | Fences |
+|---|---|
+| Area one | `docs/decisions/area-one.md#fences` |
+
+## Out of Scope
+
+nothing
+@@@ file docs/decisions/INDEX.md
+# Key Decisions — the register
+
+## Areas
+
+| Area | Fences | Governs |
+|---|---|---|
+| Area one | `docs/decisions/area-one.md#fences` | none |
+@@@ file docs/decisions/area-one.md
+# Area one — decisions
+
+intro
+
+## Contents
+
+- [Fences](#fences)
+- [Use `a**b` as the marker](#use-ab-as-the-marker)
+- [A shutdown shortens a *wait*; it never skips *work*](#a-shutdown-shortens-a-wait-it-never-skips-work)
+
+## Fences
+
+- **Use `a**b` as the marker** — settled.
+- **A shutdown shortens a *wait*; it never skips *work*** — fence.
+
+---
+
+### Use `a**b` as the marker
+
+**Use `a**b` as the marker** — a code span holding asterisks closes the label early unless
+the span is blanked first, which would truncate this one to "Use `a".
+
+### A shutdown shortens a *wait*; it never skips *work*
+
+**A shutdown shortens a *wait*; it never skips *work*** — a label ending in an italic closes
+with three asterisks, and taking the first pair drops the final character of the label.

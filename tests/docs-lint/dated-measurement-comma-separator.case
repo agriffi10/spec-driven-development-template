@@ -1,0 +1,50 @@
+@@@ expect exit=1
+@@@ match carries a dated measurement with no commit
+@@@ file docs/architecture.md
+# Architecture
+
+Measured, 2026-09-05: the two modules ran to 1,680 and 2,196 lines.
+
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+Intro prose; every decision is a fence in its area file.
+
+| Area | Fences |
+|---|---|
+| Area one | `docs/decisions/area-one.md#fences` |
+
+## Out of Scope
+
+nothing
+
+@@@ file docs/decisions/INDEX.md
+# Key Decisions — the register
+
+## Areas
+
+| Area | Fences | Governs |
+|---|---|---|
+| Area one | `docs/decisions/area-one.md#fences` | none |
+@@@ file docs/decisions/area-one.md
+# Area one — decisions
+
+intro
+
+## Contents
+
+- [Fences](#fences)
+- [Alpha rule](#alpha-rule)
+
+## Fences
+
+- **Alpha rule** — short claim and its fence.
+
+---
+
+### Alpha rule
+
+Reasoning.
+

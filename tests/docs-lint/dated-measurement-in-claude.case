@@ -1,0 +1,49 @@
+@@@ expect exit=1
+@@@ match carries a dated measurement with no commit
+@@@ match CLAUDE.md:
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+One line each; the full entry lives in the register.
+
+### Area one
+
+- **Alpha rule** — short claim and its fence.
+
+## Notes
+
+Measured 2026-09-02: the suite carries 41 sink tests.
+
+## Out of Scope
+
+nothing
+
+@@@ file docs/decisions/INDEX.md
+# Key Decisions — the register
+
+## Areas
+
+| Area | Fences | Governs |
+|---|---|---|
+| Area one | `docs/decisions/area-one.md#fences` | none |
+@@@ file docs/decisions/area-one.md
+# Area one — decisions
+
+intro
+
+## Contents
+
+- [Fences](#fences)
+- [Alpha rule](#alpha-rule)
+
+## Fences
+
+- **Alpha rule** — short claim and its fence.
+
+---
+
+### Alpha rule
+
+Reasoning.

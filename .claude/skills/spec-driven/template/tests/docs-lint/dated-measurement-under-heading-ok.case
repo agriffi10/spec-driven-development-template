@@ -1,0 +1,50 @@
+@@@ expect exit=0
+@@@ file docs/architecture.md
+# Architecture
+
+## Measured 2026-09-05: two modules unsplit
+Both figures were taken at `3c973b9` and can be re-measured there.
+
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+Intro prose; every decision is a fence in its area file.
+
+| Area | Fences |
+|---|---|
+| Area one | `docs/decisions/area-one.md#fences` |
+
+## Out of Scope
+
+nothing
+
+@@@ file docs/decisions/INDEX.md
+# Key Decisions — the register
+
+## Areas
+
+| Area | Fences | Governs |
+|---|---|---|
+| Area one | `docs/decisions/area-one.md#fences` | none |
+@@@ file docs/decisions/area-one.md
+# Area one — decisions
+
+intro
+
+## Contents
+
+- [Fences](#fences)
+- [Alpha rule](#alpha-rule)
+
+## Fences
+
+- **Alpha rule** — short claim and its fence.
+
+---
+
+### Alpha rule
+
+Reasoning.
+

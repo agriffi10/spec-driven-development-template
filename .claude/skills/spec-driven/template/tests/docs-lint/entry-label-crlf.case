@@ -1,0 +1,44 @@
+@@@ expect exit=1
+@@@ match "### Alpha rule" opens its body with the label "Beta rule"
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+Intro prose; every decision is a fence in its area file.
+
+| Area | Fences |
+|---|---|
+| Area one | `docs/decisions/area-one.md#fences` |
+
+## Out of Scope
+
+nothing
+@@@ file docs/decisions/INDEX.md
+# Key Decisions — the register
+
+## Areas
+
+| Area | Fences | Governs |
+|---|---|---|
+| Area one | `docs/decisions/area-one.md#fences` | none |
+@@@ file docs/decisions/area-one.md
+# Area one — decisions
+
+intro
+
+## Contents
+
+- [Fences](#fences)
+- [Alpha rule](#alpha-rule)
+
+## Fences
+
+- **Alpha rule** — short claim and its fence.
+
+---
+
+### Alpha rule
+
+**Beta rule** — the whole area file is CRLF, and a trailing CR must not land inside the label,
+or every rule below it is read as a Contents row and this check never runs.
