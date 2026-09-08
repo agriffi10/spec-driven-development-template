@@ -10,7 +10,7 @@ fresh-context review gate, watch PRs/main, and run the completion ritual. The fu
 - **`SKILL.md`** — the workflow Claude executes. **Claude Code auto-discovers it** at this path
   (`.claude/skills/spec-driven/SKILL.md`) — no install needed in a repo that contains it.
 - **`template/`** — the **canonical copy** of the repo scaffold (`CLAUDE.md`, `docs/`, `scripts/`,
-  `.github/`). It lives here so the skill is self-contained and can scaffold a *different, pre-existing*
+  `tests/`, `.github/`, `.claude/`). It lives here so the skill is self-contained and can scaffold a *different, pre-existing*
   repo. This is the **source of truth**; the repo root mirrors it (run `scripts/sync-from-skill.sh`
   after editing here, and commit both). `scripts/check-mirror.sh` runs in CI and goes red if the two
   drift in either direction — including the orphan a payload *deletion* leaves at the root, which the

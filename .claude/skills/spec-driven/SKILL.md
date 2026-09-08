@@ -35,8 +35,12 @@ The jobs below are the operating modes.
 When a repo has no spec-driven docs yet:
 
 1. Copy **everything** under this skill's `template/` into the repo root — `CLAUDE.md`, `docs/`,
-   `scripts/`, `tests/`, `.github/`, and `.claude/rules/` + `.claude/agents/` (the path-scoped
-   pointers and the model-routed subagent roles). Copy the whole tree rather than working from a
+   `scripts/`, `tests/`, `.github/`, and `.claude/rules/` + `.claude/agents/` + `.claude/settings.json`
+   (the path-scoped pointers, the model-routed subagent roles, and the permission allow-list that lets
+   a session run the gates and land its PR without a prompt — **merge** it into an existing
+   `.claude/settings.json` rather than overwrite one, and show the user the list: it grants `git push`
+   and `gh pr merge`, which is what an autonomous build needs and what a shared checkout should see
+   coming). Copy the whole tree rather than working from a
    list: `sync-from-skill.sh` does (`cp -R`), and the list that used to stand here omitted `tests/`,
    which ships both fixture corpora — without it `docs-lint-test.sh` and `spec-lint-test.sh` each
    fail their case floor, which is the runner refusing to print a success line over nothing. **Do not clobber** existing files — if `CLAUDE.md`, a PR template, or a workflow already

@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sh scripts/spec-lint.sh *)",
+      "Bash(sh scripts/spec-lint.sh)",
+      "Bash(sh scripts/spec-lint-test.sh *)",
+      "Bash(sh scripts/spec-lint-test.sh)",
+      "Bash(sh scripts/docs-lint.sh)",
+      "Bash(sh scripts/docs-lint-test.sh *)",
+      "Bash(sh scripts/docs-lint-test.sh)",
+      "Bash(sh scripts/pr-queue-test.sh *)",
+      "Bash(sh scripts/pr-queue-test.sh)",
+      "Bash(sh scripts/pr-queue/install-test.sh)",
+      "Bash(git fetch *)",
+      "Bash(git worktree *)",
+      "Bash(git rebase *)",
+      "Bash(git push *)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr checks *)",
+      "Bash(gh pr merge *)",
+      "Bash(gh run list *)",
+      "Bash(gh run view *)"
+    ]
+  }
+}
