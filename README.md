@@ -428,7 +428,7 @@ from the template don't need them.
 | `docs/process/session-rhythm.md` | The **operating loop** from session start to landing the PR. Imported by `CLAUDE.md`. | Claude (every session) |
 | `docs/process/reviewer-contract.md` | The **review gate** in full — counts, frames, rotating the frame, briefing the reviewer, the exit rule, and the evidence. | Claude (before any review) |
 | `docs/process/model-routing.md` | **Which model does which job** — the table, the complexity rule for Fable, the step-up rule. | Claude (before delegating) |
-| `docs/process/spec-lifecycle.md`, `authoring-a-spec.md`, `completion-ritual.md`, `several-agents.md` | The remaining parts: statuses and arcs; what makes a spec buildable; the six completion steps plus the doc-hygiene rules; the PR queue for parallel sessions. | Claude (when the router says) |
+| `docs/process/spec-lifecycle.md`, `authoring-a-spec.md`, `completion-ritual.md`, `several-agents.md` | The remaining parts: statuses and arcs; what makes a spec buildable; the seven completion steps plus the doc-hygiene rules; the PR queue for parallel sessions. | Claude (when the router says) |
 | `docs/process/operational-traps.md`, `ground-rules.md` | The two **per-project** parts — seeded as traps bite and constraints appear. | You + Claude |
 | `docs/architecture.md` | Sectioned **design reference**, an append-only decision record, and Known Constraints. Pull the one section you need, never the whole file. | Claude (on demand) |
 | `docs/decisions/INDEX.md` | The **Key Decisions register's index**: the rules for keeping it, and one row per area — name, register file, and what the area governs. Mirrors the table in `CLAUDE.md`. | Claude (on demand) |

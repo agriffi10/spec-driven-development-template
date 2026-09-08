@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match glob "docs/sp*/x.md" is not one of the five allowed forms
+@@@ match glob "docs/*.md/x.py" ends in an extension that is not literal
 @@@ file CLAUDE.md
 # P
 
@@ -85,7 +85,7 @@ text
 @@@ file .claude/rules/specs.md
 ---
 paths:
-  - "docs/sp*/x.md"
+  - "docs/*.md/x.py"
 ---
 Files matching these paths are governed by `docs/process/authoring-a-spec.md`.
 Read it before changing one — it is not loaded with CLAUDE.md.
@@ -107,3 +107,5 @@ description: i
 model: opus
 ---
 body
+@@@ file docs/foo.md/x.py
+x

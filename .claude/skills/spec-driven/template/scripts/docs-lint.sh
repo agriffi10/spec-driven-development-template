@@ -824,11 +824,18 @@ if [ -d "$PROCESS_DIR" ]; then
       # a file you have", not "matches a file the repo has".
       FILES="${TMPDIR:-/tmp}/docs-lint-files.$$"
       find . -path ./.git -prune -o -type f -print | sed 's|^\./||' > "$FILES"
-      # Does any file match a glob of one of the four allowed forms? Anchored on a literal
+      # Does any file match a glob of one of the five allowed forms? Anchored on a literal
       # prefix and a literal extension, so no glob engine is involved and nothing is
       # translated: a translation is where two implementations disagree.
       glob_hits() {
         case "$1" in
+          # `dir/prefix-*/**`: ONE wildcard, ending the last directory segment. Taken from a
+          # consumer whose Lambda directories are named by prefix (`lambdas/archive-*`), which
+          # the four literal forms could only spell as a list that goes stale with the next
+          # function. Still no glob engine: the prefix is literal, and a hit is a file whose
+          # path starts with it and has a `/` somewhere after — the wildcard completes a
+          # segment rather than matching across one.
+          *'*'/'**')   p="${1%\*/\*\*}";              awk -v p="$p" 'index($0, p) == 1 && index(substr($0, length(p) + 1), "/") > 0 { f = 1; exit } END { exit !f }' "$FILES" ;;
           */'**')      p="${1%/\*\*}/";              awk -v p="$p" 'index($0, p) == 1 { f = 1; exit } END { exit !f }' "$FILES" ;;
           */'**/*.'*)  p="${1%/\*\*/\*.*}/"; e=".${1##*/\*\*/\*.}"
                        awk -v p="$p" -v e="$e" 'index($0, p) == 1 && substr($0, length($0) - length(e) + 1) == e { f = 1; exit } END { exit !f }' "$FILES" ;;
@@ -854,18 +861,58 @@ if [ -d "$PROCESS_DIR" ]; then
       silently."; continue; }
         printf '%s\n' "$fm" | grep -v -E '^paths:$|^  - "[^"]+"$' | grep -q . && note "$r carries a frontmatter line that is not \`paths:\` or a \`  - \"glob\"\` entry:
       $(printf '%s\n' "$fm" | grep -v -E '^paths:$|^  - "[^"]+"$' | head -1). A rule is a pointer and nothing else."
-        # 12c / 12d — each glob is one of four literal-prefixed forms, and matches something.
+        # 12c / 12d — each glob is one of five literal-prefixed forms, and matches something.
+        # Judged in two steps, and the order is the design: the ALLOWED TAIL (`/**`, `/**/*.ext`,
+        # `/*.ext`, or none) is stripped first, and the HEAD that remains is judged once. Judging
+        # the whole glob by pattern was tried and kept leaking — each pattern closed one wildcard
+        # shape and the next review found another, because a wildcard can sit in the head several
+        # ways and every one of them fell through to 12d, where the literal prefix reported
+        # "matches no file" about a tree that exists. The head may carry ONE wildcard: a `*` ending
+        # its last segment behind a literal prefix, and only when the tail is `/**` — that is the
+        # `dir/prefix-*/**` form. Everything else with a wildcard in it is refused here, by name.
         printf '%s\n' "$fm" | sed -n 's/^  - "\([^"]*\)"$/\1/p' | while IFS= read -r g; do
           case "$g" in
-            *'{'*|*'}'*|*'['*|*']'*|'*'*|'/'*|*'/'|'.'|'..'|*'/./'*|*'/../'*)
-              note "$r: glob \"$g\" is not allowed. Globs are \`dir/**\`, \`dir/**/*.ext\`, \`dir/*.ext\` or
-      an exact path, with a literal first segment — braces and brackets are where two glob engines
-      disagree, a leading wildcard scopes a rule to the whole repo, and a trailing slash names a
-      directory, which no rule can match."; continue ;;
-            */'**'|*/'**/*.'*|*/'*.'*) ;;
-            *'*'*|*'?'*) note "$r: glob \"$g\" is not one of the four allowed forms (\`dir/**\`, \`dir/**/*.ext\`,
-      \`dir/*.ext\`, exact path)."; continue ;;
+            *'{'*|*'}'*|*'['*|*']'*|*'\'*|'*'*|'/'*|*'/'|'.'|'..'|*'/./'*|*'/../'*)
+              note "$r: glob \"$g\" is not allowed. Globs are \`dir/**\`, \`dir/prefix-*/**\`, \`dir/**/*.ext\`,
+      \`dir/*.ext\` or an exact path, with a literal first segment — braces and brackets are where two
+      glob engines disagree, a backslash is decoded by the awk that measures the glob, a leading
+      wildcard scopes a rule to the whole repo, and a trailing slash names a directory, which no rule
+      can match."; continue ;;
           esac
+          h=$g; t=exact
+          case "$g" in
+            */'**/*.'*) h=${g%/\*\*/\*.*}; t=ext ;;
+            */'**')     h=${g%/\*\*};      t=tree ;;
+            */'*.'*)    h=${g%/\*.*};      t=flat ;;
+          esac
+          if [ "$t" = ext ] || [ "$t" = flat ]; then
+            # The TAIL is judged as well as the head, or `docs/**/*.*` reaches 12d and is told the
+            # tree does not exist — the head's defect one layer over. The extension after `*.` is
+            # one literal: not empty, no wildcard, no `?`, no `/`.
+            e=${g##*/\*.}
+            case "$e" in
+              ''|*'*'*|*'?'*|*'/'*) note "$r: glob \"$g\" ends in an extension that is not literal (\`.$e\`). The tail of
+      \`dir/**/*.ext\` and \`dir/*.ext\` is one literal extension — not empty, no wildcard, no \`?\`, no \`/\`."; continue ;;
+            esac
+          fi
+          if [ "$t" = exact ]; then
+            case "$g" in *'*'*|*'?'*) note "$r: glob \"$g\" is not one of the five allowed forms (\`dir/**\`, \`dir/prefix-*/**\`,
+      \`dir/**/*.ext\`, \`dir/*.ext\`, exact path)."; continue ;; esac
+          else
+            why=""
+            case "$h" in
+              *'?'*)        why="\`?\` is allowed in no form" ;;
+              *'*'*'*'*)    why="it carries two wildcards" ;;
+              *'*'*'/'*)    why="the wildcard sits before a \`/\`, so it would match across a segment" ;;
+              *'/*')        why="the wildcard segment has no literal prefix — \`dir/**\` is the form for every child" ;;
+              *'*')         [ "$t" = tree ] || why="a wildcard segment is allowed only before \`/**\`, not before \`${g#"$h"}\`" ;;
+              *'*'*)        why="the wildcard does not end its segment" ;;
+            esac
+            if [ -n "$why" ]; then
+              note "$r: glob \"$g\" carries a wildcard that is not the single \`prefix-*\` ending its last directory
+      segment — $why. The one wildcard form is \`dir/prefix-*/**\`."; continue
+            fi
+          fi
           glob_hits "$g" || note "$r: glob \"$g\" matches no file in the repo. A rule for a tree that does not exist
       never fires and is still advertised as a backstop."
         done

@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match glob "docs/sp*/x.md" is not one of the five allowed forms
+@@@ match glob "lambdas/archive-*/**" matches no file in the repo
 @@@ file CLAUDE.md
 # P
 
@@ -85,7 +85,7 @@ text
 @@@ file .claude/rules/specs.md
 ---
 paths:
-  - "docs/sp*/x.md"
+  - "lambdas/archive-*/**"
 ---
 Files matching these paths are governed by `docs/process/authoring-a-spec.md`.
 Read it before changing one — it is not loaded with CLAUDE.md.
@@ -107,3 +107,5 @@ description: i
 model: opus
 ---
 body
+@@@ file lambdas/archive-restore
+not a directory

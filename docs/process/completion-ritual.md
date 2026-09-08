@@ -32,6 +32,11 @@ When a spec is done, in the same pass:
    replaced it. Most decisions do **not** qualify — a rule, a fence or a per-feature choice is a
    register entry and nothing more, and a table that grows a row per spec has stopped being an
    orientation aid.
+7. **Prune `CLAUDE.md`'s `## Specs`** of whatever the closed spec made stale. Its **Current work**
+   line carries the spec in progress or `none — next work unplanned`, and the section carries nothing
+   that is recorded elsewhere — never a changelog:
+   a closed spec's row is in `docs/specs/INDEX.md` and its delivery doc says what shipped, so its
+   line here is a line every future session pays for and nobody reads.
 
 **Anti-regrowth & doc hygiene** (each rule below was earned by a real doc defect in a project run
 this way):
