@@ -45,7 +45,7 @@ When a repo has no spec-driven docs yet:
    mirror of `template/`, `scripts/sync-from-skill.sh` regenerates it, and edits belong in `template/`
    followed by a sync. Steps 3 and 6 below would fill in the mirror and delete `ci.yml.example`, which
    must survive there.
-2. `chmod +x scripts/spec-lint.sh scripts/docs-lint.sh scripts/docs-lint-test.sh scripts/pr-queue-test.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh`.
+2. `chmod +x scripts/spec-lint.sh scripts/docs-lint.sh scripts/docs-lint-test.sh scripts/pr-queue-test.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh scripts/pr-queue/install-test.sh`.
 3. Fill in the placeholders in `CLAUDE.md` (Project Overview, Layout, Tech Stack, Code Conventions,
    Common Commands) from what the repo actually is — detect the language/build/test/lint tooling from
    the manifest (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, …) rather than guessing.
@@ -70,9 +70,9 @@ When a repo has no spec-driven docs yet:
    gates, not just spec-lint.
 7. Run `sh scripts/spec-lint.sh` and `sh scripts/docs-lint.sh` to confirm both pass (each no-ops or
    passes cleanly on a fresh scaffold). Then run `sh scripts/docs-lint-test.sh` and
-   `sh scripts/pr-queue-test.sh` and **check the case COUNTS, not the exit status** — both report
-   "N passed"; an N of 0 means the fixtures did not arrive, and an empty corpus exits 0 exactly like
-   a healthy one.
+   `sh scripts/pr-queue-test.sh` and `sh scripts/pr-queue/install-test.sh` and **check the case
+   COUNTS, not the exit status** — each reports "N passed"; an N of 0 means the fixtures did not
+   arrive, and an empty corpus exits 0 exactly like a healthy one.
 
 Keep the always-loaded tier (`CLAUDE.md`) lean — it must not regrow into a wall of prose. `docs-lint.sh`
 now enforces that rather than asking you to remember it. In a project that ran this template the
@@ -143,13 +143,18 @@ Only when the user asks for it. The default is one spec in flight; this is the d
 refuses; `scripts/pr-queue/PROTOCOL.md` carries the four commands, the branch-pattern setting and the
 configuration seams for a project that is not on GitHub.
 
-Install it once, before launching anyone — `sh scripts/pr-queue/install.sh '<branch-regex>'` (default
-`^spec-`) — and brief every session from `docs/templates/multi-agent-briefing.md`.
+Install it once, before launching anyone — `sh scripts/pr-queue/install.sh` (the optional
+`'<branch-regex>'` defaults to `.`, every branch; a narrowed one fails open the day branch naming
+moves on) — and brief every session from `docs/templates/multi-agent-briefing.md`.
 
-One fact about installing lives only here, because it is about the installer rather than the method:
-`install.sh` exits **3**, having installed everything else, when another `pre-push` hook already
-occupies the path; its message says what to add by hand. A queue installed that way is inert until
-someone does, and nothing else reports it.
+One fact about installing is worth knowing before the first run: `install.sh` exits **3**, having
+installed everything else, when it could not wire the hook — a foreign `pre-push` already occupies
+the path (its message says what to add by hand, and the queue is inert until someone does), the
+existing wrapper names a **different** queue (left alone; the old queue stays enforced, and the
+message says how to upgrade it instead), the hooks directory could not be written, or
+`core.hooksPath` is relative (a wrapper there fires in the main worktree only, so linked worktrees
+would push unenforced; the message gives the absolute-path remedy). Exit **1** is
+a refusal before anything was copied: a blank or uncompilable pattern, or a lock held on the queue.
 
 ## 6. Delegate by model
 

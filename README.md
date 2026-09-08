@@ -346,14 +346,19 @@ repository, because a lock inside one working directory is invisible to sessions
 **Setting it up**, once, before you launch anyone:
 
 ```bash
-sh scripts/pr-queue/install.sh '^spec-'
+sh scripts/pr-queue/install.sh
 ```
 
-The argument is the branch-name pattern the queue applies to, and it defaults to `^spec-`. Branches
-outside it push freely, so the pattern has to match the branch names you give the agents — nothing
-warns you if it doesn't. The script copies the queue somewhere shared under your home directory and
-installs a `pre-push` hook, so a session that tries to push out of turn is stopped rather than
-reminded. If you already have a `pre-push` hook of your own, it says so and prints the line to add.
+The optional argument is the branch-name pattern the queue applies to, and it defaults to `.` —
+every branch. Narrowing it to a few prefixes is the tempting setting and the one that fails open:
+the day branch naming moves on, the hook enforces nothing and still looks installed, which is what
+the earlier default did in both repos that took it. The installer refuses a blank or uncompilable
+pattern, keeps an existing one on a re-install and says so, and prints how many of the repo's
+branches the live pattern matches. The script copies the queue somewhere shared under your home
+directory and installs a `pre-push` hook, so a session that tries to push out of turn — or with a
+base behind `main` — is stopped rather than reminded. If you already have a `pre-push` hook of your
+own, or one pointing at a different queue, or a relative `core.hooksPath` (which linked worktrees
+would not resolve), it says so and leaves it alone.
 
 **Briefing each session.** Fill in `docs/templates/multi-agent-briefing.md` per session and paste it
 as that session's first message. It covers what a session cannot work out for itself: to work in its
@@ -444,7 +449,8 @@ from the template don't need them.
 | `scripts/pr-queue/queue.sh` | The **PR queue**: a lock and a first-come-first-served line that keeps one pull request open at a time when several agents share the repo. Runs from outside the repo — `install.sh` puts it there. | Claude (multi-agent runs) |
 | `scripts/pr-queue/pre-push` | The git hook that makes the queue binding rather than advisory. Refuses a push from a participating branch that doesn't hold the lock, and one whose commits don't contain the remote's current `main` — the stale base a queue wait quietly creates. Branches outside the pattern are left alone; a remote it couldn't read is refused, not waved through. | Git |
 | `scripts/pr-queue-test.sh` | **POSIX** fixture corpus for that hook — real pushes to real bare repos, each case asserting the specific refusal text, plus the silence cases that catch a check turning into a false positive. Run it whenever you change the queue or the hook. | you + Claude (when the queue changes) |
-| `scripts/pr-queue/install.sh` | One-time setup for a multi-agent run: places the queue outside the repo and installs the hook wrapper. | You + Claude |
+| `scripts/pr-queue/install.sh` | One-time setup for a multi-agent run: places the queue outside the repo and installs the hook wrapper. Refuses a blank or uncompilable pattern and an upgrade under a held lock; keeps an existing pattern and says so; leaves a foreign hook, or one naming a different queue, alone. | You + Claude |
+| `scripts/pr-queue/install-test.sh` | **POSIX** fixture corpus for the installer — its refusals, its enforcement summary, and what it does to a hook that is already there — built in throwaway repos under `$TMPDIR`. Run it whenever you change `install.sh`. | Claude |
 | `scripts/pr-queue/PROTOCOL.md` | The protocol the agents read: the four commands, what the lock covers, the configuration seams, and the stale-entry rules. | Claude (multi-agent runs) |
 | `scripts/sync-from-skill.sh` | Maintenance for **this template repo only** — regenerates the root scaffold from the skill's canonical copy. Delete it in a derived project. | Maintainers of this template |
 | `scripts/check-mirror.sh` | Maintenance for **this template repo only** — fails if the root scaffold has drifted from the canonical copy, in either direction. Delete it in a derived project, where customizing `CLAUDE.md` makes it fail by design. | CI + maintainers |
@@ -627,9 +633,10 @@ the only home of a fact has quietly turned the register's front page into the ar
 
 **A push was refused with "PUSH REFUSED — you do not hold the PR queue lock".** The PR queue is
 installed and that branch is in a multi-agent run, so it has to take its turn: `queue.sh ticket`,
-poll `queue.sh turn`, then `queue.sh acquire`. If the branch isn't part of such a run at all, the
-enforced pattern is too broad — it's the argument you gave `install.sh`, kept in `enforce-branches`
-in the queue directory. `PR_QUEUE_BYPASS=1 git push …` overrides it for one push.
+poll `queue.sh turn`, then `queue.sh acquire`. The queue applies to every branch by default; if
+this branch genuinely is not part of such a run, narrow `enforce-branches` in the queue directory
+deliberately (`install.sh '<regex>'`), knowing that a narrowed pattern fails open the day naming
+moves on. `PR_QUEUE_BYPASS=1 git push …` overrides it for one push.
 
 **An agent has been waiting in the queue for a long time.** Run `queue.sh status`. If a session holds
 the lock and has stopped, the queue breaks that lock on its own after 90 minutes — but only once

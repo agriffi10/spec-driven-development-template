@@ -52,7 +52,7 @@ expectations. Keep to what an implementer must not violate.]
 # spec-lint:  sh scripts/spec-lint.sh
 # docs-lint:  sh scripts/docs-lint.sh
 # docs-lint tests: sh scripts/docs-lint-test.sh
-# pr-queue tests: sh scripts/pr-queue-test.sh
+# pr-queue tests: sh scripts/pr-queue-test.sh; sh scripts/pr-queue/install-test.sh
 ```
 
 ## Specs
