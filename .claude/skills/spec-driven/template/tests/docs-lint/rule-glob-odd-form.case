@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match glob "docs/sp*/x.md" is not one of the four allowed forms
+@@@ match glob "docs/sp*/x.md" is not one of the five allowed forms
 @@@ file CLAUDE.md
 # P
 

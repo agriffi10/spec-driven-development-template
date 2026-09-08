@@ -1,5 +1,6 @@
 @@@ expect exit=1
-@@@ match glob "docs/sp*/x.md" is not one of the five allowed forms
+@@@ match glob "docs/*/**" carries a wildcard that is not the single
+@@@ match no literal prefix
 @@@ file CLAUDE.md
 # P
 
@@ -85,7 +86,7 @@ text
 @@@ file .claude/rules/specs.md
 ---
 paths:
-  - "docs/sp*/x.md"
+  - "docs/*/**"
 ---
 Files matching these paths are governed by `docs/process/authoring-a-spec.md`.
 Read it before changing one — it is not loaded with CLAUDE.md.
@@ -107,3 +108,5 @@ description: i
 model: opus
 ---
 body
+@@@ file docs/x/y.md
+x

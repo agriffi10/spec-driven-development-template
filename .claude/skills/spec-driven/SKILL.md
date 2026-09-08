@@ -192,7 +192,7 @@ fails: a `docs/process/` with no router; a stub at `docs/process.md`; a router r
 not import or an import the router does not name; the always-loaded set (derived from the router's
 table) over `ALWAYS_LOADED_MAX_BYTES`; a bare `@` import in any always-loaded file but `CLAUDE.md`;
 a part with no router row or a row with no file; a `.claude/rules/` file without frontmatter at
-byte 0, with an inline or missing `paths:`, an extra key, a glob outside the four allowed forms or
+byte 0, with an inline or missing `paths:`, an extra key, a glob outside the five allowed forms (`dir/**`, `dir/prefix-*/**`, `dir/**/*.ext`, `dir/*.ext`, an exact path) or
 matching nothing, a body that is not the two-line template, or a pointer to an unrouted part; a
 `.claude/agents/` file without frontmatter, a `name` not equal to its stem, a `model` outside
 `sonnet|opus|haiku|fable`, or one the routing table does not name (and the reverse); a part, rule,
