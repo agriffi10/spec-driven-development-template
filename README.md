@@ -237,7 +237,9 @@ the router's table says.
    React rulebook — and update `docs/best-practices/INDEX.md` to match.
 7. **Protect `main`.** In Settings → Rules, require pull requests (no direct pushes) and add
    `spec-lint` and your `ci` jobs as required status checks. Nothing in the files can enforce this;
-   it's a repository setting.
+   it's a repository setting. If you do require `spec-lint`, remove the `paths:` filter from the
+   `pull_request` trigger in `.github/workflows/spec-lint.yml` — a workflow skipped by path
+   filtering leaves its check Pending and blocks the merge.
 8. Fill in the two per-project parts of the process, `docs/process/operational-traps.md` and
    `docs/process/ground-rules.md`. They start as examples and exist nowhere else — the first time a
    trap bites you, one line there stops it biting the next session.
@@ -409,7 +411,8 @@ sh scripts/sync-from-skill.sh
 sh scripts/check-mirror.sh
 ```
 
-`spec-lint.sh` checks every spec in `docs/specs` (pass a different directory as an argument).
+`spec-lint.sh` checks every spec in `docs/specs` (pass a different directory as an argument);
+`spec-lint-test.sh` proves its checks still fire, and is what CI runs first.
 `docs-lint.sh` checks the always-loaded tier: `CLAUDE.md`'s size, that its Key Decisions section is an
 intro and one table of areas, and that each area's register file under `docs/decisions/` opens with its
 fences and carries an entry behind every fence. The last two are maintenance scripts for *this* template repository, explained under
@@ -443,6 +446,8 @@ from the template don't need them.
 | `docs/templates/spec-completion-template.md` | The blank a delivery note is written from. | You + Claude |
 | `docs/templates/multi-agent-briefing.md` | The blank a launch briefing is written from, when several agents run at once. One per session. | You + Claude |
 | `scripts/spec-lint.sh` | **POSIX** shell linter. Fails a spec that's missing a required section or contains an "Open Questions"/"Checkpoint" heading; warns on unfilled placeholders, on requirements with no acceptance criteria anywhere in the file, and on a spec carrying more than eight requirements. No dependencies. | CI + you + Claude |
+| `scripts/spec-lint-test.sh` | **POSIX** fixture corpus for the spec linter — one case per check, asserting the specific FAIL or WARN text rather than the exit code, plus an unfilled copy of the spec template as a live case. CI runs it before the lint; run it whenever you change `spec-lint.sh` or the template. | CI + you + Claude |
+| `tests/spec-lint/*.case` | Those fixtures. A `-ok` case asserts the linter stays SILENT where it should — the fenced FR heading, the lowercase section, the filename with a space. | you + Claude |
 | `scripts/docs-lint.sh` | **POSIX** shell linter for the always-loaded tier. Fails when `CLAUDE.md` is over its byte budget, its Key Decisions section is anything but an intro and one area table, the register index disagrees with that table, an area file is missing or does not open with its fences, a fence has no entry or has grown into an essay, an entry is missing from its Contents, a Completed spec has no delivery doc, a delivery doc has become an essay, or a pointer out of an always-loaded file goes nowhere. No dependencies. | you + Claude, before every push |
 | `scripts/docs-lint-test.sh` | **POSIX** fixture corpus for the doc linter — one case per construct, asserting the specific failure text rather than the exit code. Run it whenever you change `docs-lint.sh`; running the linter against your own docs proves your docs pass, not that the checks work. | you + Claude (when the linter changes) |
 | `tests/docs-lint/*.case` | The fixtures themselves. A `-ok` case asserts the linter stays SILENT: false positives are a large share of what a gate gets wrong. | you + Claude |
@@ -454,7 +459,7 @@ from the template don't need them.
 | `scripts/pr-queue/PROTOCOL.md` | The protocol the agents read: the four commands, what the lock covers, the configuration seams, and the stale-entry rules. | Claude (multi-agent runs) |
 | `scripts/sync-from-skill.sh` | Maintenance for **this template repo only** — regenerates the root scaffold from the skill's canonical copy. Delete it in a derived project. | Maintainers of this template |
 | `scripts/check-mirror.sh` | Maintenance for **this template repo only** — fails if the root scaffold has drifted from the canonical copy, in either direction. Delete it in a derived project, where customizing `CLAUDE.md` makes it fail by design. | CI + maintainers |
-| `.github/workflows/spec-lint.yml` | Runs spec-lint on pushes to `main`, and on pull requests that touch `docs/specs/`, the lint script, or the workflow itself. | CI |
+| `.github/workflows/spec-lint.yml` | Runs the spec-lint corpus and then spec-lint, on pull requests and pushes to `main` that touch `docs/specs/`, the spec template, the lint script, its corpus, or the workflow itself. | CI |
 | `.github/workflows/check-mirror.yml` | Runs the mirror check on every pull request and push to `main`, in **this template repo only**. Deliberately not path-filtered — the failure it exists to catch is a change in a path nobody thought to list. Delete it in a derived project. | CI |
 | `.github/workflows/ci.yml.example` | **Inert** template for your language's formatter, linter, type-checker and tests (Node and Python jobs included). The `.example` extension means GitHub never runs it; you turn it into a real `ci.yml` at setup. | CI (once you fill it in) |
 | `.github/pull_request_template.md` | PR checklist restating the rules: maps to the plan, no new open questions, **both framed pre-push reviews done**, gates green, owed criteria named, watch to green. | You + Claude |
@@ -514,8 +519,8 @@ which is which tells you what breaks silently if you skip a step.
 | Guardrail | Enforced by |
 |---|---|
 | Specs are fully specified before build — no Open Questions | `spec-lint.sh` (CI) + `docs/process/` |
-| Specs are structurally complete (required sections present) | `spec-lint.sh` (CI) |
-| A spec stays one buildable slice — split past eight requirements | `spec-lint.sh` warns (CI); the reviewer decides |
+| Specs are structurally complete (required sections present) | `spec-lint.sh` (CI), its checks proven by `spec-lint-test.sh` first |
+| A spec stays one buildable slice — split past eight requirements | `spec-lint.sh` warns (CI), its ceiling and its fence/comment skips proven by `spec-lint-test.sh`; the reviewer decides |
 | Every spec, plan and diff passes a fresh-context review before it moves on | `docs/process/` + `CLAUDE.md` + `SKILL.md` |
 | The counts: one review on the spec, one on the plan, one on the PR grouping, **two** on the diff | `docs/process/` + `CLAUDE.md` + `SKILL.md` |
 | Both diff reviews happened before the push, and owed criteria are named | PR template |
@@ -531,6 +536,7 @@ which is which tells you what breaks silently if you skip a step.
 | Path-scoped rules and agent files keep their shape — frontmatter at byte 0, globs that match something, a body equal to the template, a `model` the routing table allows | `docs-lint.sh` (local pre-push) |
 | Every job runs on the model the routing table names | `docs/process/model-routing.md` + `CLAUDE.md` + the `.claude/agents/` defaults |
 | The doc linter's own checks still fire | `docs-lint-test.sh` (local, run when you change the linter) — a fixture per construct, each asserting its failure text |
+| The spec linter's own checks still fire | `spec-lint-test.sh` (CI, before the lint) — a fixture per check and per exemption, each asserting its failure text, plus an unfilled copy of the spec template as a live case |
 | Any gate you add is itself tested, not just run | `docs/process/reviewer-contract.md` — a gate run only on what it guards proves the artifacts pass, not that the gate works |
 | One pull request open at a time when several agents share the repo | `scripts/pr-queue/` (the `pre-push` hook) |
 | A branch is rebased on current `main` before it reaches the remote | `scripts/pr-queue/pre-push`, **for branches matching the enforced pattern in a checkout where the queue is installed** — a solo session, a repo that never installs it, and a branch outside the pattern are all still on prose alone. Nothing checks this server-side; GitHub's "require branches to be up to date" is the setting that would |

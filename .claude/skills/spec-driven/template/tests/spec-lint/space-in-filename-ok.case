@@ -1,0 +1,35 @@
+@@@ expect exit=0
+@@@ match ok    docs/specs/SPEC-002-a b.md
+@@@ absent missing required section
+@@@ file docs/specs/SPEC-002-a b.md
+# Spec: X
+
+**ID:** SPEC-001
+**Status:** Draft
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+### FR-001: Thing 1
+
+#### Description:
+
+What it does.
+
+#### Acceptance Criteria:
+
+- a
+
+## Implementation Phases
+
+prose
+

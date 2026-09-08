@@ -1,0 +1,24 @@
+@@@ expect exit=0
+@@@ absent missing required section
+@@@ file docs/specs/SPEC-001-x.md
+# Spec: X
+
+**ID:** SPEC-001
+**Status:** Draft
+
+## overview
+
+prose
+
+## SCOPE
+
+prose
+
+## Functional requirements
+
+prose
+
+## implementation phases
+
+prose
+

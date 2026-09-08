@@ -1,0 +1,28 @@
+@@@ expect exit=1
+@@@ match contains banned header(s)
+@@@ match line 22:#### Checkpoint: pause here
+@@@ file docs/specs/SPEC-001-x.md
+# Spec: X
+
+**ID:** SPEC-001
+**Status:** Draft
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+
+#### Checkpoint: pause here
+
+no

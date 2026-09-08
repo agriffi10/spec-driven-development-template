@@ -1,0 +1,26 @@
+@@@ expect exit=0
+@@@ match WARN  docs/specs/SPEC-001-x.md: unfilled template placeholder(s)
+@@@ match 0 file(s) failed, 1 warning(s)
+@@@ file docs/specs/SPEC-001-x.md
+# Spec: X
+
+**ID:** SPEC-001
+**Status:** Draft
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+
+See SPEC-XXX.

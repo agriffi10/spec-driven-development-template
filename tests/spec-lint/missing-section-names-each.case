@@ -1,0 +1,17 @@
+@@@ expect exit=1
+@@@ match missing required section '## Scope'
+@@@ match missing required section '## Implementation Phases'
+@@@ file docs/specs/SPEC-001-x.md
+# Spec: X
+
+**ID:** SPEC-001
+**Status:** Draft
+
+## Overview
+
+prose
+
+## Functional Requirements
+
+prose
+

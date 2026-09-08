@@ -1,0 +1,12 @@
+@@@ expect exit=0
+@@@ match no SPEC-*.md files in docs/specs (nothing to check)
+@@@ file docs/specs/archive/SPEC-001-x.md
+# Spec: X
+
+**ID:** SPEC-001
+**Status:** Draft
+
+## Overview
+
+prose
+
