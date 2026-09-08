@@ -115,7 +115,7 @@ done < "$tmp/root_only"
 # --- split the tracked list into payload side and root side ----------------
 # Payload entries, prefix stripped. Root entries: everything NOT under .claude/skills/,
 # since that tree is the skill (payload + SKILL.md + its README), not the mirror.
-# The rest of .claude/ (rules/, agents/) IS mirrored: the payload ships them.
+# The rest of .claude/ (rules/, agents/, settings.json) IS mirrored: the payload ships them.
 : > "$tmp/payload"
 : > "$tmp/root_all"
 while IFS= read -r rel; do

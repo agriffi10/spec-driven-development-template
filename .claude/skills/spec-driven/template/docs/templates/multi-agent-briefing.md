@@ -48,6 +48,9 @@ The queue serialises the remote — it is not a review, and it does not replace 
 [queue-dir]/queue.sh release SPEC-XXX     # on EVERY exit path, including failure and abandonment
 ```
 
+[Allow `Bash([queue-dir]/queue.sh *)` in the settings this session runs under — the shipped
+`.claude/settings.json` cannot name a path outside the repo.]
+
 The lock covers the whole PR lifecycle — fetch, rebase, re-run your gates, push, open, watch to green
 keyed on the head sha, merge, confirm `main` went green — not just the push. The fetch is *inside* the
 lock because the wait is exactly when peers merge: rebase before you get in line and you push a base
@@ -59,6 +62,15 @@ Full protocol: `[queue-dir]/PROTOCOL.md`. One
 ticket per PR: if your spec needs several, release between them so the others interleave. If `turn` reports the trunk `IS RED`, stop and
 escalate; a red `main` is fixed before anything else merges.
 
-**Escalate, don't improvise.** [Name who to escalate to and how.] A product-changing or ambiguous
-call, a conflict you cannot resolve without discarding someone's work, and a red `main` all stop the
-session — the reversible technical calls are still yours to make.
+**Escalate, don't improvise — and ask, don't list.** [Name who to escalate to and how.] A
+product-changing or ambiguous call, a conflict you cannot resolve without discarding someone's work,
+and a red `main` all stop the session — the reversible technical calls are still yours to make. When
+you do stop, ask with the question tool: the options as selections, the recommended one first, and
+carry on with the answer. Options written out in prose that end the turn are a stop nobody asked for.
+
+**This briefing is the authorization for the landing.** The push of your reviewed branch, the PR,
+the watch and the merge on green are the last steps of building the spec, not decisions to confirm
+with me: do not stop to ask for them, and do not stop after announcing them. If the harness refuses
+one of those landing commands, say which and ask — the repo's `.claude/settings.json` allows them, and a
+refusal means that file is not in effect here: the folder is not trusted, or an `ask` rule above it
+still prompts.

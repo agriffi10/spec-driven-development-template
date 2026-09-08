@@ -306,7 +306,8 @@ writing any code. It does the same for how the work will be split into pull requ
 
 **4. Let it run.** The build works through the phases without stopping for approval. It will surface
 progress; it will stop only if it hits something product-changing or genuinely ambiguous, and when it
-does it will bring you options and a recommendation rather than a bare question.
+does it will ask you — options to pick from, the recommended one first — rather than write the
+choice out and stop.
 
 **5. The work is reviewed before it goes public.** Claude commits locally and runs your formatter,
 linter, type-checker and tests. Then the diff goes to **two** fresh-context reviewers with different
@@ -464,6 +465,7 @@ from the template don't need them.
 | `.github/workflows/ci.yml.example` | **Inert** template for your language's formatter, linter, type-checker and tests (Node and Python jobs included). The `.example` extension means GitHub never runs it; you turn it into a real `ci.yml` at setup. | CI (once you fill it in) |
 | `.github/pull_request_template.md` | PR checklist restating the rules: maps to the plan, no new open questions, **both framed pre-push reviews done**, gates green, owed criteria named, watch to green. | You + Claude |
 | `.claude/rules/*.md` | **Path-scoped pointers**, one per governed tree, of two kinds: the process kind (specs, delivery docs, the register, the process, the PR queue, the agents), which says which process part to read first, and `decisions-<area>.md`, one per decision area that declares what it governs, which says to read that area's fences first. Each fires when Claude opens a matching file with its Read tool. A backstop for a session that forgot, not the mechanism. | Claude Code (on Read) |
+| `.claude/settings.json` | The **permission allow-list** a build needs to run unattended: the gate scripts, `git fetch`/`worktree`/`rebase`/`push`, and `gh pr create`/`view`/`checks`/`merge` plus `gh run list`/`view`. Without it a session stops at "I'll open the PR" — before an outward action the harness asks, or in auto mode sends it to the classifier, unless a rule says not to. Merge it into an existing settings file; review what it grants. Its rules take effect only once you have trusted the folder (the workspace trust dialog), and a matching `ask` rule in your user settings still prompts. It deliberately omits `scripts/pr-queue/install.sh` (run once, by a person) and `gh api` (too broad to allow by prefix). | Claude Code (at startup); you review it |
 | `.claude/agents/*.md` | The **subagent roles** the routing table names — `spec-author` (Sonnet), `reviewer` (Opus, Fable on demand), `implementer` (Opus, Fable on demand), `scout` (Haiku) — each carrying its default model and its brief. | Claude Code (when delegating) |
 | `.claude/skills/spec-driven/SKILL.md` | The **skill** — the procedure Claude follows. Claude Code discovers it at this path. | Claude Code (automatically) |
 | `.claude/skills/spec-driven/README.md` | Human-facing note on what the skill folder contains and how to install it. | You |
