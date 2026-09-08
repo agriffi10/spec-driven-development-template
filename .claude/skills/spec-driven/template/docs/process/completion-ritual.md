@@ -16,8 +16,9 @@ When a spec is done, in the same pass:
    that file's `## Fences`, the claim and its constraint in one line. The fence is **never the only home
    of a fact**, never a paragraph, and never a line in `CLAUDE.md`: only a new *area* touches `CLAUDE.md`, as a row in its Key Decisions table mirrored — with its
    *Governs* column — in `docs/decisions/INDEX.md`, and a file copied from `example-area.md`. A reversal
-   that changes the entry's **heading** must move its Contents row and its fence label with it — the
-   row is an anchor link, left pointing at nothing otherwise, which docs-lint fails.
+   that changes the entry's **heading** must move three copies of it with the heading — its Contents
+   row, its fence label, and the entry's own opening bold label — or the row points at a dead anchor,
+   the label still names the old decision, and docs-lint fails.
    If the decision **supersedes an earlier one**, update the old register entry in
    place and add a superseded marker (short blockquote: what changed, which spec, where the full
    entry lives) at every doc site that still states the old claim — arc narratives, architecture
@@ -98,14 +99,19 @@ this way):
   table; requires `docs/decisions/INDEX.md` to name the same areas in the same order, every area to
   have a file and every file a row; holds each area file to fences-first, each **fence** — a bullet
   with its continuations — to a length, a `###` entry for every fence and a fence for every entry, every
-  entry in the file's Contents, and the rules to what each area declares it governs; requires every
+  entry in the file's Contents — named by the row that reaches it, and restated by the entry's opening
+  bold label when it has one — and the rules to what each area declares it governs; requires every
   Completed spec to have a delivery doc, and holds every doc in `docs/spec-delivery/` to a line cap
   (not only those tied to a Completed spec); and checks that the pointers
   out of `CLAUDE.md` resolve. On the routed process tier it also holds the always-loaded set to the
   router's *Loaded every session* table (imports match rows, a byte budget derived from the table, no
   nested imports, pointers resolve in every file of the set), every part to a router row and every
   row to a file, the old single-file path empty, and `.claude/rules/` and `.claude/agents/` to their
-  shapes — the rule template, the allowed glob forms, the allowed models, the routing table.
+  shapes — the rule template, the allowed glob forms, the allowed models, the routing table — each
+  tree one flat set with dotfiles seen and subdirectories refused; and, in every standing doc, script
+  and workflow file it names, a dated measurement — `measured` or `as of` beside an ISO date — to a
+  commit SHA in the same paragraph, bullet or comment block, which is the half of *never cite volatile
+  numbers* a script can hold.
   **`scripts/docs-lint-test.sh` is the corpus that proves those checks still fire** — running the
   linter against the repo's own documents proves the documents pass and nothing about whether any
   check works. A change to the linter runs the corpus. The general rule, and its evidence, is in `reviewer-contract.md`.

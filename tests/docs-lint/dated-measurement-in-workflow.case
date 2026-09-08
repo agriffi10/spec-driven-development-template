@@ -1,0 +1,63 @@
+@@@ expect exit=1
+@@@ match carries a dated measurement with no commit
+@@@ match .github/workflows/ci.yml
+@@@ match .github/actions/install-poetry/action.yml
+@@@ match .github/dependabot.yaml
+@@@ file .github/workflows/ci.yml
+name: CI
+# Measured 2026-09-05: the matrix takes 6 minutes.
+on: push
+
+@@@ file .github/actions/install-poetry/action.yml
+name: Install
+# Measured 2026-09-05: the install step takes 18 s.
+runs: {}
+
+@@@ file .github/dependabot.yaml
+version: 2
+# Measured 2026-09-05: 14 pinned actions.
+updates: []
+
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+Intro prose; every decision is a fence in its area file.
+
+| Area | Fences |
+|---|---|
+| Area one | `docs/decisions/area-one.md#fences` |
+
+## Out of Scope
+
+nothing
+
+@@@ file docs/decisions/INDEX.md
+# Key Decisions — the register
+
+## Areas
+
+| Area | Fences | Governs |
+|---|---|---|
+| Area one | `docs/decisions/area-one.md#fences` | none |
+@@@ file docs/decisions/area-one.md
+# Area one — decisions
+
+intro
+
+## Contents
+
+- [Fences](#fences)
+- [Alpha rule](#alpha-rule)
+
+## Fences
+
+- **Alpha rule** — short claim and its fence.
+
+---
+
+### Alpha rule
+
+Reasoning.
+

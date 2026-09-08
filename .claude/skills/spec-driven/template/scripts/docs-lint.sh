@@ -17,13 +17,15 @@
 # script can see them — run before every push, deliberately not in CI, so the failure
 # lands on whoever caused it rather than on a shared branch.
 #
-# FAIL (exit 1): the always-loaded file is over budget or has been removed outright, a
+# FAIL (exit 1): an always-loaded file is over budget or has been removed outright, a
 #   Key Decisions section carries anything but its intro and area table, the register INDEX or an
 #   area file is missing or disagrees with the table, a fence has no entry or an entry no fence,
-#   an entry is unreachable from the Contents, a fence has become the reasoning, a Completed spec has no
-#   delivery doc, a delivery doc has become an essay, a pointer out of an always-loaded file goes
-#   nowhere, the routed process tier has lost its shape (router, imports, parts, rules, agents —
-#   checks 9–13), or a stub has reappeared at the old single-file path.
+#   an entry is unreachable from its Contents or is named by a row that links elsewhere, an entry
+#   opens its body with a label that contradicts its heading, a fence has become the reasoning, a
+#   Completed spec has no delivery doc, a delivery doc has become an essay, a pointer out of an
+#   always-loaded file goes nowhere, the routed process tier has lost its shape (router, imports,
+#   parts, rules, agents — checks 9–13), a stub has reappeared at either old single-file path, or a
+#   dated measurement in a standing doc or script carries no commit to re-measure from (14).
 #
 # There is no WARN tier: `spec-lint.sh` owns the soft per-spec judgements, and every rule
 # here is a shape the layering depends on — a shape is either held or it isn't.
@@ -43,7 +45,7 @@ set -eu
 
 # Both byte budgets rely on awk length() counting BYTES. It does in the one-true-awk
 # that ships on macOS, but gawk in a UTF-8 locale counts CHARACTERS — every em dash in a
-# digest would then count 1 instead of 3, so the caps would measure something different
+# fence would then count 1 instead of 3, so the caps would measure something different
 # in CI than they do locally. C locale makes it bytes everywhere.
 LC_ALL=C
 export LC_ALL
@@ -121,7 +123,9 @@ AGENTS_DIR=".claude/agents"
 # — the bug reads as "the check found nothing" and is invisible in a green run.
 total=""
 FAILS="${TMPDIR:-/tmp}/docs-lint.$$"
-trap 'rm -f "$FAILS" "${TMPDIR:-/tmp}"/docs-lint-kdrows.$$' EXIT INT TERM
+# Every scratch file this script writes is `${TMPDIR:-/tmp}/docs-lint-<name>.$$`, so one glob
+# covers them all — a check interrupted midway must not leave its scratch behind.
+trap 'rm -f "$FAILS" "${TMPDIR:-/tmp}"/docs-lint-*.$$' EXIT INT TERM
 : > "$FAILS"
 
 note() { printf 'FAIL  %s\n' "$1" >> "$FAILS"; }
@@ -171,6 +175,23 @@ check_pointers() {
   ' "$1" | sort -u | while IFS= read -r p; do
     [ -n "$p" ] || continue
     [ -e "$p" ] || printf 'FAIL  %s points at "%s", which does not exist.\n' "${2:-$1}" "$p" >> "$FAILS"
+  done
+}
+
+# The four governed trees — docs/process/, docs/decisions/, .claude/rules/ and
+# .claude/agents/ — are each ONE FLAT SET, and each is enumerated through this pair so the
+# set cannot differ by tree. It differed three times: a glob skipped the dotfiles in two
+# trees, `ls` skipped them in a third, and a subdirectory was invisible in two. Each miss
+# has the same shape — a file Claude Code loads and no check here sees — and each was found
+# one tree later than the last, which is why this is a helper and not a third fix.
+#
+# `find -maxdepth 1` takes dotfiles; the glob and `ls` do not. Callers read it through a
+# `while IFS= read -r`, which runs in a subshell: safe here because every caller reports
+# through `note`, which appends to a FILE, and none of them accumulates a variable.
+list_flat_md() { find "$1" -maxdepth 1 -name '*.md' | sort; }
+refuse_deep_md() {
+  find "$1" -mindepth 2 -name '*.md' | sort | while IFS= read -r deep; do
+    note "$deep is in a subdirectory of $1/. $2"
   done
 }
 
@@ -347,11 +368,9 @@ else
 
   # Every area file is a row, every row a file — and the register is one flat set, so it can be
   # enumerated by eye and by this loop; a file one directory deeper is invisible to both.
-  find "$REGISTER_DIR" -mindepth 2 -name '*.md' | sort | while IFS= read -r deep; do
-    note "$deep is in a subdirectory of $REGISTER_DIR/. Area files are one flat set, one per table row;
+  refuse_deep_md "$REGISTER_DIR" "Area files are one flat set, one per table row;
       a file a level down is a register nothing checks."
-  done
-  for f in "$REGISTER_DIR"/*.md; do
+  list_flat_md "$REGISTER_DIR" | while IFS= read -r f; do
     [ -f "$f" ] || continue
     [ "$f" = "$REGISTER_INDEX" ] && continue
     slug=$(basename "$f" .md)
@@ -446,16 +465,41 @@ else
         }
         line = $0
         while (match(line, /\(#[a-z0-9_-]+\)/)) { seen[substr(line, RSTART + 2, RLENGTH - 3)] = 1; line = substr(line, RSTART + RLENGTH) }
+        # A SECOND pass over the same line, for the row itself rather than its
+        # reachability. Deliberately not folded into the loop above: narrowing that one to
+        # the full `[text](#anchor)` form would stop a bare `(#anchor)` reaching `seen`, and
+        # the entry it names would then be reported as absent from a Contents that lists it
+        # — weakening a working check in order to add one. A link text containing `]` never
+        # matches and is exempt in silence; balancing brackets here is markdown parsing,
+        # which this script is the standing argument against.
+        line = $0
+        while (match(line, /\[[^]]*\]\(#[a-z0-9_-]+\)/)) {
+          m = substr(line, RSTART, RLENGTH)
+          line = substr(line, RSTART + RLENGTH)
+          rt = m; sub(/^\[/, "", rt); sub(/\]\(#[a-z0-9_-]+\)$/, "", rt)
+          ra = m; sub(/^.*\]\(#/, "", ra); sub(/\)$/, "", ra)
+          # ONE-BASED, and the increment comes first. An uninitialised awk variable used as
+          # a subscript is the empty string, not zero, so `rowtext[nrow]` with nrow unset
+          # stored the first row under "" and a 0-based loop then read past it — the FIRST
+          # Contents row went unchecked while every later one worked.
+          if (ra != "fences" && (!example_file || rt !~ /^\(example\)/)) { nrow++; rowtext[nrow] = rt; rowanchor[nrow] = ra }
+        }
         next
       }
       /^### / {
         if (in_fences) { flush(); in_fences = 0 }
         s = trim(substr($0, 5))
         allhead[anchor(s)] = 1
-        if (!example_file || s !~ /^\(example\)/) { entry_lbl[s] = 1; head[anchor(s)] = s }
+        want_label = 0
+        if (!example_file || s !~ /^\(example\)/) { entry_lbl[s] = 1; head[anchor(s)] = s; cur_head = s; want_label = 1 }
         next
       }
-      !in_fences && !in_toc && /^- \*\*[^*]+\*\* — / {
+      # The label is `.+`, not `[^*]+`: nine fences in this very register carry an italic or a
+      # code span inside the label, and excluding `*` let every one of those shapes be restated
+      # outside `## Fences`, where nothing cross-checks it — the plain-label control was caught
+      # and the italic one was not. Greedy is right here because only the EXISTENCE of the fence
+      # signature matters, not which `**` pair closes the label.
+      !in_fences && !in_toc && /^- \*\*.+\*\* — / {
         printf "FAIL  %s, line %d: a fence-shaped bullet (`- **Label** — …`) outside `## Fences`. A fence stated\n      anywhere else is a fence nothing cross-checks; move it under Fences, or write the entry text\n      without the fence signature.\n", file, FNR; next
       }
       in_fences {
@@ -471,6 +515,39 @@ else
         if ($0 ~ /^[*+][ \t]/) { bad("a `*` or `+` bullet — use `-`"); next }
         bad("prose in the Fences section"); next
       }
+      # ---- the opening bold label of an entry body ----
+      # A decision heading is written down in four places here and two of them are checked
+      # elsewhere: the Contents anchor and the heading itself. This is the one nothing else
+      # can see. An entry can open its body with a bold label that disagrees with the heading
+      # above it, which costs more here than it would elsewhere: the whole register model is
+      # that a fence greps straight to its entry, and that bold label is what such a grep
+      # lands on.
+      #
+      # Scoped to DISAGREEMENT, not to presence. An entry opening with plain prose is left
+      # alone — the live register has such entries — so demanding the restatement would be a
+      # gate inventing a rule the rules header of the register never stated. The escape is
+      # therefore real and deliberate: delete the label and nothing fires. A heading with no
+      # restatement contradicts nothing; a heading with the WRONG restatement contradicts
+      # itself. These rules sit below the Fences block so that a line inside `## Fences`
+      # never reaches them.
+      !want_label { next }
+      /^[ \t]*$/ { next }
+      # A superseded marker is a BLOCKQUOTE, and the completion ritual puts one at every doc
+      # site still stating the old claim — so it lands directly under the heading, on exactly
+      # the path this check exists for: superseding is WHEN a heading gets renamed. Read as
+      # the body line, it silences the stale label below it.
+      /^[ \t]*>/ { next }
+      {
+        want_label = 0
+        if ($0 !~ /^\*\*/) next
+        s = $0; sub(/^\*\*/, "", s)
+        lab = label_of("- **" s)
+        if (lab == "")
+          printf "FAIL  %s: \"### %s\" opens its body with a `**` that never closes.\n      An unclosed label yields no label at all, so the one line that has to restate the\n      heading is never compared against it. It opens and closes on the FIRST body line: a\n      label wrapped onto a second line reads here as one that never closes.\n", file, cur_head
+        else if (lab != cur_head)
+          printf "FAIL  %s: \"### %s\" opens its body with the label \"%s\".\n      The bold label opening an entry restates its heading, and is what a fence greps to. A\n      label that does not match its heading is visible to no other check here: the heading is\n      right, the Contents row is right, and the two disagree only with each other.\n      A superseded marker belongs in a blockquote above the label, where it is skipped.\n", file, cur_head, lab
+        next
+      }
       END {
         flush()
         if (!toc_seen) printf "FAIL  %s has no `## Contents`. Fences and entries are found through it; without it the file is\n      read whole, which is the cost the layering exists to avoid.\n", file
@@ -485,6 +562,16 @@ else
           printf "FAIL  %s: \"### %s\" is absent from the Contents — findable only by reading the whole file,\n      which is the cost the layering exists to avoid.\n", file, head[a]
         for (a in seen) if (a != "fences" && !(a in allhead))
           printf "FAIL  %s: Contents links to #%s, which no `###` entry carries. A stale anchor sends the reader to\n      the top of the file; fix the link or the heading.\n", file, a
+        # Indexed rather than `for (i in rowtext)`: awk iterates an associative array in an
+        # unspecified order, so two bad rows would report in a different order on a different
+        # awk and the corpus would be flaky on exactly the machines it is meant to protect.
+        for (i = 1; i <= nrow; i++) {
+          if (anchor(rowtext[i]) == rowanchor[i]) continue
+          if (rowanchor[i] in head)
+            printf "FAIL  %s Contents: the row named \"%s\" links to \"#%s\", the anchor of \"### %s\".\n      A row that names one decision and points at another reads as correct from either end,\n      because the link still works — nothing looks broken until a reader trusts the name.\n", file, rowtext[i], rowanchor[i], head[rowanchor[i]]
+          else
+            printf "FAIL  %s Contents: the row named \"%s\" links to \"#%s\", but its own anchor is\n      \"#%s\". The Contents row is the only place a name and the link under it are written\n      side by side, so a disagreement between the two is checkable nowhere else.\n", file, rowtext[i], rowanchor[i], anchor(rowtext[i])
+        }
       }
     ' "$f" >> "$FAILS"
     [ -f "$FENCES" ] && check_pointers "$FENCES" "$f (Fences)"
@@ -569,8 +656,8 @@ fi
 
 # ── 8. Pointers out of the always-loaded files ─────────────────────────────────
 # The always-loaded set only, deliberately. A pointer that goes nowhere defeats the
-# layering these files defend: a session sent to a missing register reads the digest and
-# stops there. Link-checking every doc in the repo is a different job with a far wider
+# layering these files defend: a session sent to a missing area file reads the fence in the
+# router and stops there. Link-checking every doc in the repo is a different job with a far wider
 # false-positive surface, and is not this script business.
 #
 # This parser is code-span-BLIND on purpose: a pointer written in backticks is still one a
@@ -709,8 +796,12 @@ if [ -d "$PROCESS_DIR" ]; then
       the router, or shorten what the table names — and re-ratchet with headroom, never to fit the
       edit in hand."
     fi
-# 10a / 10b — router rows and part files are the same set.
-    for f in "$PROCESS_DIR"/*.md; do
+# 10a / 10b — router rows and part files are the same set. Flat, and enumerated with find
+    # rather than a glob: a part one directory down is where the next paragraph of process
+    # accretes unread, which is the reason 10a exists, and a dotfile is invisible to `*.md`.
+    refuse_deep_md "$PROCESS_DIR" "The method is one flat set, one file per router row;
+      a part a level down is routed by nothing and read by no one."
+    list_flat_md "$PROCESS_DIR" | while IFS= read -r f; do
       [ -f "$f" ] || continue
       [ "$f" = "$ROUTER" ] && continue
       grep -qxF "$f" "$LOADED" && continue   # always-loaded parts are routed by the OTHER table
@@ -726,6 +817,11 @@ if [ -d "$PROCESS_DIR" ]; then
 
     # 12 — rules: one path-scoped pointer per governed tree, body equal to the template.
     if [ -d "$RULES_DIR" ]; then
+      # The WORKING TREE, not the tracked set: `git ls-files` would be deterministic, and would
+      # also be empty in the corpus harness, which runs this script over a plain directory. The
+      # cost is stated rather than hidden — a glob matching only untracked or ignored files
+      # (a venv, a build dir) passes here and fails on a clean checkout, so 12d means "matches
+      # a file you have", not "matches a file the repo has".
       FILES="${TMPDIR:-/tmp}/docs-lint-files.$$"
       find . -path ./.git -prune -o -type f -print | sed 's|^\./||' > "$FILES"
       # Does any file match a glob of one of the four allowed forms? Anchored on a literal
@@ -741,10 +837,9 @@ if [ -d "$PROCESS_DIR" ]; then
           *)           grep -qxF "$1" "$FILES" ;;
         esac
       }
-      find "$RULES_DIR" -name '*.md' | sort | while IFS= read -r r; do
-        rel="${r#$RULES_DIR/}"
-        case "$rel" in */*) note "$r is in a subdirectory of $RULES_DIR/. Rules are one flat set, one per governed
-      tree, so the set can be enumerated by eye and by this script."; continue ;; esac
+      refuse_deep_md "$RULES_DIR" "Rules are one flat set, one per governed tree, so the set can be
+      enumerated by eye and by this script."
+      list_flat_md "$RULES_DIR" | while IFS= read -r r; do
         # 12a — frontmatter opens the file. Anything before it makes the rule ALWAYS-loaded.
         if [ "$(sed -n '1p' "$r" | tr -d '\r')" != "---" ]; then
           note "$r does not open with frontmatter at byte 0. Without it Claude Code loads the rule
@@ -815,6 +910,7 @@ if [ -d "$PROCESS_DIR" ]; then
     # roles directory gone entirely, a table routing to four ghosts must still fail.
     ROUTED="${TMPDIR:-/tmp}/docs-lint-routed.$$"
     : > "$ROUTED"
+    have_routing_table=1
     if [ -f "$ROUTING" ]; then
       awk -F'|' '
         index($0, "## The table") == 1 { t = 1; next }
@@ -824,17 +920,36 @@ if [ -d "$PROCESS_DIR" ]; then
           while (match(c, /`[a-z][a-z0-9-]*`/)) { print substr(c, RSTART + 1, RLENGTH - 2); c = substr(c, RSTART + RLENGTH) }
         }
       ' "$ROUTING" | sort -u > "$ROUTED"
+      # 13f — the heading is a PARSE ANCHOR (exact text, exact case), like the two in the
+      # router. Renaming it yields an empty roster, and an empty roster makes 13e report one
+      # confident falsehood per agent file — "not named in the routing table" for a table that
+      # names them all. Assert the anchor and skip what depends on it.
+      if [ ! -s "$ROUTED" ]; then
+        have_routing_table=0
+        note "$ROUTING has no \`## The table\` section with backticked agent names in its Agent column.
+      The heading is a parse anchor: with no roster, every check that depends on it reports a
+      falsehood — one \"not named in the routing table\" per role — instead of naming this."
+      fi
       while IFS= read -r n; do
         [ -n "$n" ] || continue
         [ -f "$AGENTS_DIR/$n.md" ] || note "$ROUTING routes to agent \`$n\`, but $AGENTS_DIR/$n.md does not exist."
       done < "$ROUTED"
     fi
-    if [ -d "$AGENTS_DIR" ] && ls "$AGENTS_DIR"/*.md >/dev/null 2>&1; then
+    # 13g — one flat set, the same guard the other three trees carry. Claude Code scans this
+    # directory RECURSIVELY, so a file one level down is loaded into a session while every
+    # check below — allowed model, name equals stem, named by the routing table — would
+    # never see it; a dotfile role escaped the same way until this used list_flat_md.
+    if [ -d "$AGENTS_DIR" ]; then
+      refuse_deep_md "$AGENTS_DIR" "Roles are one flat set, one per row of the routing table:
+      Claude Code loads a role a level down, and the checks here would not see it, so the file would
+      be live and unchecked at the same time."
+    fi
+    if [ -d "$AGENTS_DIR" ] && [ -n "$(list_flat_md "$AGENTS_DIR")" ]; then
       if [ ! -f "$ROUTING" ]; then
         note "$AGENTS_DIR/ has agent files but $ROUTING does not exist. The routing table is what says
       which job each agent and model is for; agents without it are habit, not routing."
       else
-        for a in "$AGENTS_DIR"/*.md; do
+        list_flat_md "$AGENTS_DIR" | while IFS= read -r a; do
           stem=$(basename "$a" .md)
           if [ "$(sed -n '1p' "$a" | tr -d '\r')" != "---" ]; then
             note "$a has no frontmatter at byte 0, so it declares no name and no model — the
@@ -849,6 +964,7 @@ if [ -d "$PROCESS_DIR" ]; then
             *) note "$a declares model \"$model\". Allowed: sonnet, opus, haiku, fable. \`inherit\` and an empty
       model both take whatever the parent runs on, which is exactly what routing by job exists to stop." ;;
           esac
+          [ "$have_routing_table" -eq 1 ] || continue   # a missing anchor is reported once above, not once per agent
           grep -qxF "$stem" "$ROUTED" || note "$a is not named in $ROUTING (## The table, Agent column). An agent the table
       does not route to is a role nobody is told to use."
         done
@@ -858,5 +974,231 @@ if [ -d "$PROCESS_DIR" ]; then
     rm -f "$LOADED" "$PARTS" "$IMPORTS"
   fi
 fi
+
+
+# ── 14. A dated measurement in the standing tier carries an anchor ────────────
+#
+# WRITTEN IN LOG-FORGE, and the history below is that repo's: every site, commit and
+# percentage named in this block was measured there, on its tree, and is kept because the
+# reasoning is the check's specification. Where it says "this repo" it means log-forge.
+#
+# completion-ritual.md: "Standing rules never cite volatile numbers ... Dating the measurement
+# does not save it." That rule was stated, and violated in the tier it governs, at eight
+# sites at once — including that section itself, which carried the dated-measurement
+# example AND argued that the date was what made it safe. The architecture.md §12 entry
+# added by dcb07c3 was one line stale in dcb07c3 itself and outright wrong in a58dfff,
+# the very next commit.
+#
+# So this is the half of that rule a script can hold: a dated measurement must carry a
+# commit a reader can re-measure from. A date says WHEN someone looked. It does not say
+# AT WHAT, and a reader who does not check it against a calendar reads it as current.
+#
+# WHAT IT CATCHES, exactly: a bullet, paragraph or comment block in which "measured" or
+# "as of" is followed by an ISO date — immediately, or across one adverb of time from a
+# closed set (today, now, recently, here, again, … — the list is beside the check, and
+# `once` is deliberately not in it) — with no short SHA or version tag in that same unit.
+#
+# THAT IS ONE SHAPE, NOT THE POPULATION, and the difference is worth stating plainly
+# because the next person to widen this will read it. Of the eight sites the commit that
+# added this check had to fix, exactly ONE matched — architecture.md §12. Both
+# pyproject.toml sites carried a bare count with no date at all; the spec-authoring rules wrote the
+# date six words from the word; the completion ritual carried a byte pair with no date. So this
+# check does not close the defect class. It closes the sub-shape that DATING creates: a
+# number sitting beside a recent date, which is the form that reads as current and
+# therefore never gets re-checked. An undated number at least still looks like something
+# to verify.
+#
+# Narrow on purpose, and the narrowness is a false-negative choice, not a coverage claim.
+# A SIBLING TRIGGER WAS BUILT AND REJECTED ON MEASUREMENT, not on taste: a transition
+# ("146 -> 222") whose unit carries fewer than two distinct SHAs. It failed both ways at
+# once. It fired on CODE — an awk program inside this script and two in spec-lint.sh, where
+# a digit, a `->` and another digit share a block — and it stayed SILENT on the exact site
+# it was written for, because the unit is the whole comment block and a neighbouring
+# sentence three lines up carried two SHAs of its own. Catching that site needs
+# sentence-granularity, which awk does not have and this script does not buy. What replaced it
+# is a rule rather than a check: a standing comment states the current measurement with one
+# anchor, or states the principle — it does not write a transition with one end anchored
+# and the other on the word "here", which is the shape that went stale one commit later.
+#
+# A trigger wide enough to catch the other seven would have to fire on any number near
+# any date, which is ordinary prose in every one of these files — and a doc gate that
+# fires on ordinary prose is a doc gate that gets commented out. The rest stays with
+# completion-ritual.md, to be caught by reading. If a future sweep finds a second idiom actually
+# in use, add it here and add a fixture for it; do not widen this into a number detector.
+#
+# THE ANCHOR IS SOUGHT OVER THE WHOLE UNIT, not the line, because the anchor and the
+# number routinely wrap apart. That is a deliberate false-NEGATIVE — an unrelated SHA
+# elsewhere in the same unit silences the check for it — and it is only tolerable while a
+# UNIT STAYS SHORT ENOUGH TO READ. So what ends a unit is load-bearing, not incidental:
+# a blank line, a fence, a list marker, a markdown heading, and, outside markdown, ANY
+# LINE THAT IS NOT A COMMENT. That last one was missing when this check first covered
+# .toml/.sh/.yml, and the cost was measured before it was added: sweeping an unanchored
+# measurement through every insertion position of this repo left 27-41% of positions in
+# those files silent, against 8-16% in its markdown, because a comment block ran on
+# across intervening CODE until the next blank line. One SHA in a comment silenced a
+# 15-line array 13 lines below it.
+#
+# What remains unbounded: a run of ordinary non-comment lines is one unit. In markdown
+# that is a paragraph, which is the reading-distance case this rule was designed around.
+# In a source file it is code — and the tempting sentence, that a dated measurement is
+# not written in code, is FALSE and was written here before it was checked. An INLINE
+# comment is not a comment LINE: `fetch-depth: 0  # Measured 2026-09-05: 42 s` joins the
+# surrounding code run, and any SHA in that run silences it. Under .github that is not a
+# corner case but the norm, since every `uses:` pins its action by SHA — measured on
+# release.yml, an inline measurement two lines below a pin is silent while the same text
+# on its own comment line fires.
+#
+# Not closed here, because closing it means telling a comment from a `#` inside a string
+# in four languages. The remedy is one sentence to an author instead: WRITE A MEASUREMENT
+# ON ITS OWN COMMENT LINE, where the bound applies. An unbalanced fence is the other
+# knowing escape — a lone ``` at column 0, in any file type, silences everything below
+# it to EOF, and nothing here notices.
+#
+# ── the population ──
+#
+# NOT MARKDOWN ONLY. log-forge's architecture §5 says exactly why: "the pointers that rot
+# unseen are in SOURCE files — .py docstrings, .toml comments, .yml steps. A markdown-only
+# sweep reports the tree clean." Two of the eight sites this check was written for were
+# pyproject.toml comments, and a third was a docstring in scripts/. A gate blind to the
+# files where a quarter of the known instances lived is half a gate.
+#
+#   IN:  every *.md at the root (CLAUDE.md, README.md, SECURITY.md and any that join
+#        them); docs/**.md except the frozen-record trees below; pyproject.toml when the
+#        repo has one; scripts/**; every *.yml and *.yaml under .github, which is workflows AND the
+#        composite actions and dependabot.yml beside them — those pin third-party code
+#        by SHA and carry the same kind of comment. Both spellings of the extension,
+#        because a glob that knows only one silently drops the other.
+#   OUT: docs/specs, docs/spec-delivery, docs/templates — and, in a consumer that keeps
+#        them, docs/audits and docs/release-notes — FROZEN RECORDS, not standing rules. An
+#        audit dated 2026-08-07 is a report of what was true then, and demanding an anchor
+#        from it demands an anchor from history.
+#   OUT: src/ — deliberately, and not because it is clean. Its docstrings anchor to SPEC
+#        numbers by convention rather than to commits, which is a different anchoring
+#        scheme; whether a spec number is an acceptable anchor is a decision nobody has
+#        taken, and this check must not take it by accident. Recorded, not chased.
+#   OUT: tests/ — tests/docs-lint/*.case carry the WRONG form on purpose. A gate that
+#        fails on its own fixture corpus is a gate that gets switched off within a week.
+#
+# The docs half is derived BY EXCLUSION so a standing doc written tomorrow, in a
+# directory that does not exist yet, is covered without anyone remembering to list it.
+{
+  for f in *.md; do [ -f "$f" ] && printf '%s\n' "$f"; done
+  [ -f pyproject.toml ] && printf 'pyproject.toml\n'
+  if [ -d docs ];    then find docs -type f -name '*.md' -print | sort; fi
+  if [ -d scripts ]; then find scripts -type f -print | sort; fi
+  if [ -d .github ]; then find .github -type f \( -name '*.yml' -o -name '*.yaml' \) -print | sort; fi
+} | while IFS= read -r f; do
+    # FROZEN RECORDS, excluded by tree. A consumer that keeps another kind — audits, release
+    # notes, an archive — adds its directory here; the scaffold ships the three it creates.
+    case "$f" in
+      docs/specs/*|docs/spec-delivery/*|docs/templates/*|docs/audits/*|docs/release-notes/*) continue ;;
+    esac
+    [ -f "$f" ] || continue
+    # `#` opens a heading in markdown and a COMMENT in everything else, and the two want
+    # opposite unit rules: a heading is its own unit, while consecutive comment lines are
+    # one block that an anchor may wrap into. Getting this wrong makes every comment line
+    # its own unit, so an anchor on the next line stops counting — which is precisely how
+    # the pyproject.toml sites are written.
+    md=0
+    case "$f" in *.md) md=1 ;; esac
+    awk -v file="$f" -v md="$md" '
+      # An anchor is a short SHA, and ONLY a short SHA. Two other forms were tried and
+      # rejected on evidence rather than taste. A version TAG names a tree as exactly as
+      # a SHA does, so it looked like an obvious second form — but version numbers appear
+      # in these files for a dozen unrelated reasons, and accepting `vN.N.N` silenced a
+      # 37-line region of pyproject.toml on the strength of two release numbers in a
+      # classifiers block that anchor nothing. A 7-hex token in prose is almost always an
+      # anchor; a version number almost never is. A PR number was never a candidate: it
+      # names a change, not a tree, and cannot be re-measured without the network.
+      #
+      # A short SHA is a hex run of 7+ starting and ending at a non-alphanumeric
+      # boundary, containing at least one DIGIT. The digit is what keeps English out:
+      # "defaced" is seven hex characters and a word, and silencing this check on it
+      # would be a false negative dressed as a feature. A real short SHA without a
+      # digit is possible and vanishingly rare (about one in 700). The converse is
+      # accepted knowingly: a bare seven-digit decimal is all hex characters and would
+      # silence the check too — and the likeliest such number is THE MEASURED VALUE
+      # ITSELF, not some unrelated token elsewhere in the unit, so
+      # "Measured 2026-09-05: 1234567 events" silences its own violation while the same
+      # figure written 1,234,567 does not. Requiring a LETTER as well would close it and
+      # would reject the roughly one short SHA in 25 that is all digits, which is the
+      # worse trade: that failure is loud and fixed by pasting one more character, and
+      # this one is silent.
+      function has_anchor(s,   i, n, c, run, digits, dirty) {
+        n = length(s); run = 0; digits = 0; dirty = 0
+        for (i = 1; i <= n + 1; i++) {
+          c = (i <= n) ? substr(s, i, 1) : " "
+          if (c ~ /^[0-9a-f]$/)        { run++; if (c ~ /^[0-9]$/) digits++ }
+          else if (c ~ /^[0-9A-Za-z]$/) { dirty = 1; run = 0; digits = 0 }
+          else {
+            if (!dirty && run >= 7 && digits > 0) return 1
+            run = 0; digits = 0; dirty = 0
+          }
+        }
+        return 0
+      }
+      # The separators are the ones this repo actually writes: "Measured 2026-09-01",
+      # "Measured, on `f17edd4`", "measured at e565e22". Leaving `at` and the comma out
+      # made the two likeliest honest spellings escape while the rule was being followed.
+      # ONE ADVERB OF TIME may sit between the verb and the date, from a closed set. The gap
+      # was found while the queue paragraphs in docs/process/ were being drafted: both were
+      # first written as "Measured here on <date>" with no SHA, this check stayed silent on
+      # them, and a read of the draft caught what the gate had not. Those sentences were
+      # anchored before they committed, so the evidence a reader can re-run is the FIXTURE
+      # SET, not the history.
+      #
+      # A CLOSED SET, not a bounded run of letters, and the difference is the whole design.
+      # The bounded version was built first and rejected on a real false positive: "as of the
+      # 2026-08-04 correction below" — a date that NAMES A THING rather than recording when
+      # someone looked — fired under it and is silent here. (An earlier draft of this comment
+      # claimed "measured against the 2026-08-01 baseline" fired under the bound too; measured,
+      # it does not — "the" sits between the adverb slot and the date. The unhedged form,
+      # "measured against 2026-08-01 baseline", is the one that fires. Corrected here rather
+      # than left standing, since the comment says the next person to widen this will read it.)
+      # The FAIL text has no remedy to offer such a sentence — no number to drop, no tree to
+      # anchor — so the moves left are a decorative SHA or learning to skip a local gate, which
+      # is the damage this check exists to avoid.
+      #
+      # THE SET IS THE ORDINARY ADVERBS OF TIME, and it has to be: a first cut carried only
+      # five and lost everything the bound had caught, so "Measured today on <date>" shipped
+      # green — likelier prose than the "here" that prompted the widening. What is deliberately
+      # OUT is `once`, which doubles as a conjunction ("Measured once 2026-08-01 landed" names
+      # an event, not a measurement), and every determiner and preposition, which is what keeps
+      # `as of the <date> <noun>` and `measured against the <date> baseline` silent. A trailing
+      # comma is taken after the adverb as well as before it, because "Measured here, on <date>"
+      # is the same claim with a pause in it.
+      function dated(s) {
+        return tolower(s) ~ /(measured|as of)[ \t]*[,:]?[ \t]*((here|again|twice|already|today|now|yesterday|recently|just|lately|then|still|finally|first|initially|currently|originally)[ \t]*[,:]?[ \t]*)?((on|at|in)[ \t]+)?20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
+      }
+      function flush(   where, what) {
+        if (unit != "" && dated(unit) && !has_anchor(unit)) {
+          where = hitline ? hitline : ustart
+          what  = hitline ? hittext : unit
+          printf "FAIL  %s:%d carries a dated measurement with no commit to re-measure from.\n      %s\n      A date says WHEN someone looked, not at what: a dated number still reads as\n      current to anyone not checking it against a calendar. Either drop the number and\n      state the principle, or anchor the evidence to a short commit SHA in the same\n      bullet, paragraph or comment block. A version tag is not accepted; the comment\n      beside this check says why. Quoting the wrong form on purpose? Put it in a fenced\n      block, which this check skips. See completion-ritual.md, never cite volatile numbers.\n",
+                 file, where, substr(what, 1, 90)
+        }
+        unit = ""; hitline = 0; ukind = ""
+      }
+      # In a non-markdown file, is this line a comment or is it not? A unit may not span
+      # the two. `kind` reads $0 directly, so it is only meaningful inside a line rule.
+      function kind() { return ($0 ~ /^[ \t]*#/) ? "c" : "p" }
+      function take(   s) {
+        if (unit == "") { unit = $0; ustart = FNR; ukind = kind() }
+        else { s = $0; sub(/^[ \t]+/, "", s); unit = unit " " s }
+        if (!hitline && dated($0)) { hitline = FNR; hittext = $0 }
+      }
+      FNR == 1 { flush(); fence = 0 }
+      { sub(/\r$/, "") }
+      /^[ \t]*(```|~~~)/                { flush(); fence = !fence; next }
+      fence                             { next }
+      /^[ \t]*$/                        { flush(); next }
+      md && /^[ \t]*#/                  { flush(); take(); next }
+      /^[ \t]*([-*+]|[0-9]+[.)])[ \t]/  { flush(); take(); next }
+      !md && unit != "" && kind() != ukind { flush() }
+                                        { take() }
+      END { flush() }
+    ' "$f" >> "$FAILS"
+  done
+
 
 report

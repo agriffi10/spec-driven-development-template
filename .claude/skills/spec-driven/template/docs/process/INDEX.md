@@ -36,7 +36,8 @@ recursion, which is the cost this layout exists to avoid.
 | `docs/process/operational-traps.md` | traps that pass locally and bite in CI or on deploy — project-specific, seeded as they bite | before the first CI- or deploy-dependent step of a build |
 | `docs/process/ground-rules.md` | the project's load-bearing constraints | when adding a dependency or a constraint |
 
-Every `*.md` in this directory other than the router is a row here, and every row is a file — an
+Every `*.md` in this directory other than the router is a row in one of the two tables above, and
+every row is a file — an
 unrouted part is where the next paragraph of process accretes unread, so `scripts/docs-lint.sh`
 holds the two sets equal.
 

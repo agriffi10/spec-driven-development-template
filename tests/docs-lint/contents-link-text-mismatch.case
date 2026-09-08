@@ -1,0 +1,50 @@
+@@@ expect exit=1
+@@@ match links to "#beta-rule", the anchor of "### Beta rule"
+@@@ match nothing looks broken until a reader trusts the name
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+Intro prose; every decision is a fence in its area file.
+
+| Area | Fences |
+|---|---|
+| Area one | `docs/decisions/area-one.md#fences` |
+
+## Out of Scope
+
+nothing
+@@@ file docs/decisions/INDEX.md
+# Key Decisions — the register
+
+## Areas
+
+| Area | Fences | Governs |
+|---|---|---|
+| Area one | `docs/decisions/area-one.md#fences` | none |
+@@@ file docs/decisions/area-one.md
+# Area one — decisions
+
+intro
+
+## Contents
+
+- [Fences](#fences)
+- [Alpha rule](#alpha-rule)
+- [Alpha rule, renamed and never relinked](#beta-rule)
+
+## Fences
+
+- **Alpha rule** — short claim and its fence.
+- **Beta rule** — short claim and its fence.
+
+---
+
+### Alpha rule
+
+Reasoning.
+
+### Beta rule
+
+Reasoning.

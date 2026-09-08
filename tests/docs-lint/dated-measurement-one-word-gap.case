@@ -1,0 +1,50 @@
+@@@ expect exit=1
+@@@ match carries a dated measurement with no commit
+@@@ match docs/architecture.md:4
+@@@ file docs/architecture.md
+# Architecture
+
+- **Two modules are unsplit** (SPEC-040).
+  Measured here on 2026-09-01: 1,398 and 1,887 lines. Neither is a defect; both are recorded.
+
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+Intro prose; every decision is a fence in its area file.
+
+| Area | Fences |
+|---|---|
+| Area one | `docs/decisions/area-one.md#fences` |
+
+## Out of Scope
+
+nothing
+@@@ file docs/decisions/INDEX.md
+# Key Decisions — the register
+
+## Areas
+
+| Area | Fences | Governs |
+|---|---|---|
+| Area one | `docs/decisions/area-one.md#fences` | none |
+@@@ file docs/decisions/area-one.md
+# Area one — decisions
+
+intro
+
+## Contents
+
+- [Fences](#fences)
+- [Alpha rule](#alpha-rule)
+
+## Fences
+
+- **Alpha rule** — short claim and its fence.
+
+---
+
+### Alpha rule
+
+Reasoning.

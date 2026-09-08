@@ -1,0 +1,68 @@
+@@@ expect exit=0
+@@@ file docs/audits/2026-08-07-pre-1.0.md
+# Audit
+
+Measured 2026-08-07: 5,980 events in one emit.
+
+@@@ file docs/specs/SPEC-099-example.md
+# SPEC-099
+
+Measured 2026-09-01: 1,398 lines.
+
+@@@ file docs/spec-delivery/SPEC-099-example.md
+# Completed Spec
+
+Measured 2026-09-01: 1,398 lines.
+
+@@@ file docs/release-notes/v1.0.0.md
+# v1.0.0
+
+Measured 2026-09-01: 1,398 lines.
+
+@@@ file docs/templates/spec-template.md
+# Template
+
+Measured 2026-09-01: 1,398 lines.
+
+@@@ file CLAUDE.md
+# Project
+
+## Key Decisions
+
+Intro prose; every decision is a fence in its area file.
+
+| Area | Fences |
+|---|---|
+| Area one | `docs/decisions/area-one.md#fences` |
+
+## Out of Scope
+
+nothing
+
+@@@ file docs/decisions/INDEX.md
+# Key Decisions — the register
+
+## Areas
+
+| Area | Fences | Governs |
+|---|---|---|
+| Area one | `docs/decisions/area-one.md#fences` | none |
+@@@ file docs/decisions/area-one.md
+# Area one — decisions
+
+intro
+
+## Contents
+
+- [Fences](#fences)
+- [Alpha rule](#alpha-rule)
+
+## Fences
+
+- **Alpha rule** — short claim and its fence.
+
+---
+
+### Alpha rule
+
+Reasoning.
