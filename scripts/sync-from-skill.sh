@@ -20,6 +20,7 @@ SKILL_TEMPLATE="$ROOT/.claude/skills/spec-driven/template"
 # script (scripts/sync-from-skill.sh) is left untouched.
 cp -R "$SKILL_TEMPLATE/." "$ROOT/"
 chmod +x "$ROOT/scripts/spec-lint.sh" \
+         "$ROOT/scripts/spec-lint-test.sh" \
          "$ROOT/scripts/docs-lint.sh" \
          "$ROOT/scripts/docs-lint-test.sh" \
          "$ROOT/scripts/pr-queue-test.sh" \

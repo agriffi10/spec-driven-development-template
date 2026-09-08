@@ -54,7 +54,7 @@ four before the first push.
 - Before pushing, run the project's **formatter, linter, typecheck and unit tests** locally and get
   them green. These quality gates are a pre-push step — don't push red and leave CI to discover it.
   **`sh scripts/docs-lint.sh` is in that set and nothing in CI runs it** — plus
-  `sh scripts/docs-lint-test.sh` whenever the linter itself changed, and
+  `sh scripts/docs-lint-test.sh` or `sh scripts/spec-lint-test.sh` whenever that linter itself changed, and
   `sh scripts/pr-queue-test.sh` whenever the queue or its hook changed, and
   `sh scripts/pr-queue/install-test.sh` whenever its installer changed.
 - **The gates a document names are a floor, not the set — before every push, also run locally

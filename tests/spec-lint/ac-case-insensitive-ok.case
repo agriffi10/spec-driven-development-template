@@ -1,0 +1,34 @@
+@@@ expect exit=0
+@@@ absent no 'Acceptance Criteria'
+@@@ file docs/specs/SPEC-001-x.md
+# Spec: X
+
+**ID:** SPEC-001
+**Status:** Draft
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+### FR-001: Thing 1
+
+#### Description:
+
+What it does.
+
+#### acceptance criteria:
+
+- a
+
+## Implementation Phases
+
+prose
+

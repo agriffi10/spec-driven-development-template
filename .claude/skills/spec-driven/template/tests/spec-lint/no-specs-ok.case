@@ -1,0 +1,4 @@
+@@@ expect exit=0
+@@@ match no SPEC-*.md files in docs/specs (nothing to check)
+@@@ file docs/specs/notes.md
+not a spec

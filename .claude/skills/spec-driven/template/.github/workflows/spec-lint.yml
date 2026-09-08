@@ -4,15 +4,41 @@ on:
   pull_request:
     paths:
       - "docs/specs/**"
+      - "docs/templates/spec-template.md"
       - "scripts/spec-lint.sh"
+      - "scripts/spec-lint-test.sh"
+      - "tests/spec-lint/**"
       - ".github/workflows/spec-lint.yml"
+  # The same filter as the pull_request trigger above, by choice: the lint reads `docs/specs/`
+  # and the scripts that lint it, so a merge touching neither cannot change the verdict, and
+  # `main`'s status for this workflow is the last run that could. What the filter costs is a
+  # status on every merge; what it saves is a run over an identical tree. If this check is
+  # marked REQUIRED for the branch, remove the `paths:` filter from `pull_request` above — a
+  # workflow skipped by path filtering leaves its check Pending and blocks the merge.
   push:
     branches: [main]
+    paths:
+      - "docs/specs/**"
+      - "docs/templates/spec-template.md"
+      - "scripts/spec-lint.sh"
+      - "scripts/spec-lint-test.sh"
+      - "tests/spec-lint/**"
+      - ".github/workflows/spec-lint.yml"
+
+permissions:
+  contents: read
 
 jobs:
   spec-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false   # nothing here runs git; don't leave a token on disk
+      # The corpus first: a green lint over the live specs proves the specs pass, and only the
+      # corpus proves a check still fires. The spec template is in the paths above because the
+      # corpus lints an unfilled copy of it as a case of its own.
+      - name: Run the spec-lint corpus
+        run: sh scripts/spec-lint-test.sh
       - name: Run spec-lint
         run: sh scripts/spec-lint.sh docs/specs

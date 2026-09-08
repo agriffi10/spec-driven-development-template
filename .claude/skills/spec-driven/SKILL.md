@@ -38,14 +38,15 @@ When a repo has no spec-driven docs yet:
    `scripts/`, `tests/`, `.github/`, and `.claude/rules/` + `.claude/agents/` (the path-scoped
    pointers and the model-routed subagent roles). Copy the whole tree rather than working from a
    list: `sync-from-skill.sh` does (`cp -R`), and the list that used to stand here omitted `tests/`,
-   which ships `docs-lint-test.sh` with no fixtures — it finds nothing, passes, and exits 0, so the
-   scaffold arrives with a gate-corpus that proves nothing. **Do not clobber** existing files — if `CLAUDE.md`, a PR template, or a workflow already
+   which ships both fixture corpora — without it `docs-lint-test.sh` finds nothing, passes, and
+   exits 0, and `spec-lint-test.sh` fails its case floor — so the scaffold arrives with a
+   gate-corpus that proves nothing, or none at all. **Do not clobber** existing files — if `CLAUDE.md`, a PR template, or a workflow already
    exists, merge rather than overwrite, and tell the user what you merged.
    🔴 **If the repo you are scaffolding is the template repo itself**, stop: its root is a generated
    mirror of `template/`, `scripts/sync-from-skill.sh` regenerates it, and edits belong in `template/`
    followed by a sync. Steps 3 and 6 below would fill in the mirror and delete `ci.yml.example`, which
    must survive there.
-2. `chmod +x scripts/spec-lint.sh scripts/docs-lint.sh scripts/docs-lint-test.sh scripts/pr-queue-test.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh scripts/pr-queue/install-test.sh`.
+2. `chmod +x scripts/spec-lint.sh scripts/spec-lint-test.sh scripts/docs-lint.sh scripts/docs-lint-test.sh scripts/pr-queue-test.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh scripts/pr-queue/install-test.sh`.
 3. Fill in the placeholders in `CLAUDE.md` (Project Overview, Layout, Tech Stack, Code Conventions,
    Common Commands) from what the repo actually is — detect the language/build/test/lint tooling from
    the manifest (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, …) rather than guessing.
@@ -69,7 +70,7 @@ When a repo has no spec-driven docs yet:
    that would fail — if a check doesn't apply, drop it. This makes "land on green CI" cover the language
    gates, not just spec-lint.
 7. Run `sh scripts/spec-lint.sh` and `sh scripts/docs-lint.sh` to confirm both pass (each no-ops or
-   passes cleanly on a fresh scaffold). Then run `sh scripts/docs-lint-test.sh` and
+   passes cleanly on a fresh scaffold). Then run `sh scripts/spec-lint-test.sh`, `sh scripts/docs-lint-test.sh`,
    `sh scripts/pr-queue-test.sh` and `sh scripts/pr-queue/install-test.sh` and **check the case
    COUNTS, not the exit status** — each reports "N passed"; an N of 0 means the fixtures did not
    arrive, and an empty corpus exits 0 exactly like a healthy one.
@@ -168,7 +169,9 @@ right one, and when unsure it is one tier up, never down.
 section (`## Overview`, `## Scope`, `## Functional Requirements`, `## Implementation Phases`), or
 containing an `Open Questions` / `Checkpoint` heading. **WARN** (exit 0): unfilled placeholders, a
 spec with FRs but no acceptance criteria anywhere in it, and a spec carrying more than
-`FR_CEILING` (8) distinct FRs. POSIX `sh` — no runtime dependency.
+`FR_CEILING` (8) distinct FRs. POSIX `sh` — no runtime dependency. `scripts/spec-lint-test.sh` is its
+fixture corpus (`tests/spec-lint/*.case`, plus an unfilled copy of the spec template as a live case):
+CI runs it before the lint, and a change to the linter runs it locally.
 
 ## docs-lint reference
 

@@ -1,0 +1,55 @@
+@@@ expect exit=1
+@@@ match ok    docs/specs/SPEC-001-x.md
+@@@ match FAIL  docs/specs/SPEC-002-y.md: missing required section '## Scope'
+@@@ match 1 file(s) failed
+@@@ absent ok    docs/specs/SPEC-002-y.md
+@@@ file docs/specs/SPEC-001-x.md
+# Spec: X
+
+**ID:** SPEC-001
+**Status:** Draft
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+### FR-001: Thing 1
+
+#### Description:
+
+What it does.
+
+#### Acceptance Criteria:
+
+- a
+
+## Implementation Phases
+
+prose
+
+@@@ file docs/specs/SPEC-002-y.md
+# Spec: X
+
+**ID:** SPEC-001
+**Status:** Draft
+
+## Overview
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

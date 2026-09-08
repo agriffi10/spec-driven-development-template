@@ -1,0 +1,74 @@
+@@@ expect exit=0
+@@@ absent over the 3 ceiling
+@@@ file docs/specs/SPEC-001-x.md
+# Spec: X
+
+**ID:** SPEC-001
+**Status:** Draft
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+### FR-001: Thing 1
+
+#### Description:
+
+What it does.
+
+#### Acceptance Criteria:
+
+- a
+
+### FR-002: Thing 2
+
+#### Description:
+
+What it does.
+
+#### Acceptance Criteria:
+
+- a
+
+### FR-003: Thing 3
+
+#### Description:
+
+What it does.
+
+#### Acceptance Criteria:
+
+- a
+
+## FR-004: Thing 4
+
+#### Description:
+
+What it does.
+
+#### Acceptance Criteria:
+
+- a
+
+#### FR-005: Thing 5
+
+#### Description:
+
+What it does.
+
+#### Acceptance Criteria:
+
+- a
+
+## Implementation Phases
+
+prose
+

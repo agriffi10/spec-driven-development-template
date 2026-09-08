@@ -30,7 +30,8 @@
 - [ ] Tests pass (added/updated where behavior changed)
 - [ ] `sh scripts/spec-lint.sh` passes
 - [ ] `sh scripts/docs-lint.sh` passes
-- [ ] `sh scripts/docs-lint-test.sh` passes (only if you changed the linter)
+- [ ] `sh scripts/docs-lint-test.sh` passes (only if you changed the doc linter)
+- [ ] `sh scripts/spec-lint-test.sh` passes (only if you changed the spec linter, its template or its cases)
 - [ ] `sh scripts/pr-queue-test.sh` passes, sweep included (only if you changed the queue or its hook)
 - [ ] `sh scripts/pr-queue/install-test.sh` passes (only if you changed the installer)
 - [ ] Every CI job that *can* run locally was run locally first — this list is a floor, not the set

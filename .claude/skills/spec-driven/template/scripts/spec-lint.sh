@@ -12,10 +12,19 @@
 #
 # Usage: scripts/spec-lint.sh [spec-dir]     (default: docs/specs)
 # POSIX sh — no bashisms; runs anywhere /bin/sh exists.
+#
+# `scripts/spec-lint-test.sh` is the fixture corpus that proves each check still fires, and
+# stays silent where it should. Running this over docs/specs/ proves the specs pass and nothing
+# about whether any check works. A change here runs the corpus; CI runs it before the lint.
 
 set -eu
 
 SPEC_DIR="${1:-docs/specs}"
+# Scratch for the per-file section check, under $TMPDIR rather than a hardcoded /tmp, and
+# removed on every exit path rather than only after a clean pass.
+MISSING="${TMPDIR:-/tmp}/spec-lint-missing.$$"
+trap 'rm -f "$MISSING"' EXIT
+trap 'exit 1' INT TERM
 
 # Above this many FRs, a spec has usually stopped being one buildable slice and
 # wants splitting into two specs recorded as an arc (docs/process/authoring-a-spec.md).
@@ -32,6 +41,14 @@ required_sections="## Overview
 # Headings (any level) that must NOT appear.
 banned_headers="Open Questions|Checkpoint"
 
+# A spec directory that does not exist is not an empty one. The empty case is a fresh repo with
+# nothing to check yet; the missing case is a renamed or mis-typed directory, and a lint that
+# reports "nothing to check" over it goes green in CI for the same reason a vanished corpus
+# would — so it fails, loudly, and the runner has a case for it.
+if [ ! -d "$SPEC_DIR" ]; then
+  echo "FAIL  $SPEC_DIR is not a directory, so nothing was linted. Pass the spec directory, or create it."
+  exit 1
+fi
 specs=$(find "$SPEC_DIR" -maxdepth 1 -type f -name 'SPEC-*.md' 2>/dev/null | sort || true)
 
 # Split the list on newlines only — an unquoted expansion on default IFS turns a
@@ -51,14 +68,14 @@ for f in $specs; do
   echo "$required_sections" | while IFS= read -r sec; do
     [ -n "$sec" ] || continue
     grep -qiE "^${sec}([[:space:]]|\$)" "$f" || echo "MISSING|$sec"
-  done > /tmp/spec-lint-missing.$$
-  if [ -s /tmp/spec-lint-missing.$$ ]; then
+  done > "$MISSING"
+  if [ -s "$MISSING" ]; then
     while IFS='|' read -r _ sec; do
       echo "FAIL  $f: missing required section '$sec'"
-    done < /tmp/spec-lint-missing.$$
+    done < "$MISSING"
     file_fail=1
   fi
-  rm -f /tmp/spec-lint-missing.$$
+  rm -f "$MISSING"
 
   # --- banned headers (any heading level) ---
   if grep -qiE "^#{1,6}[[:space:]].*(${banned_headers})" "$f"; then
