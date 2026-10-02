@@ -1,8 +1,9 @@
 # Completion ritual (keep the always-loaded tier lean)
 
 When a spec is done, in the same pass:
-1. Set the spec file header `Status: Completed`.
-2. Update its one-line row in `docs/specs/INDEX.md` (**status only** — no prose).
+1. Set the spec's frontmatter `spec_status: Completed`.
+2. Regenerate the indexes — `sh scripts/gen-index.sh` — and commit them with it. They are never edited
+   by hand; `docs-lint.sh` fails one that is stale.
 3. Write a **short** delivery doc at `docs/spec-delivery/SPEC-XXX-<name>.md` from
    `docs/templates/spec-completion-template.md` — *what shipped + what changed*, typically under a
    page (~40–100 lines), **no code/config pasted** (the code + component-inventory are the source of
@@ -35,7 +36,7 @@ When a spec is done, in the same pass:
 7. **Prune `CLAUDE.md`'s `## Specs`** of whatever the closed spec made stale. Its **Current work**
    line carries the spec in progress or `none — next work unplanned`, and the section carries nothing
    that is recorded elsewhere — never a changelog:
-   a closed spec's row is in `docs/specs/INDEX.md` and its delivery doc says what shipped, so its
+   a closed spec's status is in its frontmatter and its delivery doc says what shipped, so its
    line here is a line every future session pays for and nobody reads.
 
 **Anti-regrowth & doc hygiene** (each rule below was earned by a real doc defect in a project run
@@ -63,10 +64,10 @@ this way):
   and neither is checked, so they drift silently and the reader follows the wrong one.
 - **Status never appears in the heading of a doc whose status can change** — an arc, an
   `architecture.md` section, a `docs/decisions/` entry. It rots the day the next spec lands, and a
-  reader who greps the heading gets an answer that was true once. Status lives in `INDEX.md` and the
-  spec header — the two places the completion ritual keeps in step **by hand**, since `spec-lint.sh`
-  does not compare them. (A delivery doc's `# Completed Spec — …` title is not this: it names a
-  finished record whose status cannot change.)
+  reader who greps the heading gets an answer that was true once. A spec's status lives in one place,
+  its frontmatter `spec_status`; `docs/specs/index.yaml` is generated from it and `docs-lint.sh` fails
+  the index when it is stale, so there is no second copy to keep in step by hand. (A delivery doc's
+  `# Completed Spec — …` title is not this: it names a finished record whose status cannot change.)
 - **A heading in a doc read by SUBJECT names the subject, not the spec that produced it** — that is
   `architecture.md` and the rulebooks, where a reader arrives asking how a thing works, never "what
   did SPEC-168 decide". The scope is deliberate and stops there: a `docs/decisions/` entry IS a record
@@ -106,7 +107,8 @@ this way):
   with its continuations — to a length, a `###` entry for every fence and a fence for every entry, every
   entry in the file's Contents — named by the row that reaches it, and restated by the entry's opening
   bold label when it has one — and the rules to what each area declares it governs; requires every
-  Completed spec to have a delivery doc, and holds every doc in `docs/spec-delivery/` to a line cap
+  Completed spec — read from its frontmatter, failing a spec whose `spec_status` cannot be read rather
+  than skipping it — to have a delivery doc, and holds every doc in `docs/spec-delivery/` to a line cap
   (not only those tied to a Completed spec); and checks that the pointers
   out of `CLAUDE.md` resolve. On the routed process tier it also holds the always-loaded set to the
   router's *Loaded every session* table (imports match rows, a byte budget derived from the table, no
@@ -116,7 +118,10 @@ this way):
   tree one flat set with dotfiles seen and subdirectories refused; and, in every standing doc, script
   and workflow file it names, a dated measurement — `measured` or `as of` beside an ISO date — to a
   commit SHA in the same paragraph, bullet or comment block, which is the half of *never cite volatile
-  numbers* a script can hold.
+  numbers* a script can hold. It regenerates every index and fails one that is missing, stale or
+  refused by the generator, and holds each rulebook to its sources: frontmatter, every footnote
+  resolving to a source, every source cited, and a `stale_after` date that has not passed
+  (`knowledge-layout.md` → *Rulebooks*).
   **`scripts/docs-lint-test.sh` is the corpus that proves those checks still fire** — running the
   linter against the repo's own documents proves the documents pass and nothing about whether any
   check works. A change to the linter runs the corpus. The general rule, and its evidence, is in `reviewer-contract.md`.

@@ -32,7 +32,9 @@ answer, and a useful one.]
 **Files you and a peer will both touch.** [List them — the always-loaded `CLAUDE.md`, an index, a
 shared module. Name them even when you think the overlap is small.] These will conflict at rebase.
 Resolve by **keeping both changes**; never resolve a conflict by discarding a peer's work, and if the
-right resolution is not obvious, stop and escalate rather than guess.
+right resolution is not obvious, stop and escalate rather than guess. A **generated index**
+(`docs/specs/index.yaml`, `docs/decisions/index.yaml`) is the exception: resolve its conflict by
+running `sh scripts/gen-index.sh` on the merged frontmatter, never by hand.
 
 **Your gates come first, and the queue is last.** In order: the formatter, linter, type-check and
 tests green locally, plus `sh scripts/spec-lint.sh`, `sh scripts/docs-lint.sh` and whatever CI will run

@@ -15,8 +15,8 @@ happen).
    off your local `main`. The fetch moves `origin/main` and never touches the local branch, so
    branching off `main` after a fetch still starts you wherever you last pulled, exits 0, and reads
    as compliance. In a multi-agent run, cut your **own worktree** off `origin/main`, never the
-   shared checkout and never a peer's branch (`several-agents.md`) — then set the spec header's
-   `Status: In Progress` plus its `INDEX.md` row in the same commit — that transition is what makes
+   shared checkout and never a peer's branch (`several-agents.md`) — then set the spec's frontmatter
+   `spec_status: In Progress` and regenerate the index in the same commit — that transition is what makes
    "exactly one spec in flight" (`spec-lifecycle.md`) legible to the next session, and nothing gates
    it, so it is missed by being skipped rather than by failing.
 5. **Generate and validate a plan before writing code.** Turn the spec's Implementation Phases into a
@@ -54,7 +54,8 @@ four before the first push.
 - Before pushing, run the project's **formatter, linter, typecheck and unit tests** locally and get
   them green. These quality gates are a pre-push step — don't push red and leave CI to discover it.
   **`sh scripts/docs-lint.sh` is in that set and nothing in CI runs it** — plus
-  `sh scripts/docs-lint-test.sh` or `sh scripts/spec-lint-test.sh` whenever that linter itself changed, and
+  `sh scripts/docs-lint-test.sh` or `sh scripts/spec-lint-test.sh` whenever that linter, the shared
+  frontmatter reader or the index generator changed, and
   `sh scripts/pr-queue-test.sh` whenever the queue or its hook changed, and
   `sh scripts/pr-queue/install-test.sh` whenever its installer changed.
 - **The gates a document names are a floor, not the set — before every push, also run locally

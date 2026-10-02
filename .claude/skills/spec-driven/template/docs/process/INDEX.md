@@ -67,7 +67,7 @@ is deliberately small and **must not regrow**.
 
 **Path-scoped rules are a backstop, not the mechanism.** `.claude/rules/*.md` carries one pointer per
 governed tree — the process kind (specs, delivery docs, the register, this directory, the PR queue,
-the agents) and the `decisions-<area>` kind, one per decision area that declares what it governs —
+the agents, the rulebooks) and the `decisions-<area>` kind, one per decision area that declares what it governs —
 each firing when a matching file is opened **with the Read tool** — not when it is read through the
 shell, so a session working in `cat` and `grep` never sees one, and only for a path under the
 session's own working directory, so a file opened in another worktree fires nothing. The instruction to pull a part

@@ -79,6 +79,12 @@ When a repo has no spec-driven docs yet:
    **check the case COUNTS, not the exit status** — each reports "N passed", and an N of 0 there
    exits 0 exactly like a healthy one.
 
+**Updating a repo scaffolded before specs, decisions and rulebooks carried frontmatter** is a
+migration, not a copy: the new `spec-lint.sh` fails every old spec in CI the moment it lands, and
+`docs-lint.sh` fails the old indexes, rulebooks and register files. Follow
+`docs/process/knowledge-layout.md` → *Migrating a repo that predates this layout* — by hand, in one
+branch, ending with its verification step against the pre-migration commit.
+
 Keep the always-loaded tier (`CLAUDE.md`) lean — it must not regrow into a wall of prose. `docs-lint.sh`
 now enforces that rather than asking you to remember it. In a project that ran this template the
 always-loaded file grew more than tenfold: first under a rule too weak to bind, then — once the
@@ -116,7 +122,8 @@ things that are true of operating this skill rather than of the method.
 Write from `docs/templates/spec-template.md` (before scaffolding, this skill's
 `template/docs/templates/spec-template.md`), then follow `docs/process/authoring-a-spec.md` — it carries
 what makes a spec buildable, the 3–6 FR aim and the split above 8, and the reviewer gate that stands
-between Draft and Draft-ready. Add a row to `docs/specs/INDEX.md`, and run `sh scripts/spec-lint.sh`
+between Draft and Draft-ready. Fill in its frontmatter (`docs/process/knowledge-layout.md`), run
+`sh scripts/gen-index.sh` — the spec index is generated, never edited — and `sh scripts/spec-lint.sh`
 before handing off.
 
 ## 2. Build a spec (plan-gated)
@@ -169,9 +176,14 @@ right one, and when unsure it is one tier up, never down.
 
 ## spec-lint reference
 
-`scripts/spec-lint.sh [dir]` (default `docs/specs`). **FAIL** (exit 1): a spec missing a required
-section (`## Overview`, `## Scope`, `## Functional Requirements`, `## Implementation Phases`), or
-containing an `Open Questions` / `Checkpoint` heading. **WARN** (exit 0): unfilled placeholders, a
+`scripts/spec-lint.sh [dir]` (default `docs/specs`). **FAIL** (exit 1): a spec whose frontmatter the
+shared reader refuses, or that lacks `type: Spec`, an `id` equal to its filename prefix, `title`,
+`description`, a `spec_status` of Draft, In Progress or Completed, or a `depends_on` list naming specs
+that exist (not itself); arc keys that are half-present, malformed, ambiguous (two specs in one place)
+or that contradict a dependency; two files with one id; a bold header line (`**Status:** …`) left in
+the body; a spec missing a required section (`## Overview`, `## Scope`, `## Functional Requirements`,
+`## Implementation Phases`), or containing an `Open Questions` / `Checkpoint` heading. **ERROR** (exit
+2): the reader (`scripts/frontmatter.awk`) is missing, fails, or returns no verdict. **WARN** (exit 0): unfilled placeholders, a
 spec with FRs but no acceptance criteria anywhere in it, and a spec carrying more than
 `FR_CEILING` (8) distinct FRs. POSIX `sh` — no runtime dependency. `scripts/spec-lint-test.sh` is its
 fixture corpus (`tests/spec-lint/*.case`, plus an unfilled copy of the spec template as a live case):
@@ -189,8 +201,12 @@ Contents and Fences, Fences not first in Contents or not first after it, a fence
 `###` entry or an entry with no fence, an entry absent from the Contents, a Contents row that names
 one entry and links to another, an entry whose opening bold label contradicts its heading, a pointer
 in Fences that resolves to nothing; an area whose *Governs* globs have no matching rule, or a rule for an area that
-governs none; a `Status: Completed` spec with no
-`docs/spec-delivery/SPEC-NNN-*.md`; a delivery doc over `DELIVERY_MAX_LINES`; a relative link or `@`
+governs none; a `spec_status: Completed` spec with no
+`docs/spec-delivery/SPEC-NNN-*.md`, or a spec whose `spec_status` cannot be read; a generated index
+(`docs/specs/index.yaml`) missing, stale or refused by `gen-index.sh`, or a stub at the old
+`docs/specs/INDEX.md`; a rulebook under `docs/best-practices/` without its frontmatter, with a footnote
+that names no source or a source nothing cites, or past its `stale_after` (the one check that reads
+the date as well as the tree); a delivery doc over `DELIVERY_MAX_LINES`; a relative link or `@`
 pointer in an always-loaded file that resolves to nothing. On the **routed process tier** it also
 fails: a `docs/process/` with no router; a stub at `docs/process.md`; a router row `CLAUDE.md` does
 not import or an import the router does not name; the always-loaded set (derived from the router's
