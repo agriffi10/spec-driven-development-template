@@ -1,11 +1,15 @@
 @@@ expect exit=1
 @@@ match contains banned header(s)
-@@@ match line 22:## open questions
+@@@ match line 26:## open questions
 @@@ file docs/specs/SPEC-001-x.md
-# Spec: X
-
-**ID:** SPEC-001
-**Status:** Draft
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
 
 ## Overview
 

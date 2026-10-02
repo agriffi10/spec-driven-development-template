@@ -1,0 +1,36 @@
+@@@ expect exit=0
+@@@ match ok    docs/specs/SPEC-001-x.md
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+sources:
+  - id: a
+    resource: https://example.com/a
+    title: "Source: A"
+  - id: b
+    resource: docs/x.md
+arc: b
+arc_order: 2
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

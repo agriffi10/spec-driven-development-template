@@ -1,0 +1,29 @@
+@@@ expect exit=1
+@@@ match FAIL  docs/specs/SPEC-001-x.md: type is "spec", not "Spec".
+@@@ absent ok    docs/specs/SPEC-001-x.md
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

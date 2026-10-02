@@ -1,0 +1,60 @@
+@@@ expect exit=1
+@@@ match FAIL  docs/specs/SPEC-001-x.md: depends_on names SPEC-002, which comes later in arc "reports" (arc_order 2 after 1).
+@@@ absent ok    docs/specs/SPEC-001-x.md
+@@@ absent FAIL  docs/specs/SPEC-002-y.md
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: [SPEC-002]
+arc: reports
+arc_order: 1
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+
+@@@ file docs/specs/SPEC-002-y.md
+---
+type: Spec
+id: SPEC-002
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+arc: reports
+arc_order: 2
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

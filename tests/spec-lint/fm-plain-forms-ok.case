@@ -1,0 +1,29 @@
+@@@ expect exit=0
+@@@ match ok    docs/specs/SPEC-001-x.md
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec
+id: SPEC-001
+title: (example) An em dash — and 100% of it
+description: See https://example.com/a:b?c=d#frag for the why, plus a colon:in-the-middle.
+spec_status: In Progress
+depends_on: [ ]
+unknown_key: producers may add keys (OKF 4.1)
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

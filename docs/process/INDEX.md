@@ -35,6 +35,7 @@ recursion, which is the cost this layout exists to avoid.
 | `docs/process/completion-ritual.md` | the seven steps at spec completion, and the anti-regrowth & doc-hygiene rules | at spec completion, and before any edit to a file in the table above |
 | `docs/process/operational-traps.md` | traps that pass locally and bite in CI or on deploy — project-specific, seeded as they bite | before the first CI- or deploy-dependent step of a build |
 | `docs/process/ground-rules.md` | the project's load-bearing constraints | when adding a dependency or a constraint |
+| `docs/process/knowledge-layout.md` | the frontmatter specs, decisions and rulebooks carry; the generated indexes; the decision register's rules; rulebook sources and staleness; migrating a repo that predates them | when writing frontmatter, adding a decision or an area, editing a rulebook, or when a lint names an old path |
 
 Every `*.md` in this directory other than the router is a row in one of the two tables above, and
 every row is a file — an

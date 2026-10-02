@@ -1,0 +1,29 @@
+@@@ expect exit=1
+@@@ match FAIL  docs/specs/SPEC-001-x.md: frontmatter has no `type`, or it is empty.
+@@@ match FAIL  docs/specs/SPEC-001-x.md: frontmatter has no `id`, or it is empty.
+@@@ match FAIL  docs/specs/SPEC-001-x.md: frontmatter has no `title`, or it is empty.
+@@@ match FAIL  docs/specs/SPEC-001-x.md: frontmatter has no `description`, or it is empty.
+@@@ match FAIL  docs/specs/SPEC-001-x.md: frontmatter has no `spec_status`, or it is empty.
+@@@ match FAIL  docs/specs/SPEC-001-x.md: frontmatter has no `depends_on`. Write `depends_on: []`
+@@@ absent ok    docs/specs/SPEC-001-x.md
+@@@ file docs/specs/SPEC-001-x.md
+---
+tags: [a]
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

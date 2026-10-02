@@ -1,0 +1,25 @@
+@@@ expect exit=1
+@@@ match FAIL  docs/specs/SPEC-001-x.md:1: frontmatter: no frontmatter — line 1 is not `---`
+@@@ match No other frontmatter check ran on this file
+@@@ absent ok    docs/specs/SPEC-001-x.md
+@@@ file docs/specs/SPEC-001-x.md
+# Spec: X
+
+**ID:** SPEC-001
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

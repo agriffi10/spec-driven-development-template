@@ -1,0 +1,30 @@
+@@@ expect exit=1
+@@@ match FAIL  docs/specs/SPEC-001-x.md:5: frontmatter: a value starting with "`" — double-quote it
+@@@ match No other frontmatter check ran on this file
+@@@ absent ok    docs/specs/SPEC-001-x.md
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: `x` is the thing.
+spec_status: Draft
+depends_on: []
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

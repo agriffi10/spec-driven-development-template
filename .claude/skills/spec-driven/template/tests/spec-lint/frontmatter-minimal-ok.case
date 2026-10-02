@@ -1,0 +1,30 @@
+@@@ expect exit=0
+@@@ match ok    docs/specs/SPEC-001-x.md
+@@@ match 0 file(s) failed, 0 warning(s)
+@@@ absent WARN
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

@@ -1,0 +1,35 @@
+@@@ expect exit=1
+@@@ match FAIL  docs/specs/SPEC-001-x.md: line 10 is a bold header line (**ID:** SPEC-001)
+@@@ match line 11 is a bold header line (**Last Updated:** 2026-01-01)
+@@@ match line 12 is a bold header line (**Depends On:** None)
+@@@ absent ok    docs/specs/SPEC-001-x.md
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
+
+**ID:** SPEC-001
+**Last Updated:** 2026-01-01
+**Depends On:** None
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

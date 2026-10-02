@@ -1,0 +1,29 @@
+@@@ expect exit=1
+@@@ match FAIL  docs/specs/SPEC-x.md: the filename has no SPEC-<number> prefix
+@@@ absent ok    docs/specs/SPEC-x.md
+@@@ file docs/specs/SPEC-x.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

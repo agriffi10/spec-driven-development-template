@@ -1,0 +1,30 @@
+@@@ expect exit=1
+@@@ match FAIL  docs/specs/SPEC-001-x.md:7: frontmatter: a flow-list element holding a bracket, a brace, a quote, `:` or `?`
+@@@ match No other frontmatter check ran on this file
+@@@ absent ok    docs/specs/SPEC-001-x.md
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: [[SPEC-002]]
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

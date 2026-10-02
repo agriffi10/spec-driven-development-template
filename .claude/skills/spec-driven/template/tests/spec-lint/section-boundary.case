@@ -1,10 +1,14 @@
 @@@ expect exit=1
 @@@ match missing required section '## Scope'
 @@@ file docs/specs/SPEC-001-x.md
-# Spec: X
-
-**ID:** SPEC-001
-**Status:** Draft
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
 
 ## Overview
 
