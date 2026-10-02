@@ -16,7 +16,7 @@ it as a question for the human instead of parking it in the spec. Fill in its fr
 `depends_on`, and `arc`/`arc_order` when it joins an arc — then run `sh scripts/gen-index.sh` (the index is
 generated, never edited) and `sh scripts/spec-lint.sh`, and report the lint output verbatim.
 
-For completion work: follow the seven steps in `completion-ritual.md` in order; the register entry is written in its area file before its fence, never after, and `CLAUDE.md`'s `## Specs` is pruned, never appended to.
+For completion work: follow the seven steps in `completion-ritual.md` in order; a new decision is one file in its area — fence and entry together, ending in its dated History — then `sh scripts/gen-index.sh`, and `CLAUDE.md`'s `## Specs` is pruned, never appended to.
 
 Return: the paths you wrote, the lint output, and the decisions you could not make (or "none"). You
 do not review your own work — the orchestrator sends it to `reviewer`.

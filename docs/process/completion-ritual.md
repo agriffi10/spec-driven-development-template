@@ -11,20 +11,20 @@ When a spec is done, in the same pass:
 4. If reusable modules/services/components were added, add a **one-line** row to
    `docs/component-inventory.md` (if the inventory has split into area files, the row goes in the
    file **matching the component's path**).
-5. A *new architectural decision* gets its **full `###` entry in its area file under `docs/decisions/`
-   first, plus a row in that file's `## Contents`** — an entry the Contents does not reach is findable
-   only by reading the whole file, and `docs-lint.sh` fails the PR for it — then **one fence** under
-   that file's `## Fences`, the claim and its constraint in one line. The fence is **never the only home
-   of a fact**, never a paragraph, and never a line in `CLAUDE.md`: only a new *area* touches `CLAUDE.md`, as a row in its Key Decisions table mirrored — with its
-   *Governs* column — in `docs/decisions/INDEX.md`, and a file copied from `example-area.md`. A reversal
-   that changes the entry's **heading** must move three copies of it with the heading — its Contents
-   row, its fence label, and the entry's own opening bold label — or the row points at a dead anchor,
-   the label still names the old decision, and docs-lint fails.
-   If the decision **supersedes an earlier one**, update the old register entry in
-   place and add a superseded marker (short blockquote: what changed, which spec, where the full
-   entry lives) at every doc site that still states the old claim — arc narratives, architecture
-   sections. The new entry alone is not enough; a reader who lands only on the old site must see the
-   reversal.
+5. A *new architectural decision* is **one new file** in its area, `docs/decisions/<area>/<decision>.md`:
+   its frontmatter `description` is the **fence** — the claim and its constraint in one line — and its
+   body is the **entry**, ending in a dated `## History` whose first entry is when it was settled. Fence
+   and entry are written together, in one file, so the fence is **never the only home of a fact**; it
+   is never a paragraph and never a line in `CLAUDE.md`. Only a new *area* touches `CLAUDE.md` — a new
+   directory with its area concept, copied from `docs/decisions/example-area/`, and a row in the Key
+   Decisions table in slug order. Then `sh scripts/gen-index.sh`. The rules:
+   `knowledge-layout.md` → *The decision register*.
+   If the decision **reverses or refines an earlier one**, rewrite that decision's file in place —
+   title, fence, entry — and add a dated History entry at the top saying what changed and why; mark it
+   `status: deprecated` only when it is retired with no replacement, and never delete it. Then add a
+   superseded marker (short blockquote: what changed, which spec, where the decision lives) at every
+   *other* doc site that still states the old claim — arc narratives, architecture sections. The
+   rewritten file alone is not enough; a reader who lands only on the old site must see the reversal.
 6. **If the decision changed the SHAPE of the system** — a new piece, a piece removed, a boundary
    moved, a mechanism swapped — add a row to `docs/architecture.md` → *Architecture Decision Record*
    **and** update the prose section it contradicts. The row is an index entry: number, title,
@@ -55,7 +55,7 @@ this way):
   question a reader arrives with is "what has been settled about X", never "what did SPEC-143
   decide". A register is the only home of the rejected alternatives and the fences, so a shape that
   reads as disposable gets treated as disposable. The CLAUDE.md table and the register **name the same areas in the same order**, and each area's fences
-  open its own file, so a reader who finds an area in one finds it in the other.
+  lead its block of the generated index, so a reader who finds an area in one finds it in the other.
 - **When a doc moves, the pointers that rot unseen are in SOURCE files** — docstrings, infra
   comments, CI steps. A markdown-only sweep reports the tree clean. Grep the path, not the filename,
   and fix the Draft specs too: a Draft is an unbuilt instruction, and pointing one at a deleted file
@@ -72,7 +72,7 @@ this way):
   `architecture.md` and the rulebooks, where a reader arrives asking how a thing works, never "what
   did SPEC-168 decide". The scope is deliberate and stops there: a `docs/decisions/` entry IS a record
   of what one spec settled, and its number is part of its identity when you arrive from a delivery
-  doc or a superseded marker, so those headings keep theirs. A rule stated more broadly than that
+  doc or a superseded marker, so those titles keep theirs. A rule stated more broadly than that
   would be violated by most of a mature register on the day it was written, and a rule practice
   contradicts at scale trains readers to ignore the ones that hold.
 - **Standing rules never cite volatile numbers** (line counts, row counts, section ranges) — state
@@ -102,11 +102,10 @@ this way):
   the branch* — so the gate is enforced by the review that must happen before a push rather than by
   a job after it. A project that wants it mechanical as well as local can call it from the pre-push
   hook `scripts/pr-queue/pre-push` already installs. It holds `CLAUDE.md` to a byte budget and its Key Decisions section to an intro and one area
-  table; requires `docs/decisions/INDEX.md` to name the same areas in the same order, every area to
-  have a file and every file a row; holds each area file to fences-first, each **fence** — a bullet
-  with its continuations — to a length, a `###` entry for every fence and a fence for every entry, every
-  entry in the file's Contents — named by the row that reaches it, and restated by the entry's opening
-  bold label when it has one — and the rules to what each area declares it governs; requires every
+  table whose rows name the area directories by their titles, in slug order, every row a directory and
+  every directory a row; holds every decision to its frontmatter, its **fence** to a length, an entry
+  behind every fence and a dated History, newest first (`knowledge-layout.md` → *The decision
+  register* lists the rest), and the rules to what each area declares it governs; requires every
   Completed spec — read from its frontmatter, failing a spec whose `spec_status` cannot be read rather
   than skipping it — to have a delivery doc, and holds every doc in `docs/spec-delivery/` to a line cap
   (not only those tied to a Completed spec); and checks that the pointers

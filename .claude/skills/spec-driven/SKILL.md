@@ -9,7 +9,7 @@ description: >-
   (no Open Questions), spec/plan/diff each pass a blocking fresh-context review gate, the diff review
   gates the push rather than the merge, builds run off a reviewed plan straight to completion (no
   per-phase checkpoints), every PR is watched and merged on green, main is always watched, and the
-  always-loaded tier stays lean (budget + a fences-first register file per decision area).
+  always-loaded tier stays lean (budget + a register of one file per decision, its fences in a generated index).
   Triggers on phrases like "set up
   spec-driven", "scaffold the docs structure", "write a spec", "start SPEC-XXX", "build this spec",
   "complete the spec / run the completion ritual", "run several agents at once", "which model
@@ -193,15 +193,16 @@ CI runs it before the lint, and a change to the linter runs it locally.
 
 `scripts/docs-lint.sh` (no arguments; resolves its own repo root). **FAIL** (exit 1), no WARN tier:
 `CLAUDE.md` over `CLAUDE_MAX_BYTES`; anything in its Key Decisions section but intro prose and one
-`| Area | Fences |` table, or that table empty; `docs/decisions/INDEX.md` missing, empty, or naming
-areas that differ from the table in name, file or order; a stub at `docs/decisions.md`; an area file
-with no row or a row with no file; in an area file: a title not matching the row, a `##` other than
-Contents and Fences, Fences not first in Contents or not first after it, a fence over
-`DIGEST_MAX_BYTES` (a bullet with its continuations joined) or of the wrong shape, a fence with no
-`###` entry or an entry with no fence, an entry absent from the Contents, a Contents row that names
-one entry and links to another, an entry whose opening bold label contradicts its heading, a pointer
-in Fences that resolves to nothing; an area whose *Governs* globs have no matching rule, or a rule for an area that
-governs none; a `spec_status: Completed` spec with no
+`| Area | Directory |` table, or that table empty; a row whose name is not its area's `title`, rows
+out of slug order, a row with no directory under `docs/decisions/` or a directory with no row; a
+stub at `docs/decisions.md` or `docs/decisions/INDEX.md`; an area directory without its concept file
+(`<slug>/<slug>.md`, `type: Decision Area`, `title`, `governs`); a decision file whose frontmatter the
+reader refuses or that lacks `type: Decision`, `title` or a `description` — its fence, capped at
+`DIGEST_MAX_BYTES` — or carries a `status` other than stable or deprecated; a fence with no entry
+above its `## History`; a History missing, undated, out of newest-first order or not last; a `# `
+title line in a body; a `.md` flat under `docs/decisions/`, one a level below an area, or one named
+`index.md` or `log.md`; a pointer in a fence that resolves to nothing; an area whose `governs` globs
+have no matching rule, or a rule for an area that governs none; a `spec_status: Completed` spec with no
 `docs/spec-delivery/SPEC-NNN-*.md`, or a spec whose `spec_status` cannot be read; a generated index
 (`docs/specs/index.yaml`) missing, stale or refused by `gen-index.sh`, or a stub at the old
 `docs/specs/INDEX.md`; a rulebook under `docs/best-practices/` without its frontmatter, with a footnote
@@ -216,12 +217,12 @@ byte 0, with an inline or missing `paths:`, an extra key, a glob outside the fiv
 matching nothing, a body that is not the two-line template, or a pointer to an unrouted part; a
 `.claude/agents/` file without frontmatter, a `name` not equal to its stem, a `model` outside
 `sonnet|opus|haiku|fable`, or one the routing table does not name (and the reverse); a part, rule,
-agent or area file in a subdirectory of its tree (dotfiles there are checked like any other file);
+agent or decision file in a subdirectory of its tree (dotfiles there are checked like any other file);
 and, in any standing doc, script or workflow file, a dated measurement — `measured` or `as of`
 beside an ISO date — with no short commit SHA in the same paragraph, bullet or comment block
 (frozen records under `docs/specs`, `docs/spec-delivery` and `docs/templates` are exempt, and so
-is `tests/`). Entries labelled `(example)` are exempt, so a fresh
-scaffold is green. **`scripts/docs-lint-test.sh` is its fixture corpus — run it after any change to
+is `tests/`). Nothing is exempt: the shipped example area and decision are conformant, so a
+fresh scaffold is green by conformance. **`scripts/docs-lint-test.sh` is its fixture corpus — run it after any change to
 `docs-lint.sh`.** The linter passing against your own docs says nothing about whether its checks
 work; the corpus is what says that. The budgets are **ratchets against accretion**: when one fires because a doc grew a line at a time, cut and re-ratchet at the new
 measurement — never raise it to fit the edit. **After a structural CUT the regime inverts**: what remains is fences rather than accretion, so leave headroom deliberately and record why beside the number, or the next change that legitimately needs a line takes one from another area. POSIX `sh` — no runtime dependency.
