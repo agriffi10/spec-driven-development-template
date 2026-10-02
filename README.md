@@ -580,9 +580,12 @@ caught it before the push, and nothing else would have until CI. A **deletion or
 file removed by hand — the sync will not do it.
 
 **Adding a best-practices domain.** Create `docs/best-practices/<domain>/<domain>.md` written the way
-the existing ones are: a short "how to use", an internal index so a session can load one section, and
-imperative ✅/🔴 rules. Then add **one row** to `docs/best-practices/INDEX.md`. The index is a router;
-the detail belongs in the doc.
+the existing ones are: frontmatter (`type: Rulebook`, `title`, `description`, its `sources` — each
+fetched and read before it is cited — and a `stale_after` about a year out), a short "how to use", an
+internal index so a session can load one section, and imperative ✅/🔴 rules, with a footnote naming
+its source on any rule that states a version-specific fact. docs-lint fails a rulebook without them;
+`docs/process/knowledge-layout.md` → *Rulebooks* has the rules. Then add **one row** to
+`docs/best-practices/INDEX.md`. The index is a router; the detail belongs in the doc.
 
 **Keeping `CLAUDE.md` lean.** This is the file loaded on every session, so its size is a running cost.
 A new architectural decision is **one file in its area under `docs/decisions/`**: its full entry in the
@@ -591,7 +594,7 @@ never a line in `CLAUDE.md`, which names only the areas. If an edit pushes a sec
 the detail belongs in `docs/` behind a pointer.
 
 **Recording what a spec delivered.** The completion ritual exists to stop the always-loaded tier
-regrowing one spec at a time. a spec's status lives in its frontmatter alone, and Key Decisions is
+regrowing one spec at a time. A spec's status lives in its frontmatter alone, and Key Decisions is
 grouped by area rather than kept as a per-spec changelog.
 
 ## Troubleshooting

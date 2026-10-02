@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match docs/specs/INDEX.md exists. The spec index is docs/specs/index.yaml, generated from each
+@@@ match docs/specs/INDEX.md exists (the layout before generated indexes: docs/process/knowledge-layout.md, Migrating).
 @@@ file CLAUDE.md
 # P
 

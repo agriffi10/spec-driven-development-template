@@ -1,7 +1,7 @@
 @@@ expect exit=1
-@@@ match scripts/gen-index.sh cannot regenerate docs/specs/index.yaml — it refuses the tree:
+@@@ match scripts/gen-index.sh cannot regenerate docs/specs/index.yaml — it refuses the tree (files from before frontmatter: docs/process/knowledge-layout.md, Migrating):
 @@@ match docs/specs/SPEC-001-x.md: its frontmatter cannot be read (spec-lint.sh names the line)
-@@@ match docs/specs/index.yaml is missing.
+@@@ match docs/specs/index.yaml is missing (a repo from before generated indexes: docs/process/knowledge-layout.md, Migrating).
 @@@ file CLAUDE.md
 # P
 

@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match Key Decisions has no | Area | Directory | table row
+@@@ match Key Decisions has no | Area | Directory | table row (a table from before one file per decision: docs/process/knowledge-layout.md, Migrating).
 @@@ file CLAUDE.md
 # P
 

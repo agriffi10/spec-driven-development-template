@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match docs/decisions.md exists.
+@@@ match docs/decisions.md exists (the layout before one file per decision: docs/process/knowledge-layout.md, Migrating).
 @@@ file CLAUDE.md
 # P
 

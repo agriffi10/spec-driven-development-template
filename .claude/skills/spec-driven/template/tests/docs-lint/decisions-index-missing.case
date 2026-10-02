@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match docs/decisions/index.yaml is missing. It is generated from the frontmatter
+@@@ match docs/decisions/index.yaml is missing (a repo from before generated indexes: docs/process/knowledge-layout.md, Migrating).
 @@@ no-index docs/decisions/index.yaml
 @@@ file CLAUDE.md
 # P

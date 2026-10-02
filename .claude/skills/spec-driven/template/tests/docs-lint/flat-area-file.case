@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match docs/decisions/area-b.md is directly under docs/decisions/. A decision is a file in its area
+@@@ match docs/decisions/area-b.md is directly under docs/decisions/ (a flat area file is the layout before one file per decision: docs/process/knowledge-layout.md, Migrating).
 @@@ match Migrating
 @@@ file CLAUDE.md
 # P

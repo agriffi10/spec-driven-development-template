@@ -1,6 +1,7 @@
 @@@ expect exit=1
 @@@ match FAIL  docs/decisions/area-a/label.md:4: frontmatter: a value starting with "`" — double-quote it
 @@@ match Every .md under docs/decisions/<area>/ opens with frontmatter
+@@@ match       decision: docs/process/knowledge-layout.md, Migrating). No other check on this file ran.
 @@@ absent has no fence
 @@@ file CLAUDE.md
 # P

@@ -1,6 +1,6 @@
 @@@ expect exit=1
 @@@ match FAIL  docs/best-practices/x/x.md:1: frontmatter: no frontmatter — line 1 is not `---`
-@@@ match A rulebook opens with frontmatter (docs/process/knowledge-layout.md, Rulebooks)
+@@@ match A rulebook opens with frontmatter (one from before rulebooks carried it: docs/process/knowledge-layout.md, Migrating).
 @@@ file CLAUDE.md
 # P
 

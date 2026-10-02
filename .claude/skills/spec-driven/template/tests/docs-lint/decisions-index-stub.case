@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match docs/decisions/INDEX.md exists. The register index is docs/decisions/index.yaml
+@@@ match docs/decisions/INDEX.md exists (the layout before one file per decision: docs/process/knowledge-layout.md, Migrating).
 @@@ file CLAUDE.md
 # P
 

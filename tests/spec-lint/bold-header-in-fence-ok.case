@@ -28,10 +28,12 @@ prose
 
 ```
 **Status:** Completed
+# Spec: quoted in a fence
 ```
 ~~~
 **ID:** SPEC-001
 ~~~
+<!-- # Spec: commented out -->
 <!--
 **Depends On:** None
 -->

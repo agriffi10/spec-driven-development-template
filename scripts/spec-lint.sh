@@ -30,6 +30,7 @@
 #   F9  a depends_on naming a spec LATER in the same arc (the order contradicts the dependency)
 #   F10 two files with one SPEC-<number> prefix
 #   F11 a bold header line (**Status:** and kin) in the body: a second copy of the frontmatter
+#   F12 a `# ` title line in the body: the title's one home is the frontmatter `title`
 #
 # Usage: scripts/spec-lint.sh [spec-dir]     (default: docs/specs)
 # POSIX sh — no bashisms; runs anywhere /bin/sh exists.
@@ -220,10 +221,10 @@ for f in $specs; do
     file_fail=1
   fi
 
-  # --- F11: a bold header line in the body is a second copy of the frontmatter ---
-  # Outside fenced blocks and HTML comments, so a spec that quotes the old header form in an
-  # example is not told to delete its example. Scanned from the first body line; a file with no
-  # frontmatter is scanned whole, since that is exactly the file still carrying its header.
+  # --- F11 / F12: a bold header line, or a `# ` title line, in the body is a second copy of the
+  # frontmatter. Outside fenced blocks and HTML comments, so a spec that quotes the old header form
+  # in an example is not told to delete its example. Scanned from the first body line; a file with
+  # no frontmatter is scanned whole, since that is exactly the file still carrying its header.
   body=$(F="$f" awk -F'\t' '$1 == ENVIRON["F"] && $2 == "B" { print $3 }' "$REC")
   if awk -v start="${body:-1}" -v file="$f" '
     FNR < start { next }
@@ -234,8 +235,13 @@ for f in $specs; do
     { gsub(/<!--[^>]*-->/, "", line) }
     line ~ /<!--/ { in_comment = 1; next }
     line ~ /^\*\*(ID|Status|Last Updated|Depends On):\*\*/ {
-      printf "FAIL  %s: line %d is a bold header line (%s). Its field lives in the frontmatter now;\n", file, FNR, substr(line, 1, 40)
-      printf "      delete the line. A spec written before specs carried frontmatter: docs/process/knowledge-layout.md (Migrating).\n"
+      printf "FAIL  %s: line %d is a bold header line (%s) — a spec from before frontmatter: docs/process/knowledge-layout.md, Migrating.\n", file, FNR, substr(line, 1, 40)
+      printf "      Its field lives in the frontmatter now; delete the line.\n"
+      found = 1
+    }
+    line ~ /^# / {
+      printf "FAIL  %s: line %d is a `# ` title line (%s) — a spec from before frontmatter: docs/process/knowledge-layout.md, Migrating.\n", file, FNR, substr(line, 1, 40)
+      printf "      The title has one home, the frontmatter `title`; delete the line.\n"
       found = 1
     }
     END { exit !found }

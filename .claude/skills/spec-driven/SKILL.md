@@ -204,8 +204,8 @@ title line in a body; a `.md` flat under `docs/decisions/`, one a level below an
 `index.md` or `log.md`; a pointer in a fence that resolves to nothing; an area whose `governs` globs
 have no matching rule, or a rule for an area that governs none; a `spec_status: Completed` spec with no
 `docs/spec-delivery/SPEC-NNN-*.md`, or a spec whose `spec_status` cannot be read; a generated index
-(`docs/specs/index.yaml`) missing, stale or refused by `gen-index.sh`, or a stub at the old
-`docs/specs/INDEX.md`; a rulebook under `docs/best-practices/` without its frontmatter, with a footnote
+(`docs/specs/index.yaml`, `docs/decisions/index.yaml`) missing, stale or refused by `gen-index.sh`, or a
+stub at the old `docs/specs/INDEX.md`; a rulebook under `docs/best-practices/` without its frontmatter, with a footnote
 that names no source or a source nothing cites, or past its `stale_after` (the one check that reads
 the date as well as the tree); a delivery doc over `DELIVERY_MAX_LINES`; a relative link or `@`
 pointer in an always-loaded file that resolves to nothing. On the **routed process tier** it also

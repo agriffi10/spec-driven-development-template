@@ -313,14 +313,16 @@ awk -v scap="$KEY_DECISIONS_MAX_BYTES" '
       next
     }
     if (want_sep) { want_sep = 0; if ($0 !~ /^\|[ \t]*:?-+:?[ \t]*\|[ \t]*:?-+:?[ \t]*\|[ \t]*$/) bad("a table without a |---|---| separator row under its header"); next }
-    if ($0 ~ /^\|[ \t]*[^|`][^|`]*\|[ \t]*`docs\/decisions\/[A-Za-z0-9_-]+\/`[ \t]*\|[ \t]*$/) {
+    # The name holds at least one character that is not blank: a blank name would leave an empty
+    # first field, which `read` with a tab IFS collapses — the row would then skip every check.
+    if ($0 ~ /^\|[ \t]*[^|` \t][^|`]*\|[ \t]*`docs\/decisions\/[A-Za-z0-9_-]+\/`[ \t]*\|[ \t]*$/) {
       name = $0; sub(/^\|[ \t]*/, "", name); sub(/[ \t]*\|.*$/, "", name)
       slug = $0; sub(/^.*`docs\/decisions\//, "", slug); sub(/\/`.*$/, "", slug)
       if (name in names) bad("a duplicate area name: " name)
       if (slug in slugs) bad("a duplicate area directory: docs/decisions/" slug "/")
       names[name] = 1; slugs[slug] = 1; rows++
       printf "ROW\t%s\t%s\n", name, slug
-    } else bad("a row that is not | <area> | `docs/decisions/<slug>/` | — one area, its directory, nothing else in the row")
+    } else bad("a row that is not | <area> | `docs/decisions/<slug>/` | — one area (a name, not blank), its directory, nothing else in the row (a row from before one file per decision: docs/process/knowledge-layout.md, Migrating)")
     next
   }
   in_table            { in_table = 0; after_table = 1 }
@@ -336,7 +338,7 @@ awk -v scap="$KEY_DECISIONS_MAX_BYTES" '
     if (!found)
       printf "FAIL  No `## Key Decisions` section found. It cannot be renamed, cased differently\n      or hidden behind an unclosed fence earlier in the file: every check on the register\n      goes quiet when the section cannot be located, which is a silent pass.\n"
     else if (!rows)
-      printf "FAIL  Key Decisions has no | Area | Directory | table row. With no row every check on the register\n      iterates nothing — an empty table is a missing parse anchor, not an empty set.\n"
+      printf "FAIL  Key Decisions has no | Area | Directory | table row (a table from before one file per decision: docs/process/knowledge-layout.md, Migrating).\n      With no row every check on the register iterates nothing — an empty table is a missing parse\n      anchor, not an empty set.\n"
     if (bytes > scap)
       printf "FAIL  The Key Decisions section is %d bytes (cap %d). It is an intro and one row per AREA —\n      a decision is a file in its area directory, never a line here.\n", bytes, scap
   }
@@ -373,11 +375,12 @@ rm -f "${TMPDIR:-/tmp}/docs-lint-kd.$$"
 #   5a an area declaring globs with no rule      5b a rule whose globs differ from `governs`
 #   5c a rule for an area declaring none         5d `governs` missing or not a flow list
 #   5e the file at decisions-<slug>.md is not this area's rule (body not template B for it)
-[ ! -e "$OLD_REGISTER" ] || note "$OLD_REGISTER exists. The register is one directory per area under $REGISTER_DIR/; there is no
-      stub at the old path — a stale pointer must fail, not land on an empty file. Migrating: docs/process/knowledge-layout.md."
-[ ! -e "$REGISTER_DIR/INDEX.md" ] || note "$REGISTER_DIR/INDEX.md exists. The register index is $REGISTER_DIR/index.yaml, generated from the
-      frontmatter; there is no stub at the old path, and its rules live in docs/process/knowledge-layout.md.
-      Migrating a register written before one file per decision: the same part, Migrating."
+[ ! -e "$OLD_REGISTER" ] || note "$OLD_REGISTER exists (the layout before one file per decision: docs/process/knowledge-layout.md, Migrating).
+      The register is one directory per area under $REGISTER_DIR/; there is no stub at the old path — a
+      stale pointer must fail, not land on an empty file."
+[ ! -e "$REGISTER_DIR/INDEX.md" ] || note "$REGISTER_DIR/INDEX.md exists (the layout before one file per decision: docs/process/knowledge-layout.md, Migrating).
+      The register index is $REGISTER_DIR/index.yaml, generated from the frontmatter; there is no stub at
+      the old path, and the register's rules live in docs/process/knowledge-layout.md."
 
 # 4a — every row names a directory that exists, whether or not docs/decisions/ does: a table
 # routing to areas that are not there must fail, not go quiet with the directory.
@@ -397,9 +400,8 @@ if [ -d "$REGISTER_DIR" ]; then
   # an area is a decision no index lists and no check reads.
   find "$REGISTER_DIR" -mindepth 1 -maxdepth 1 -type f -name '*.md' | sort | while IFS= read -r f; do
     [ "$f" = "$REGISTER_DIR/INDEX.md" ] && continue   # 3e names it
-    note "$f is directly under $REGISTER_DIR/. A decision is a file in its area's directory,
-      $REGISTER_DIR/<area>/<decision>.md; a flat area file is the layout before one file per decision
-      (docs/process/knowledge-layout.md, Migrating)."
+    note "$f is directly under $REGISTER_DIR/ (a flat area file is the layout before one file per decision: docs/process/knowledge-layout.md, Migrating).
+      A decision is a file in its area's directory, $REGISTER_DIR/<area>/<decision>.md."
   done
   find "$REGISTER_DIR" -mindepth 3 -name '*.md' | sort | while IFS= read -r f; do
     note "$f is in a subdirectory of an area. Decisions are one flat set per area directory; a file a
@@ -455,7 +457,7 @@ awk -F'\t' -v cap="$DIGEST_MAX_BYTES" -v info="$REG_AREA_INFO" -v fences="$REG_F
       out(f, "is named " base ", which OKF reserves at every level of a bundle (index.md a listing, log.md a history). A decision takes a name of its own.")
     if (v[f] != "ok") {
       for (j = 1; j <= ne[f]; j++) { split(e[f, j], p, "\t"); printf "FAIL  %s:%s: frontmatter: %s\n", f, p[1], p[2] }
-      printf "      Every .md under docs/decisions/<area>/ opens with frontmatter (docs/process/knowledge-layout.md,\n      The decision register); a register written before one file per decision: the same part, Migrating.\n"
+      printf "      Every .md under docs/decisions/<area>/ opens with frontmatter (a register from before one file per\n      decision: docs/process/knowledge-layout.md, Migrating). No other check on this file ran.\n"
       next
     }
     if (t == "A") {
@@ -620,9 +622,9 @@ if [ -d "$SPEC_DIR" ]; then
     case "$st" in
       Draft|"In Progress") continue ;;
       Completed) ;;
-      *) note "$f: its spec_status cannot be read, so whether it owes a delivery doc cannot be checked — a
-      silent skip here is indistinguishable from a pass. spec-lint.sh names the defect; a spec written
-      before specs carried frontmatter: docs/process/knowledge-layout.md (Migrating)."
+      *) note "$f: its spec_status cannot be read (a spec from before frontmatter: docs/process/knowledge-layout.md, Migrating).
+      Whether it owes a delivery doc cannot be checked, and a silent skip here is indistinguishable from a
+      pass. spec-lint.sh names the defect."
          continue ;;
     esac
     num=$(basename "$f" | sed -n 's/^\(SPEC-[0-9][0-9]*\).*/\1/p')
@@ -926,6 +928,14 @@ if [ -d "$PROCESS_DIR" ]; then
             note "$r points at docs/decisions/$aslug/ but is not named decisions-$aslug.md. An area rule is named
       decisions-<slug>.md — for its area directory, and with a prefix no process rule can collide with."
           fi
+          continue
+        fi
+        # An area rule in the template from before one file per decision names a register FILE,
+        # docs/decisions/<slug>.md; said apart from a malformed process rule, so the FAIL can name
+        # the migration rather than leave the adopter to work out which template it once was.
+        if [ -n "$(printf '%s\n' "$body" | sed -n '1s/^Files matching these paths are governed by the \*\*.*\*\* decisions in `docs\/decisions\/[A-Za-z0-9_-]*\.md`\.$/old/p')" ]; then
+          note "$r: an area rule from before one file per decision — it names a register file (docs/process/knowledge-layout.md, Migrating).
+      Its body is now the area template naming \`docs/decisions/<slug>/\` and \`docs/decisions/index.yaml\`."
           continue
         fi
         if [ -z "$part" ] || [ "$body" != "$expect" ]; then
@@ -1261,19 +1271,20 @@ check_index() {   # check_index <tree> <specs|decisions>
     0|1) ;;
     *) echo "error: docs-lint: $GENERATOR --print $2 failed (exit $grc): $(head -1 "$GEN_ERR")" >&2; exit 2 ;;
   esac
-  [ "$grc" -eq 0 ] || note "$GENERATOR cannot regenerate $idx — it refuses the tree:
+  [ "$grc" -eq 0 ] || note "$GENERATOR cannot regenerate $idx — it refuses the tree (files from before frontmatter: docs/process/knowledge-layout.md, Migrating):
 $(sed 's/^/      /' "$GEN_ERR")"
   if [ ! -f "$idx" ]; then
-    note "$idx is missing. It is generated from the frontmatter: run \`sh $GENERATOR\` and commit it."
+    note "$idx is missing (a repo from before generated indexes: docs/process/knowledge-layout.md, Migrating).
+      It is generated from the frontmatter: run \`sh $GENERATOR\` and commit it."
   elif [ "$grc" -eq 0 ] && ! cmp -s "$GEN_OUT" "$idx"; then
     note "$idx is stale — it differs from what the frontmatter generates. Run \`sh $GENERATOR\` and commit
       the result; never edit it by hand (a merge conflict in it is resolved the same way)."
   fi
 }
 if [ -d "$SPEC_DIR" ]; then
-  [ ! -e "$SPEC_DIR/INDEX.md" ] || note "$SPEC_DIR/INDEX.md exists. The spec index is $SPEC_DIR/index.yaml, generated from each
-      spec's frontmatter; there is no stub at the old path — a stale pointer must fail, not land on an
-      empty file. Migrating: docs/process/knowledge-layout.md."
+  [ ! -e "$SPEC_DIR/INDEX.md" ] || note "$SPEC_DIR/INDEX.md exists (the layout before generated indexes: docs/process/knowledge-layout.md, Migrating).
+      The spec index is $SPEC_DIR/index.yaml, generated from each spec's frontmatter; there is no stub at
+      the old path — a stale pointer must fail, not land on an empty file."
   check_index "$SPEC_DIR" specs
 fi
 [ ! -d "$REGISTER_DIR" ] || check_index "$REGISTER_DIR" decisions
@@ -1366,7 +1377,7 @@ if [ -d "$RULEBOOK_DIR" ]; then
       END {
         if (verdict != "ok") {
           for (i = 1; i <= ne; i++) printf "FAIL  %s:%s: frontmatter: %s\n", file, eline[i], emsg[i]
-          printf "      A rulebook opens with frontmatter (docs/process/knowledge-layout.md, Rulebooks); one written\n      before rulebooks carried it: the same part, Migrating. No other rulebook check ran on this file.\n"
+          printf "      A rulebook opens with frontmatter (one from before rulebooks carried it: docs/process/knowledge-layout.md, Migrating).\n      No other rulebook check ran on this file.\n"
           exit
         }
         if (k["type"] != "Rulebook")
