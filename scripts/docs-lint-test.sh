@@ -13,6 +13,8 @@
 # several of the historical regressions produced a real failure with a misleading
 # message. Cases named `*-ok.case` assert the linter stays SILENT: half of the
 # regressions were false positives, and a corpus of only-failures would have missed them.
+# `@@@ absent <text>` asserts one specific line is NOT printed — for a FAIL case that must
+# stay quiet about something, such as a refused frontmatter suppressing the checks behind it.
 #
 # Directives are `@@@ `-prefixed, not `--- `: a fixture whose CONTENT began "--- " was
 # silently truncated at that line, so the construct it existed to test was not on disk and
@@ -114,8 +116,8 @@ for case_file in "$CASES"/*.case; do
   # count on `^@@@`, not `^@@@ `, because `@@@file`, `@@@<tab>file` and `@@@@ file` break
   # the prefix the splitter keys on and would otherwise escape this guard as well as the
   # one above it.
-  if [ "$(grep -c '^@@@' "$case_file")" != "$(grep -cE '^@@@ (file |expect exit=|match |no-index )' "$case_file")" ]; then
-    fail=$((fail + 1)); echo "FAIL  $name: an '@@@' line is not one of file/expect exit=/match/no-index."
+  if [ "$(grep -c '^@@@' "$case_file")" != "$(grep -cE '^@@@ (file |expect exit=|match |absent |no-index )' "$case_file")" ]; then
+    fail=$((fail + 1)); echo "FAIL  $name: an '@@@' line is not one of file/expect exit=/match/absent/no-index."
     continue
   fi
 
@@ -141,6 +143,13 @@ for case_file in "$CASES"/*.case; do
       case "$got" in *"$m"*) ;; *) echo "MISSING|$m" ;; esac
     done > "$WORK/.miss"
     if [ -s "$WORK/.miss" ]; then ok=0; why="output lacked: $(sed 's/^MISSING|//' "$WORK/.miss" | head -1)"; fi
+  fi
+  if [ "$ok" = 1 ]; then
+    sed -n 's/^@@@ absent //p' "$case_file" | while IFS= read -r m; do
+      [ -n "$m" ] || continue
+      case "$got" in *"$m"*) echo "PRESENT|$m" ;; esac
+    done > "$WORK/.present"
+    if [ -s "$WORK/.present" ]; then ok=0; why="output carried: $(sed 's/^PRESENT|//' "$WORK/.present" | head -1)"; fi
   fi
   # A `-ok` case must be silent: no FAIL line may appear at all.
   case "$name" in
@@ -265,6 +274,10 @@ Reasoning.'
     n=${pair%%:*}; typo=${pair#*:}
     printf '@@@ expect exit=0\n%s docs/typo.md\ncontent\n%s\n' "$typo" "$skeleton" > "$SELF/typo-$n-ok.case"
   done
+  # 4. An `absent` assertion whose text IS printed — every run prints a `docs-lint:` verdict line —
+  #    must fail the case. Without this, a harness that stopped reading `absent` would let every
+  #    suppression case pass whatever the linter printed.
+  printf '@@@ expect exit=1\n@@@ absent docs-lint:\n@@@ file CLAUDE.md\n# P\n' > "$SELF/absent-fires.case"
 
   # Counted from disk, never asserted as a literal: the count that was hand-written here
   # was wrong the moment two planted names collided, in a change whose whole subject is
@@ -276,7 +289,8 @@ Reasoning.'
   for want in \
     "no-file-ok: declares no '@@@ file' directive" \
     "unwritten-ok: declared file(s) never written" \
-    "an '@@@' line is not one of file/expect exit=/match/no-index"
+    "an '@@@' line is not one of file/expect exit=/match/absent/no-index" \
+    "absent-fires: output carried: docs-lint:"
   do
     case "$self_out" in
       *"$want"*) ;;
@@ -292,7 +306,7 @@ Reasoning.'
     echo "disk would pass silently, which is how this harness went green over nothing."
     exit 1
   fi
-  echo "docs-lint-test: fixture guards verified — 3 guards, $planted vacuous cases refused."
+  echo "docs-lint-test: fixture guards verified — 4 guards, $planted vacuous cases refused."
 
   # The FLOOR has to fire too, and nothing above proves it: the self-test invocation sets
   # DOCS_LINT_TEST_CASES, which disables the floor so a handful of planted cases can run.

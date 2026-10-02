@@ -1,7 +1,7 @@
 @@@ expect exit=1
 @@@ match carries a dated measurement with no commit
-@@@ match docs/best-practices/shell.md
-@@@ file docs/best-practices/shell.md
+@@@ match docs/runbooks/shell.md
+@@@ file docs/runbooks/shell.md
 # Shell rulebook
 
 Measured 2026-09-02: 12 scripts in `scripts/` use `set -eu`.

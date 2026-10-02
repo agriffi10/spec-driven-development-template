@@ -65,3 +65,37 @@ further keys (OKF allows them); nothing reads them.
 directory and not itself, the arc keys, that no two specs share an arc place, that no spec depends on
 one later in its own arc, that no two files share an id, and that no bold header line
 (`**Status:** …` and kin) survives in the body as a second copy of the frontmatter.
+
+## Rulebooks
+
+A rulebook (`docs/best-practices/<domain>/<domain>.md`) states rules an agent follows without
+checking them, so where a rule rests on a **version-specific fact** — a WCAG level, a React release,
+a PEP — it says where the fact came from. The frontmatter carries `type: Rulebook`, `title`,
+`description`, `sources` and `stale_after`; each `sources` item carries `id`, `resource` (the URL)
+and `title`, and may carry OKF's other fields. The rule cites its source with a markdown footnote
+whose label **is** the source id — `…is AA in WCAG 2.2.[^wcag22]` — and the definition at the foot
+of the file gives the title and URL. Footnoting every rule is not the aim; a source that supports no
+version-specific rule is cited once, in the rulebook's opening paragraph, on the claim it does support.
+
+**A source is fetched and read before it is cited, and it must support the sentence that cites it.**
+A fabricated or unread citation is the defect this layer exists to prevent; when a fetched source
+contradicts the rule, the rule is corrected, not the citation dropped. A reviewer re-fetches every
+source in the diff — they are few.
+
+`stale_after` is the date by which the sources must be read again: an ISO 8601 instant in UTC,
+`YYYY-MM-DDTHH:MM:SSZ` (OKF allows any explicit offset; this subset takes `Z`, so "past" is a plain
+comparison with no date arithmetic). A rulebook is stale when now is on or after it, and **a stale
+rulebook FAILS `docs-lint.sh`** — there is no WARN tier. That makes this the one check that reads
+the clock as well as the tree: the same commit passes before the instant and fails after it, in every
+repo that carries the rulebook, and a reviewer re-running the gates later can see a red the change
+under review did not cause. That is the intent — a rulebook nobody has re-read is not one to follow
+unchecked — and the remedy is the FAIL's own text: re-fetch every source, correct any rule a source no
+longer supports, move `stale_after` forward. Set it about a year out. The fixtures use dates far in
+the past and the future, so the corpus is deterministic; there is no "now" override, which would be a
+bypass.
+
+`docs-lint.sh` holds every `.md` under `docs/best-practices/` but its `INDEX.md` (which is a router,
+not a rulebook): the reader's refusals, `type: Rulebook`, the four keys, each source's three fields,
+unique ids, the `stale_after` form and date, every footnote reference defined and naming a source,
+and every source cited at least once. Code spans and fenced blocks are skipped, so a regex such as
+`[^a-z]` written in a rule is not read as a footnote.

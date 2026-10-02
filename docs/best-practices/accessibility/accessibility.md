@@ -1,6 +1,31 @@
+---
+type: Rulebook
+title: Web accessibility (WCAG 2.2)
+description: "WCAG 2.2 success criteria as code-level rules for agents building or auditing web UI, A and AA by default."
+sources:
+  - id: wcag22
+    resource: https://www.w3.org/TR/WCAG22/
+    title: Web Content Accessibility Guidelines (WCAG) 2.2
+  - id: wcag22-quickref
+    resource: https://www.w3.org/WAI/WCAG22/quickref/
+    title: How to Meet WCAG (Quick Reference)
+  - id: wcag22-new
+    resource: https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/
+    title: What's New in WCAG 2.2
+  - id: sc-3-3-1
+    resource: https://www.w3.org/WAI/WCAG22/Understanding/error-identification.html
+    title: "Understanding SC 3.3.1: Error Identification"
+  - id: sc-3-3-3
+    resource: https://www.w3.org/WAI/WCAG22/Understanding/error-suggestion.html
+    title: "Understanding SC 3.3.3: Error Suggestion"
+  - id: sc-3-3-4
+    resource: https://www.w3.org/WAI/WCAG22/Understanding/error-prevention-legal-financial-data.html
+    title: "Understanding SC 3.3.4: Error Prevention (Legal, Financial, Data)"
+stale_after: 2027-10-02T00:00:00Z
+---
 # Web Accessibility (WCAG 2.2) — Agent Reference
 
-> Token-efficient, code-oriented digest of WCAG 2.2 success criteria (SC), from the W3C "How to Meet WCAG" Quickref. For LLMs writing/auditing web UI. Each SC: **number Name (Level) — rule. ✅ technique. 🔴 failure.** Levels: **A** = must, **AA** = standard legal target (meet A+AA), **AAA** = enhanced (rarely required wholesale). Load only the sections you need.
+> Token-efficient, code-oriented digest of WCAG 2.2 success criteria (SC)[^wcag22], from the W3C "How to Meet WCAG" Quickref[^wcag22-quickref]. Levels are the normative ones in WCAG 2.2[^wcag22]. For LLMs writing/auditing web UI. Each SC: **number Name (Level) — rule. ✅ technique. 🔴 failure.** Levels: **A** = must, **AA** = standard legal target (meet A+AA), **AAA** = enhanced (rarely required wholesale). Load only the sections you need.
 
 ## How to use
 - Use the **Task Index** to jump from what you're building to the relevant SC IDs.
@@ -13,13 +38,13 @@
 - **Text & zoom/reflow**: 1.4.4, 1.4.10, 1.4.12, 1.4.8(AAA), 1.4.5.
 - **Headings / structure / landmarks**: 1.3.1, 1.3.2, 2.4.1, 2.4.10(AAA).
 - **Links**: 2.4.4, 2.4.9(AAA), 1.4.1.
-- **Forms & inputs**: 1.3.1, 1.3.5, 3.3.2, 3.3.7, 2.5.3, 4.1.2, 1.4.1, 4.1.3.
+- **Forms & inputs**: 1.3.1, 1.3.5, 3.3.1, 3.3.2, 3.3.3, 3.3.4, 3.3.7, 2.5.3, 4.1.2, 1.4.1, 4.1.3.
 - **Keyboard & focus**: 2.1.1, 2.1.2, 2.1.4, 2.4.3, 2.4.7, 2.4.11, 2.4.13(AAA), 3.2.1.
 - **Custom widgets (div/span as control)**: 4.1.2, 2.1.1, 2.4.7, 1.4.11, 4.1.3, 2.5.3.
 - **Pointer / touch / mobile**: 2.5.1, 2.5.2, 2.5.4, 2.5.7, 2.5.8, 1.3.4.
 - **Motion / animation / flashing**: 2.2.2, 2.3.1, 1.4.2.
 - **Tooltips / hover / popovers**: 1.4.13, 4.1.3.
-- **Dynamic updates / toasts / errors / live**: 4.1.3, 3.3.7.
+- **Dynamic updates / toasts / errors / live**: 4.1.3, 3.3.1, 3.3.7.
 - **Timeouts / sessions / auto-refresh**: 2.2.1, 3.2.5(AAA), 2.2.6(AAA).
 - **Media (audio/video)**: 1.2.1–1.2.5 (+AAA 1.2.6–1.2.9).
 - **Navigation across pages**: 2.4.5, 3.2.3, 3.2.4, 3.2.6, 2.4.8(AAA).
@@ -112,17 +137,20 @@
 - **3.2.5 Change on Request (AAA)** — context changes only on user request.
 
 ### 3.3 Input Assistance
+- **3.3.1 Error Identification (A)**[^sc-3-3-1] — an input error that is automatically detected is identified, and described to the user in text. ✅ describe the error in text, naming the field (G83, G85); mark the field `aria-invalid="true"` (ARIA21); announce it with `role="alert"` or a live region (ARIA19). 🔴 an error shown only by a red border or an icon.
 - **3.3.2 Labels or Instructions (A)** — provide labels/instructions for inputs. ✅ `<label for>`/wrapping label; `fieldset`+`legend` for groups; format hints/examples; mark required (`required`, text, or `aria-required`). 🔴 placeholder-as-label; visually grouped fields (phone) with no label (F82).
 - **3.3.7 Redundant Entry (A)** — info already entered in a process is auto-populated or selectable, not re-typed (except passwords/security).
+- **3.3.3 Error Suggestion (AA)**[^sc-3-3-3] — when an input error is detected and a correction is known, suggest it, unless that would jeopardize security or the purpose of the content. ✅ "Enter a date as YYYY-MM-DD", "Did you mean …?". 🔴 a bare "Invalid input".
+- **3.3.4 Error Prevention (Legal, Financial, Data) (AA)**[^sc-3-3-4] — a page that commits the user legally or financially, changes or deletes their stored data, or submits test responses makes the submission reversible, checked for input errors with a chance to correct, or confirmed before it is final. ✅ a review-and-confirm step; undo. 🔴 a one-click irreversible purchase or delete.
 - **3.3.8 Accessible Authentication (Minimum) (AA)** — no cognitive-function test (memorize/transcribe/puzzle) required to authenticate, unless an alternative exists. ✅ allow paste/password managers, `autocomplete="current-password"`, WebAuthn/OAuth, email-link. 🔴 blocking paste on password (F109).
-- **AAA**: 3.3.1 Error Identification, 3.3.3 Error Suggestion, 3.3.5 Help, 3.3.6 Error Prevention (All), 3.3.9 Accessible Authentication (Enhanced). *(Note: 3.3.3/3.3.4 error suggestion & prevention are AA in full WCAG 2.2 — confirm in spec.)*
+- **AAA**: 3.3.5 Help, 3.3.6 Error Prevention (All), 3.3.9 Accessible Authentication (Enhanced)[^wcag22].
 
 ## §4 Robust
 
 ### 4.1 Compatible
 - **4.1.2 Name, Role, Value (A)** — every UI component exposes a programmatic **name**, **role**, and settable **states/values**, with change notifications. ✅ native HTML controls satisfy this automatically; for custom widgets use ARIA `role`, `aria-label`/`aria-labelledby` (name), `aria-checked`/`aria-expanded`/`aria-selected` etc. (state). 🔴 `<div>`/`<span>` made interactive via script with no role (F59); custom control with no accessible name (F68); state not exposed/updated (F79).
 - **4.1.3 Status Messages (AA)** — status messages reach AT **without moving focus**. ✅ `role="status"`/`aria-live="polite"` for success/progress; `role="alert"`/`aria-live="assertive"` for errors/warnings; `role="log"` for sequential updates. 🔴 status only conveyed visually (F103); `role="alert"` on non-urgent content.
-- *(4.1.1 Parsing was removed in WCAG 2.2 — obsolete; no action needed.)*
+- *(4.1.1 Parsing was removed in WCAG 2.2 — obsolete; no action needed.)*[^wcag22-new]
 
 ---
 
@@ -169,3 +197,14 @@ it. It can't see `color-contrast` (jsdom has no layout/computed style — verifi
 visually instead, per the design tokens), real `:focus-visible` rendering, true
 focus order, screen-reader output, or whether copy/labels actually make sense.
 Keep doing manual keyboard + screen-reader passes for those.
+
+---
+
+## Sources
+
+[^wcag22]: Web Content Accessibility Guidelines (WCAG) 2.2 — https://www.w3.org/TR/WCAG22/
+[^wcag22-quickref]: How to Meet WCAG (Quick Reference) — https://www.w3.org/WAI/WCAG22/quickref/
+[^wcag22-new]: What's New in WCAG 2.2 — https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/
+[^sc-3-3-1]: Understanding SC 3.3.1: Error Identification — https://www.w3.org/WAI/WCAG22/Understanding/error-identification.html
+[^sc-3-3-3]: Understanding SC 3.3.3: Error Suggestion — https://www.w3.org/WAI/WCAG22/Understanding/error-suggestion.html
+[^sc-3-3-4]: Understanding SC 3.3.4: Error Prevention (Legal, Financial, Data) — https://www.w3.org/WAI/WCAG22/Understanding/error-prevention-legal-financial-data.html

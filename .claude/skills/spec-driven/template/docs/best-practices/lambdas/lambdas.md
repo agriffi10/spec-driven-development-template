@@ -1,6 +1,22 @@
+---
+type: Rulebook
+title: AWS Lambda best practices
+description: "Lambda shape for coding agents: single-task functions, thin handlers, idempotency, retries, least privilege and Step Function orchestration."
+sources:
+  - id: aws-best-practices
+    resource: https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html
+    title: Best practices for working with AWS Lambda functions
+  - id: aws-runtimes
+    resource: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html
+    title: Lambda runtimes
+  - id: pep-8
+    resource: https://peps.python.org/pep-0008/
+    title: PEP 8 – Style Guide for Python Code
+stale_after: 2027-10-02T00:00:00Z
+---
 # AWS Lambda Best Practices — Agent Reference
 
-> Token-efficient rulebook for LLM coding agents writing/refactoring AWS Lambda functions (Python 3.12 in this repo; principles are language-agnostic). Each section is self-contained; load only the sections relevant to the task. Rules are imperative; ✅ = do, 🔴 = don't. Defaults assume event-driven functions invoked by a Step Function task, an EventBridge Pipe, SQS, or a Cognito trigger.
+> Token-efficient rulebook for LLM coding agents writing/refactoring AWS Lambda functions (Python 3.12 in this repo; principles are language-agnostic). Client reuse (§5), idempotency (§3), configuration in environment variables (§6) and least privilege (§7) follow AWS's own Lambda best practices[^aws-best-practices]. Each section is self-contained; load only the sections relevant to the task. Rules are imperative; ✅ = do, 🔴 = don't. Defaults assume event-driven functions invoked by a Step Function task, an EventBridge Pipe, SQS, or a Cognito trigger.
 
 ## How to use this doc
 - Find the relevant section ID(s) in the Index below.
@@ -140,9 +156,17 @@ Code and infrastructure live apart; share code deliberately; ship small.
 A Lambda is also ordinary code in a language — §1–§12 govern its *Lambda* shape, not its *language* style. Apply the language's own best practices **on top of** these rules.
 
 - ✅ **Python Lambdas follow Python best practices.** If a Python rulebook exists in `best-practices/` (e.g. `python/python.md`), route to it via `best-practices/INDEX.md` and load the relevant sections; otherwise apply standard Python conventions below.
-- ✅ **PEP 8** style + a formatter/linter (e.g. `black` + `ruff`/`flake8`); snake_case functions/modules, CONSTANT_CASE module constants (matches the repo's existing `lambdas/`).
+- ✅ **PEP 8**[^pep-8] style + a formatter/linter (e.g. `black` + `ruff`/`flake8`); snake_case functions/modules, CONSTANT_CASE module constants (matches the repo's existing `lambdas/`).
 - ✅ **Type hints** on function signatures + `mypy`-clean where practical; makes the thin handler → pure-function boundary (§2) explicit and testable (§11).
 - ✅ **Specific exceptions**, not bare `except:`; define domain exception types (§4) and never `except: pass` (§4 swallowing rule).
 - ✅ Pythonic structure: small pure functions, docstrings on the public ones, `pathlib`/context managers for I/O, f-strings, comprehensions over manual loops where clearer — and **stdlib first** before adding a dependency (§5/§12).
-- ✅ Pin the runtime (this repo: **Python 3.12**) and keep `requirements.txt` pinned + minimal (§12).
+- ✅ Pin the runtime (this repo: **Python 3.12**, the `python3.12` managed runtime — check its deprecation date in the runtimes table[^aws-runtimes]) and keep `requirements.txt` pinned + minimal (§12).
 - The same applies to any other language a Lambda is written in: layer its ecosystem's conventions over §1–§12.
+
+---
+
+## Sources
+
+[^aws-best-practices]: Best practices for working with AWS Lambda functions — https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html
+[^aws-runtimes]: Lambda runtimes — https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html
+[^pep-8]: PEP 8 – Style Guide for Python Code — https://peps.python.org/pep-0008/

@@ -26,8 +26,10 @@
 #   owes one cannot be told — a delivery doc has become an essay, a pointer out of an
 #   always-loaded file goes nowhere, the routed process tier has lost its shape (router, imports,
 #   parts, rules, agents — checks 9–13), a stub has reappeared at an old path, a dated measurement
-#   in a standing doc or script carries no commit to re-measure from (14), or a generated index is
-#   missing, stale, or cannot be regenerated (15).
+#   in a standing doc or script carries no commit to re-measure from (14), a generated index is
+#   missing, stale, or cannot be regenerated (15), or a rulebook lacks its frontmatter, cites a
+#   footnote that is not one of its sources, carries a source it never cites, or is past its
+#   `stale_after` (16 — the one check that reads the DATE as well as the tree, by design).
 # ERROR (exit 2): the shared frontmatter reader or the index generator is missing, fails, or
 #   returns no verdict — the checks that read through them cannot run, and must not read as passed.
 #
@@ -123,6 +125,7 @@ ROUTING="$PROCESS_DIR/model-routing.md"
 OLD_PROCESS="docs/process.md"
 RULES_DIR=".claude/rules"
 AGENTS_DIR=".claude/agents"
+RULEBOOK_DIR="docs/best-practices"
 # The frontmatter reader and the index generator are SHARED with spec-lint.sh, so a file is never
 # read two ways (docs/process/knowledge-layout.md). Missing either is an environment error, not a
 # pass: every check that reads through them would otherwise iterate over nothing.
@@ -1319,6 +1322,129 @@ if [ -d "$SPEC_DIR" ]; then
       spec's frontmatter; there is no stub at the old path — a stale pointer must fail, not land on an
       empty file. Migrating: docs/process/knowledge-layout.md."
   check_index "$SPEC_DIR" specs
+fi
+
+
+# ── 16. Rulebooks carry their sources, cite them, and are not stale ────────────
+#
+# A rulebook states rules an agent follows without checking them, so where a rule rests on a
+# version-specific fact it says where the fact came from: OKF `sources` in the frontmatter, and a
+# footnote whose label is a source id on the rule (docs/process/knowledge-layout.md, Rulebooks).
+# A fabricated or unread citation is the defect this exists to prevent — so every source must be
+# cited somewhere, every footnote must resolve to a source, and `stale_after` puts a date on the
+# claim that the sources were read. Past that date the rulebook FAILS, and this is the one check
+# here that reads the CLOCK as well as the tree: the same commit passes before that instant and
+# fails after it, in every repo that carries the rulebook. That is the intent — docs-lint has no
+# WARN tier — and the FAIL says what to do. The fixtures use dates far in the past and the future,
+# so the corpus is deterministic; there is no "now" override, which would be a bypass.
+#
+# `stale_after` is narrowed from OKF (any explicit offset) to UTC with `Z`, so "past" is a plain
+# byte comparison against `date -u` with no date arithmetic in awk.
+#
+# The population is every .md under docs/best-practices/ but its INDEX.md, found with `find` so a
+# second file in a domain directory, a dotfile or a deeper file is governed too — a rulebook nobody
+# held to this is exactly the one that would drift.
+#   16a frontmatter refused, or type not Rulebook   16b title, description, sources or stale_after
+#   missing   16c a source without id, resource or title   16d a duplicate source id   16e
+#   stale_after not YYYY-MM-DDTHH:MM:SSZ (a real date)   16f stale   16g a footnote reference with no
+#   definition   16h a footnote label that is no source id   16i a source never cited
+if [ -d "$RULEBOOK_DIR" ]; then
+  NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  case "$NOW" in
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z) ;;
+    *) echo "error: docs-lint: date -u did not give an ISO 8601 UTC instant ($NOW); staleness cannot be judged" >&2; exit 2 ;;
+  esac
+  RB_LIST="${TMPDIR:-/tmp}/docs-lint-rblist.$$"
+  RB_REC="${TMPDIR:-/tmp}/docs-lint-rbrec.$$"
+  find "$RULEBOOK_DIR" -type f -name '*.md' | sort > "$RB_LIST"
+  # Read by redirect, not a pipe: fm_read exits 2 on a reader failure, and inside a pipeline that
+  # exit would end a subshell rather than this script.
+  while IFS= read -r f; do
+    [ "$f" = "$RULEBOOK_DIR/INDEX.md" ] && continue
+    : > "$RB_REC"
+    fm_read "$f" "$RB_REC"
+    awk -F'\t' -v now="$NOW" -v file="$f" '
+      function out(msg) { printf "FAIL  %s: %s\n", file, msg }
+      function leap(y) { return (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 }
+      function instant(v,   y, m, d, dim) {
+        if (v !~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z$/) return 0
+        y = substr(v, 1, 4) + 0; m = substr(v, 6, 2) + 0; d = substr(v, 9, 2) + 0
+        if (m < 1 || m > 12) return 0
+        dim = (m == 2) ? (leap(y) ? 29 : 28) : ((m == 4 || m == 6 || m == 9 || m == 11) ? 30 : 31)
+        if (d < 1 || d > dim) return 0
+        if (substr(v, 12, 2) + 0 > 23 || substr(v, 15, 2) + 0 > 59 || substr(v, 18, 2) + 0 > 59) return 0
+        return 1
+      }
+      # Blank every inline code span, so a regex written in a rule (`[^a-z]`) is not read as a
+      # footnote. A fenced block is skipped whole, below.
+      function nocode(s,   pad) {
+        while (match(s, /`[^`]*`/)) { pad = sprintf("%*s", RLENGTH, ""); s = substr(s, 1, RSTART - 1) pad substr(s, RSTART + RLENGTH) }
+        return s
+      }
+      NR == FNR {
+        if ($2 == "F") verdict = $3
+        else if ($2 == "E") { ne++; eline[ne] = $3; emsg[ne] = $4 }
+        else if ($2 == "K") k[$3] = $4
+        else if ($2 == "L") lst[$3] = 1
+        else if ($2 == "B") body = $3
+        else if ($2 == "S") { n = $3 + 0; if (n > nsrc) nsrc = n; sf[n, $4] = $5 }
+        next
+      }
+      verdict != "ok" || FNR < body { next }
+      { line = $0 }
+      line ~ /^[ \t]*(```|~~~)/ { fence = !fence; next }
+      fence { next }
+      {
+        line = nocode(line)
+        # Labels are kept in order of first appearance and reported in that order: awk walks an
+        # array in an unspecified order, and the corpus must read the same on every awk.
+        if (match(line, /^\[\^[A-Za-z0-9_.-]+\]:/)) {
+          lab = substr(line, 3, RLENGTH - 4)
+          if (!(lab in def)) { ndef++; defs[ndef] = lab; def[lab] = FNR }
+          line = substr(line, RLENGTH + 1)
+        }
+        while (match(line, /\[\^[A-Za-z0-9_.-]+\]/)) {
+          lab = substr(line, RSTART + 2, RLENGTH - 3)
+          if (!(lab in ref)) { nref++; refs[nref] = lab; ref[lab] = FNR }
+          line = substr(line, RSTART + RLENGTH)
+        }
+      }
+      END {
+        if (verdict != "ok") {
+          for (i = 1; i <= ne; i++) printf "FAIL  %s:%s: frontmatter: %s\n", file, eline[i], emsg[i]
+          printf "      A rulebook opens with frontmatter (docs/process/knowledge-layout.md, Rulebooks); one written\n      before rulebooks carried it: the same part, Migrating. No other rulebook check ran on this file.\n"
+          exit
+        }
+        if (k["type"] != "Rulebook")
+          out("type is \"" k["type"] "\", not \"Rulebook\". Every .md under docs/best-practices/ but its INDEX.md is a rulebook.")
+        split("title description stale_after", req, " ")
+        for (j = 1; j <= 3; j++) if (k[req[j]] == "") out("frontmatter has no `" req[j] "`, or it is empty.")
+        if (lst["sources"]) out("`sources` is a flow list. It is the block list of `  - id:` items, each with id, resource and title.")
+        else if (!nsrc) out("frontmatter has no `sources`. Every rulebook names what its rules rest on, each source with id, resource and title.")
+        for (n = 1; n <= nsrc; n++) {
+          for (j = split("id resource title", fld, " "); j >= 1; j--)
+            if (sf[n, fld[j]] == "") out("sources item " n " has no `" fld[j] "`.")
+          id = sf[n, "id"]
+          if (id == "") continue
+          if (id in sid) out("source id \"" id "\" is used twice. A footnote resolves to exactly one source.")
+          sid[id] = 1
+        }
+        v = k["stale_after"]
+        if (v != "" && !instant(v))
+          out("stale_after \"" v "\" is not YYYY-MM-DDTHH:MM:SSZ — a real UTC instant, `Z` for the offset (OKF allows any offset; this subset takes Z, so staleness is a byte comparison).")
+        else if (v != "" && now >= v)
+          out("is stale since " v ": re-fetch every source it cites, correct any rule a source no longer supports, and move\n      stale_after forward. This check reads the date as well as the tree, by design (docs/process/knowledge-layout.md, Rulebooks).")
+        for (i = 1; i <= nref; i++) { lab = refs[i]
+          if (!(lab in def)) out("line " ref[lab] " cites [^" lab "] with no `[^" lab "]:` definition.")
+          if (!(lab in sid)) out("footnote [^" lab "] (line " ref[lab] ") names no `sources` id. A footnote label IS the source id it attributes to.") }
+        for (i = 1; i <= ndef; i++) { lab = defs[i]
+          if (!(lab in ref) && !(lab in sid)) out("footnote definition [^" lab "] (line " def[lab] ") names no `sources` id, and nothing cites it.") }
+        for (n = 1; n <= nsrc; n++) { id = sf[n, "id"]
+          if (id != "" && !(id in ref)) out("source \"" id "\" is never cited. Cite it with [^" id "] on the rule it supports, or drop it: a source nothing cites is a citation nobody checked.") }
+      }
+    ' "$RB_REC" "$f" >> "$FAILS"
+  done < "$RB_LIST"
+  rm -f "$RB_LIST" "$RB_REC"
 fi
 
 
