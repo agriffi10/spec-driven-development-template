@@ -11,7 +11,7 @@ pulled **on demand**, when the router's table says:
 - `@docs/process/model-routing.md` — which model does which job (pull before delegating anything)
 - `@docs/process/completion-ritual.md` — the seven steps at spec completion + the doc-hygiene rules
 - `@docs/architecture.md` — system design decisions + Known Constraints (read the section you need)
-- `@docs/decisions/INDEX.md` — the Key Decisions register: one file per area, fences first (the table below names the areas)
+- `@docs/decisions/index.yaml` — the Key Decisions register, generated: every area's fences (one file per decision under `docs/decisions/<area>/`)
 - `@docs/specs/index.yaml` — the spec index, generated from each spec's frontmatter (`sh scripts/gen-index.sh`)
 - `@docs/specs/SPEC-XXX-*.md` — the spec you're implementing
 - `@docs/component-inventory.md` — reusable modules/services/components already built
@@ -65,16 +65,16 @@ Each spec's frontmatter is the one authority for its status; `docs/specs/index.y
 
 ## Key Decisions (settled — don't re-litigate)
 
-Settled decisions live in `docs/decisions/`, **one file per area**. Each area file opens with its
-**Fences** — one line per decision, the claim and its constraint — and carries the full entries
-behind them. **Read an area's fences before working in it.** A new decision is a fence and an entry
-in its area file, never a line here; a new *area* is a new row here and in `docs/decisions/INDEX.md`,
-in the same order. This table is the authority for the set of areas; `scripts/docs-lint.sh` holds
-the register and the rules to it, and refuses anything in this section but this prose and the table.
+Settled decisions live in `docs/decisions/`, **one file per decision** in one directory per area: its
+`description` is the **fence** — the claim and its constraint in one line — and its body the reasoning.
+`docs/decisions/index.yaml` (generated) lists every area's fences: **read your area's before working
+in it.** A new decision is a new file in its area, never a line here; a new *area* is a new directory
+and a row here, in slug order. `scripts/docs-lint.sh` holds this table to the areas' titles and
+refuses anything in this section but this prose and the table.
 
-| Area | Fences |
+| Area | Directory |
 |---|---|
-| (example) Area name | `docs/decisions/example-area.md#fences` |
+| (example) Area name | `docs/decisions/example-area/` |
 
 ## Out of Scope (don't build)
 
@@ -92,6 +92,6 @@ the register and the rules to it, and refuses anything in this section but this 
 
 **PRs & main:** building a spec **authorizes the whole landing** — the push of the reviewed branch, the PR, the watch and the merge on green are the build's last steps, not decisions to confirm, so do not stop to ask for them and do not stop at announcing them. Before pushing, get the diff through the review gate above, and get the formatter, linter, typecheck and unit tests green locally, plus `sh scripts/spec-lint.sh` and **`sh scripts/docs-lint.sh` — always, before every PR, since nothing in CI runs it** (and `sh scripts/docs-lint-test.sh` or `sh scripts/spec-lint-test.sh` whenever you touch that linter). **That list is a floor, not the set** — also run locally whatever CI will run on the branch. Watch every PR to completion and merge it as soon as CI is green — never open-and-abandon. **Key the watch on the current head sha** — a bare `gh pr checks --watch` can exit clean against the *previous* commit's checks. `main` is always watched: after any merge confirm it went green, and if `main` fails, diagnose immediately and fix it with a new PR before anything else. **When several agent sessions share this repo**, install `scripts/pr-queue/install.sh` once and the remote is serialised by a PR queue — one PR open at a time, taken in the order agents asked, `main` green before the next — and you get in line only once your gates and reviews are green, because the queue is not a review. Until it is installed the queue is inert; once it is, its `pre-push` hook refuses a push whose commits do not contain the remote's current `main`. Protocol and the four commands: `scripts/pr-queue/PROTOCOL.md`; brief each session from `@docs/templates/multi-agent-briefing.md`.
 
-**On spec completion:** run the seven steps in `@docs/process/completion-ritual.md` — `spec_status`, regenerated indexes, delivery doc, inventory row, register entry **before** its fence in the area file, an ADR row only when the system's shape changed, and a prune of `## Specs` above (never an append).
+**On spec completion:** run the seven steps in `@docs/process/completion-ritual.md` — `spec_status`, regenerated indexes, delivery doc, inventory row, a decision as one file — fence and entry together, an ADR row only when the system's shape changed, and a prune of `## Specs` above (never an append).
 
-**Doc-size guardrail:** this file and its two imports are every session's fixed cost. `scripts/docs-lint.sh` holds the set **the router's table names** to a byte budget, holds Key Decisions to an intro and one area table, holds every area file in `@docs/decisions/INDEX.md` to fences-first with an entry behind every fence, and holds `docs/process/`, `.claude/rules/` and `.claude/agents/` to theirs, and refuses one shape of unanchored evidence — a dated measurement with no commit to re-measure from — in the standing docs and scripts it names. Run it locally before every push; it is not a CI job. When a budget fires, move detail down a tier behind a pointer and re-ratchet; after a structural cut leave headroom and say why beside the number. Full rule set: `@docs/process/completion-ritual.md` → *Anti-regrowth & doc hygiene*.
+**Doc-size guardrail:** this file and its two imports are every session's fixed cost. `scripts/docs-lint.sh` holds the set **the router's table names** to a byte budget, holds Key Decisions to an intro and one area table, every decision to its frontmatter and an entry behind its fence, every generated index to its frontmatter, and `docs/process/`, `.claude/rules/` and `.claude/agents/` to their shapes. Run it locally before every push; it is not a CI job. When a budget fires, move detail down a tier behind a pointer and re-ratchet; after a structural cut leave headroom and say why beside the number. Full rule set: `@docs/process/completion-ritual.md` → *Anti-regrowth & doc hygiene*.

@@ -187,13 +187,15 @@ fi
 # one-line, deliberate lowering in the same change; a case lost by accident reds the run.
 # Not applied to the self-test invocation, which runs a handful of planted cases. Derived
 # in log-forge, where a floor left slack enough that deleting one whole family of cases
-# still printed a success line was measured; re-derived here for the template's own corpus
-# — 175 at the commit that took the register cross-checks and check 14 up (121 inherited
-# plus 54 taken over) — with headroom of FIVE, below the smallest family (the six tree
-# cases), so losing any whole family fires and pruning a case or two does not. A first
-# draft set it at 150 and claimed the same thing; measured by deleting families from a
-# copy, that floor let two of the three ported families vanish green.
-CASES_MIN=170
+# still printed a success line was measured. RE-DERIVED, not re-checked, at the commit that
+# moved the register to one file per decision: the corpus there is 208 cases, and the floor
+# had gone stale before it — set at 170 against 175, it sat 24 below the 194 the corpus had
+# grown to, so a whole family could vanish green. The headroom is TWO, below the smallest
+# family that change has — the three `yaml-*` cases that widened the pointer checks to the
+# generated indexes — so losing any whole family fires and pruning a case or two does not.
+# Measured by deleting that family from a copy: the run reds on the floor. A family smaller
+# than three is not protected by a floor at all; that is what its own case is for.
+CASES_MIN=206
 if { [ -z "${DOCS_LINT_TEST_CASES:-}" ] || [ -n "${DOCS_LINT_TEST_FLOOR:-}" ]; } && [ -z "$FILTER" ] && [ "$pass" -lt "$CASES_MIN" ]; then
   echo "docs-lint-test: only $pass cases ran, against a floor of $CASES_MIN. The corpus has"
   echo "shrunk or gone missing — a run over nothing exits 0 and looks exactly like a healthy"
@@ -228,36 +230,31 @@ if [ -z "${DOCS_LINT_TEST_CASES:-}" ] && [ -z "$FILTER" ]; then
 
 Intro prose.
 
-| Area | Fences |
+| Area | Directory |
 |---|---|
-| Area one | `docs/decisions/area-one.md#fences` |
-@@@ file docs/decisions/INDEX.md
-# Register
-
-## Areas
-
-| Area | Fences | Governs |
-|---|---|---|
-| Area one | `docs/decisions/area-one.md#fences` | none |
-@@@ file docs/decisions/area-one.md
-# Area one — decisions
-
-intro
-
-## Contents
-
-- [Fences](#fences)
-- [Alpha rule](#alpha-rule)
-
-## Fences
-
-- **Alpha rule** — short claim.
-
+| Area one | `docs/decisions/area-one/` |
+@@@ file docs/decisions/area-one/area-one.md
+---
+type: Decision Area
+title: Area one
+governs: []
 ---
 
-### Alpha rule
+intro
+@@@ file docs/decisions/area-one/alpha-rule.md
+---
+type: Decision
+title: Alpha rule
+description: short claim.
+---
 
-Reasoning.'
+Reasoning.
+
+## History
+
+### 2026-01-01
+
+- **Settled.**'
 
   # 1. No `@@@ file` at all: nothing is written, so the linter examines an empty tree.
   printf '@@@ expect exit=0\n' > "$SELF/no-file-ok.case"

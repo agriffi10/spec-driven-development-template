@@ -207,18 +207,19 @@ echo "spec-lint-test: $pass passed, $fail failed."
 
 # A FLOOR, NOT AN EXIT CODE. Every mechanical way to lose the corpus — a renamed directory,
 # a glob that stops matching — ends with zero cases run and `0 passed, 0 failed`, which
-# exits 0 and prints a success line. Deliberately BELOW the measurement — 26 at the commit
-# that introduced it: 23 case files plus the two template cases and the missing-directory case
-# — with headroom of about a quarter, so adding cases needs no edit here and pruning a few does
-# not either; losing the corpus, or most of it, does, and that is the point. Not applied to the
-# self-test invocation, which runs a handful of planted cases.
+# exits 0 and prints a success line. Deliberately BELOW the measurement, with headroom of about
+# a quarter, so adding cases needs no edit here and pruning a few does not either; losing the
+# corpus, or most of it, does, and that is the point. Re-derived when specs gained frontmatter:
+# 98 at that commit — 95 case files plus the two template cases and the missing-directory case,
+# up from 26 — so the old floor of 19 had stopped meaning "most of the corpus". Not applied to
+# the self-test invocation, which runs a handful of planted cases.
 # A filter typo is the same shape at a smaller scale and gets its own line: a filtered run
 # that matched nothing has proved nothing.
 if [ -n "$FILTER" ] && [ "$pass" -eq 0 ]; then
   echo "spec-lint-test: the filter '$FILTER' matched no case. Nothing ran, so nothing passed."
   exit 1
 fi
-CASES_MIN=19
+CASES_MIN=73
 if [ -z "${SPEC_LINT_TEST_CASES:-}" ] && [ -z "$FILTER" ] && [ "$pass" -lt "$CASES_MIN" ]; then
   echo "spec-lint-test: only $pass cases ran, against a floor of $CASES_MIN. The corpus has"
   echo "shrunk or gone missing — a run over nothing exits 0 and looks exactly like a healthy"

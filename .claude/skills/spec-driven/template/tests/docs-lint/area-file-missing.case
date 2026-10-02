@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match routes area "Area A" to docs/decisions/area-a.md, which does not exist
+@@@ match CLAUDE.md routes area "Area A" to docs/decisions/area-a/, which does not exist.
 @@@ file CLAUDE.md
 # P
 
@@ -8,27 +8,19 @@ Loaded every session.
 @docs/process/INDEX.md
 @docs/process/session-rhythm.md
 
-- `@docs/decisions/INDEX.md` — register
+- `@docs/decisions/index.yaml` — register
 
 ## Key Decisions
 
 Intro prose.
 
-| Area | Fences |
+| Area | Directory |
 |---|---|
-| Area A | `docs/decisions/area-a.md#fences` |
+| Area A | `docs/decisions/area-a/` |
 
 ## Out of Scope
 
 nothing
-@@@ file docs/decisions/INDEX.md
-# Register
-
-## Areas
-
-| Area | Fences | Governs |
-|---|---|---|
-| Area A | `docs/decisions/area-a.md#fences` | none |
 @@@ file docs/process/INDEX.md
 # Router
 

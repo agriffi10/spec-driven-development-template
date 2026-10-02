@@ -1,32 +1,27 @@
 @@@ expect exit=1
 @@@ match CLAUDE.md does not exist, but docs/ is scaffolded
-@@@ file docs/decisions/INDEX.md
-# Register
-
-## Areas
-
-| Area | Fences | Governs |
-|---|---|---|
-| Area A | `docs/decisions/area-a.md#fences` | none |
-@@@ file docs/decisions/area-a.md
-# Area A — decisions
-
-intro
-
-## Contents
-
-- [Fences](#fences)
-- [Label](#label)
-
-## Fences
-
-- **Label** — a fence.
-
+@@@ file docs/decisions/area-a/area-a.md
+---
+type: Decision Area
+title: Area A
+governs: []
 ---
 
-### Label
+intro
+@@@ file docs/decisions/area-a/label.md
+---
+type: Decision
+title: Label
+description: a fence.
+---
 
 text
+
+## History
+
+### 2026-01-01
+
+- **Settled.**
 @@@ file docs/process/INDEX.md
 # Router
 

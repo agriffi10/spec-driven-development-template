@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match fence "Lonely" has no `### Lonely` entry in the same file
+@@@ match docs/decisions/area-a/lonely.md: is a fence with no entry: nothing above `## History`
 @@@ file CLAUDE.md
 # P
 
@@ -8,47 +8,41 @@ Loaded every session.
 @docs/process/INDEX.md
 @docs/process/session-rhythm.md
 
-- `@docs/decisions/INDEX.md` — register
+- `@docs/decisions/index.yaml` — register
 
 ## Key Decisions
 
 Intro prose.
 
-| Area | Fences |
+| Area | Directory |
 |---|---|
-| Area A | `docs/decisions/area-a.md#fences` |
+| Area A | `docs/decisions/area-a/` |
 
 ## Out of Scope
 
 nothing
-@@@ file docs/decisions/INDEX.md
-# Register
-
-## Areas
-
-| Area | Fences | Governs |
-|---|---|---|
-| Area A | `docs/decisions/area-a.md#fences` | none |
-@@@ file docs/decisions/area-a.md
-# Area A — decisions
-
-intro
-
-## Contents
-
-- [Fences](#fences)
-- [Label](#label)
-
-## Fences
-
-- **Label** — a fence.
-- **Lonely** — a fence with no entry.
-
+@@@ file docs/decisions/area-a/area-a.md
+---
+type: Decision Area
+title: Area A
+governs: []
 ---
 
-### Label
+intro
+@@@ file docs/decisions/area-a/label.md
+---
+type: Decision
+title: Label
+description: a fence.
+---
 
 text
+
+## History
+
+### 2026-01-01
+
+- **Settled.**
 @@@ file docs/process/INDEX.md
 # Router
 
@@ -113,3 +107,15 @@ description: i
 model: opus
 ---
 body
+@@@ file docs/decisions/area-a/lonely.md
+---
+type: Decision
+title: Lonely
+description: a fence.
+---
+
+## History
+
+### 2026-01-01
+
+- **Settled.**

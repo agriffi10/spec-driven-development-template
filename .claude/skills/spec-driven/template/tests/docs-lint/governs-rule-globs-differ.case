@@ -8,46 +8,41 @@ Loaded every session.
 @docs/process/INDEX.md
 @docs/process/session-rhythm.md
 
-- `@docs/decisions/INDEX.md` — register
+- `@docs/decisions/index.yaml` — register
 
 ## Key Decisions
 
 Intro prose.
 
-| Area | Fences |
+| Area | Directory |
 |---|---|
-| Area A | `docs/decisions/area-a.md#fences` |
+| Area A | `docs/decisions/area-a/` |
 
 ## Out of Scope
 
 nothing
-@@@ file docs/decisions/INDEX.md
-# Register
-
-## Areas
-
-| Area | Fences | Governs |
-|---|---|---|
-| Area A | `docs/decisions/area-a.md#fences` | `docs/specs/**`, `docs/process/**` |
-@@@ file docs/decisions/area-a.md
-# Area A — decisions
-
-intro
-
-## Contents
-
-- [Fences](#fences)
-- [Label](#label)
-
-## Fences
-
-- **Label** — a fence.
-
+@@@ file docs/decisions/area-a/area-a.md
+---
+type: Decision Area
+title: Area A
+governs: [docs/specs/**, docs/process/**]
 ---
 
-### Label
+intro
+@@@ file docs/decisions/area-a/label.md
+---
+type: Decision
+title: Label
+description: a fence.
+---
 
 text
+
+## History
+
+### 2026-01-01
+
+- **Settled.**
 @@@ file docs/process/INDEX.md
 # Router
 
@@ -117,5 +112,5 @@ body
 paths:
   - "docs/specs/**"
 ---
-Files matching these paths are governed by the **Area A** decisions in `docs/decisions/area-a.md`.
-Read its fences first — they are not loaded with CLAUDE.md.
+Files matching these paths are governed by the **Area A** decisions in `docs/decisions/area-a/`.
+Read the area's fences in `docs/decisions/index.yaml` first — they are not loaded with CLAUDE.md.
