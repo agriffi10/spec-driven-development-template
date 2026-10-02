@@ -22,16 +22,22 @@
 #   area file is missing or disagrees with the table, a fence has no entry or an entry no fence,
 #   an entry is unreachable from its Contents or is named by a row that links elsewhere, an entry
 #   opens its body with a label that contradicts its heading, a fence has become the reasoning, a
-#   Completed spec has no delivery doc, a delivery doc has become an essay, a pointer out of an
+#   Completed spec has no delivery doc — or a spec's `spec_status` cannot be read, so whether it
+#   owes one cannot be told — a delivery doc has become an essay, a pointer out of an
 #   always-loaded file goes nowhere, the routed process tier has lost its shape (router, imports,
-#   parts, rules, agents — checks 9–13), a stub has reappeared at either old single-file path, or a
-#   dated measurement in a standing doc or script carries no commit to re-measure from (14).
+#   parts, rules, agents — checks 9–13), a stub has reappeared at an old path, a dated measurement
+#   in a standing doc or script carries no commit to re-measure from (14), or a generated index is
+#   missing, stale, or cannot be regenerated (15).
+# ERROR (exit 2): the shared frontmatter reader or the index generator is missing, fails, or
+#   returns no verdict — the checks that read through them cannot run, and must not read as passed.
 #
 # There is no WARN tier: `spec-lint.sh` owns the soft per-spec judgements, and every rule
 # here is a shape the layering depends on — a shape is either held or it isn't.
 # Deliberately NOT checked here: anything `spec-lint.sh` already owns (required spec
-# sections, banned headers, the FR ceiling). A rule with two enforcement homes gets
-# qualified in one of them and read from the other.
+# sections, banned headers, the FR ceiling, and every rule on a spec's frontmatter — this
+# script reads a spec's `spec_status` for check 6 and regenerates the spec index for check 15,
+# through the same reader, and names spec-lint for the defect). A rule with two enforcement
+# homes gets qualified in one of them and read from the other.
 #
 # Usage: sh scripts/docs-lint.sh          (run from anywhere; resolves its own root)
 # POSIX sh — no bashisms, no dependencies; runs anywhere /bin/sh exists.
@@ -117,6 +123,11 @@ ROUTING="$PROCESS_DIR/model-routing.md"
 OLD_PROCESS="docs/process.md"
 RULES_DIR=".claude/rules"
 AGENTS_DIR=".claude/agents"
+# The frontmatter reader and the index generator are SHARED with spec-lint.sh, so a file is never
+# read two ways (docs/process/knowledge-layout.md). Missing either is an environment error, not a
+# pass: every check that reads through them would otherwise iterate over nothing.
+READER="scripts/frontmatter.awk"
+GENERATOR="scripts/gen-index.sh"
 
 # Every failure lands in one file rather than incrementing a counter. A `| while` loop
 # runs in a subshell, so a count raised inside one is lost the moment the pipeline ends
@@ -129,6 +140,24 @@ trap 'rm -f "$FAILS" "${TMPDIR:-/tmp}"/docs-lint-*.$$' EXIT INT TERM
 : > "$FAILS"
 
 note() { printf 'FAIL  %s\n' "$1" >> "$FAILS"; }
+
+# Read one governed file through the shared reader, appending its records to $2. Two guards, and
+# neither alone is enough: the reader exit status, and exactly one verdict (F) record. An awk
+# that dies on a syntax error prints nothing, and a check iterating over no records passes. Called
+# from the main shell, never a pipeline, so the `exit 2` reaches the script.
+FM_ONE="${TMPDIR:-/tmp}/docs-lint-fmone.$$"
+fm_read() {
+  [ -f "$READER" ] || { echo "error: docs-lint: the frontmatter reader $READER is missing; docs-lint.sh, spec-lint.sh and gen-index.sh read every frontmatter through it" >&2; exit 2; }
+  if ! awk -f "$READER" "$1" > "$FM_ONE" 2> "$FM_ONE.err"; then
+    echo "error: docs-lint: the frontmatter reader failed on $1: $(head -1 "$FM_ONE.err")" >&2
+    exit 2
+  fi
+  if [ "$(awk -F'\t' '$2 == "F"' "$FM_ONE" | wc -l | tr -d '[:space:]')" != 1 ]; then
+    echo "error: docs-lint: the frontmatter reader returned no single verdict for $1 — a reader that prints nothing passes every check that reads through it" >&2
+    exit 2
+  fi
+  cat "$FM_ONE" >> "$2"
+}
 
 report() {
   count=$(grep -c '^FAIL  ' "$FAILS" || true)
@@ -147,7 +176,8 @@ report() {
   exit 1
 }
 
-# Shared by checks 4 and 8: every relative link and `@path.md` pointer in a file resolves.
+# Shared by checks 4 and 8: every relative link and `@path.md` / `@path.yaml` pointer in a file
+# resolves — `.yaml` because the generated indexes are pointed at the same way.
 # Defined here because the register check (4) runs before the always-loaded check (8).
 # Code-span-BLIND on purpose — see the note at check 8.
 check_pointers() {
@@ -163,7 +193,7 @@ check_pointers() {
         if (p != "" && p !~ /^(https?:|mailto:)/ && p !~ /[*?]/) print p
       }
       line = $0
-      while (match(line, /@[A-Za-z0-9_.*?\/-]+\.md/)) {
+      while (match(line, /@[A-Za-z0-9_.*?\/-]+\.(md|yaml)/)) {
         p = substr(line, RSTART + 1, RLENGTH - 1)
         line = substr(line, RSTART + RLENGTH)
         # A pointer written as a glob (@docs/specs/SPEC-XXX-*.md) names a shape, not a
@@ -619,21 +649,28 @@ else
 fi
 
 # ── 6 & 7. The delivery tier ───────────────────────────────────────────────────
-# The Status match is deliberately permissive about what sits between "Status" and
-# "Completed" — ": ", " | " in a table row, "**" — because a spec whose header form
-# this fails to recognise is skipped SILENTLY, and a silent skip of the delivery-doc
-# check is indistinguishable from a pass.
+# A spec's status is its frontmatter `spec_status`, read through the shared reader — the body is
+# not consulted at all, so a spec quoting "Status: Completed" in an example cannot be mistaken for
+# a completed one. A spec whose `spec_status` cannot be read (frontmatter refused, key missing,
+# a value outside the vocabulary) FAILS here: a spec this check cannot read would otherwise be
+# skipped SILENTLY, and a silent skip of the delivery-doc check is indistinguishable from a pass.
+# spec-lint.sh names the defect itself; this only refuses to guess.
+#   6a a Completed spec with no delivery doc   6b a spec whose spec_status cannot be read
 if [ -d "$SPEC_DIR" ]; then
+  FM_REC="${TMPDIR:-/tmp}/docs-lint-fmrec.$$"
   for f in "$SPEC_DIR"/SPEC-*.md; do
     [ -f "$f" ] || continue
-    # Fence-aware: a Draft spec that quotes the completion ritual in a fenced block
-    # would otherwise be read as Completed and told it owes a delivery doc.
-    awk '
-      /^[ \t]*(```|~~~)/ { fence = !fence; next }
-      fence { next }
-      tolower($0) ~ /^[^a-z]*status[^a-z]+completed/ { found = 1 }
-      END { exit !found }
-    ' "$f" || continue
+    : > "$FM_REC"
+    fm_read "$f" "$FM_REC"
+    st=$(awk -F'\t' '$2 == "F" { v = $3 } $2 == "K" && $3 == "spec_status" { s = $4 } END { if (v == "ok") print s }' "$FM_REC")
+    case "$st" in
+      Draft|"In Progress") continue ;;
+      Completed) ;;
+      *) note "$f: its spec_status cannot be read, so whether it owes a delivery doc cannot be checked — a
+      silent skip here is indistinguishable from a pass. spec-lint.sh names the defect; a spec written
+      before specs carried frontmatter: docs/process/knowledge-layout.md (Migrating)."
+         continue ;;
+    esac
     num=$(basename "$f" | sed -n 's/^\(SPEC-[0-9][0-9]*\).*/\1/p')
     [ -n "$num" ] || continue
     found=0
@@ -752,7 +789,7 @@ if [ -d "$PROCESS_DIR" ]; then
             pad = sprintf("%*s", RLENGTH, "")
             line = substr(line, 1, RSTART - 1) pad substr(line, RSTART + RLENGTH)
           }
-          while (match(line, /@[A-Za-z0-9_.\/-]+\.md/)) {
+          while (match(line, /@[A-Za-z0-9_.\/-]+\.(md|yaml)/)) {
             pre = (RSTART > 1) ? substr(line, RSTART - 1, 1) : " "
             p = substr(line, RSTART + 1, RLENGTH - 1)
             line = substr(line, RSTART + RLENGTH)
@@ -1246,6 +1283,43 @@ fi
       END { flush() }
     ' "$f" >> "$FAILS"
   done
+
+
+# ── 15. The generated indexes exist, are fresh, and can be regenerated ────────
+#
+# An index is a VIEW of the frontmatter, written by scripts/gen-index.sh and never by hand
+# (docs/process/knowledge-layout.md). Freshness is regenerate-and-compare: the generator prints
+# the index into a temp file and the committed copy must match it byte for byte — the index is
+# only ever written, never parsed, so there is no second reading of it to disagree with.
+# The generator runs whether or not the index exists, so a tree it refuses is named even when
+# the index is missing too: "run the generator" is no remedy when the generator refuses.
+#   15a the spec index is missing      15b the spec index is stale
+#   15e the generator refuses a tree (its errors are printed)   15f a stub at docs/specs/INDEX.md
+GEN_OUT="${TMPDIR:-/tmp}/docs-lint-genout.$$"
+GEN_ERR="${TMPDIR:-/tmp}/docs-lint-generr.$$"
+check_index() {   # check_index <tree> <specs|decisions>
+  idx="$1/index.yaml"
+  [ -f "$GENERATOR" ] || { echo "error: docs-lint: the index generator $GENERATOR is missing; docs-lint regenerates every index through it" >&2; exit 2; }
+  sh "$GENERATOR" --print "$2" > "$GEN_OUT" 2> "$GEN_ERR" && grc=0 || grc=$?
+  case "$grc" in
+    0|1) ;;
+    *) echo "error: docs-lint: $GENERATOR --print $2 failed (exit $grc): $(head -1 "$GEN_ERR")" >&2; exit 2 ;;
+  esac
+  [ "$grc" -eq 0 ] || note "$GENERATOR cannot regenerate $idx — it refuses the tree:
+$(sed 's/^/      /' "$GEN_ERR")"
+  if [ ! -f "$idx" ]; then
+    note "$idx is missing. It is generated from the frontmatter: run \`sh $GENERATOR\` and commit it."
+  elif [ "$grc" -eq 0 ] && ! cmp -s "$GEN_OUT" "$idx"; then
+    note "$idx is stale — it differs from what the frontmatter generates. Run \`sh $GENERATOR\` and commit
+      the result; never edit it by hand (a merge conflict in it is resolved the same way)."
+  fi
+}
+if [ -d "$SPEC_DIR" ]; then
+  [ ! -e "$SPEC_DIR/INDEX.md" ] || note "$SPEC_DIR/INDEX.md exists. The spec index is $SPEC_DIR/index.yaml, generated from each
+      spec's frontmatter; there is no stub at the old path — a stale pointer must fail, not land on an
+      empty file. Migrating: docs/process/knowledge-layout.md."
+  check_index "$SPEC_DIR" specs
+fi
 
 
 report

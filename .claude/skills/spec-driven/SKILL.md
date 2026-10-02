@@ -49,7 +49,7 @@ When a repo has no spec-driven docs yet:
    mirror of `template/`, `scripts/sync-from-skill.sh` regenerates it, and edits belong in `template/`
    followed by a sync. Steps 3 and 6 below would fill in the mirror and delete `ci.yml.example`, which
    must survive there.
-2. `chmod +x scripts/spec-lint.sh scripts/spec-lint-test.sh scripts/docs-lint.sh scripts/docs-lint-test.sh scripts/pr-queue-test.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh scripts/pr-queue/install-test.sh`.
+2. `chmod +x scripts/spec-lint.sh scripts/spec-lint-test.sh scripts/docs-lint.sh scripts/docs-lint-test.sh scripts/gen-index.sh scripts/pr-queue-test.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh scripts/pr-queue/install-test.sh`.
 3. Fill in the placeholders in `CLAUDE.md` (Project Overview, Layout, Tech Stack, Code Conventions,
    Common Commands) from what the repo actually is — detect the language/build/test/lint tooling from
    the manifest (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, …) rather than guessing.

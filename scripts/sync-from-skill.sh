@@ -23,6 +23,7 @@ chmod +x "$ROOT/scripts/spec-lint.sh" \
          "$ROOT/scripts/spec-lint-test.sh" \
          "$ROOT/scripts/docs-lint.sh" \
          "$ROOT/scripts/docs-lint-test.sh" \
+         "$ROOT/scripts/gen-index.sh" \
          "$ROOT/scripts/pr-queue-test.sh" \
          "$ROOT/scripts/pr-queue/queue.sh" \
          "$ROOT/scripts/pr-queue/pre-push" \

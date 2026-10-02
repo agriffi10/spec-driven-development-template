@@ -94,9 +94,14 @@ paths:
 Files matching these paths are governed by `docs/process/authoring-a-spec.md`.
 Read it before changing one — it is not loaded with CLAUDE.md.
 @@@ file docs/specs/SPEC-001-x.md
-# Spec
-
-**Status:** Draft
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
 @@@ file .claude/agents/reviewer.md
 ---
 name: reviewer

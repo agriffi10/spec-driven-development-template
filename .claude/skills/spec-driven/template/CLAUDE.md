@@ -12,7 +12,7 @@ pulled **on demand**, when the router's table says:
 - `@docs/process/completion-ritual.md` — the seven steps at spec completion + the doc-hygiene rules
 - `@docs/architecture.md` — system design decisions + Known Constraints (read the section you need)
 - `@docs/decisions/INDEX.md` — the Key Decisions register: one file per area, fences first (the table below names the areas)
-- `@docs/specs/INDEX.md` — the spec index + status (one row per spec)
+- `@docs/specs/index.yaml` — the spec index, generated from each spec's frontmatter (`sh scripts/gen-index.sh`)
 - `@docs/specs/SPEC-XXX-*.md` — the spec you're implementing
 - `@docs/component-inventory.md` — reusable modules/services/components already built
 - `@docs/spec-delivery/SPEC-XXX-*.md` — what a past spec delivered (pull only when a dependency points to one)
@@ -51,13 +51,14 @@ expectations. Keep to what an implementer must not violate.]
 # lint / typecheck
 # spec-lint:  sh scripts/spec-lint.sh   (its tests: sh scripts/spec-lint-test.sh)
 # docs-lint:  sh scripts/docs-lint.sh
+# indexes:    sh scripts/gen-index.sh   (after any frontmatter change; never edit an index by hand)
 # docs-lint tests: sh scripts/docs-lint-test.sh
 # pr-queue tests: sh scripts/pr-queue-test.sh; sh scripts/pr-queue/install-test.sh
 ```
 
 ## Specs
 
-Index + status: `@docs/specs/INDEX.md`. Each spec file's header carries its own `Status`.
+Each spec's frontmatter is the one authority for its status; `docs/specs/index.yaml` is generated from it.
 **Current work:** [the spec in progress, or "none — next work unplanned"].
 
 ---

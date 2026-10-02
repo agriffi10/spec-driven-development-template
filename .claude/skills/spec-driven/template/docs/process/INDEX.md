@@ -50,7 +50,7 @@ is deliberately small and **must not regrow**.
 | Tier | File(s) | Loaded | Authoritative for |
 |---|---|---|---|
 | Always | `CLAUDE.md` + its two imports (the table above) | every session | conventions, key decisions, the session rhythm, what loads when |
-| Status | `docs/specs/INDEX.md` + each spec header | on demand | spec **status** (one row per spec) |
+| Status | each spec's frontmatter → `docs/specs/index.yaml` (generated) | on demand | spec **status** — `spec_status`, one home |
 | The work | `docs/specs/SPEC-XXX-*.md` | the one you're building | requirements + phases |
 | Why | `docs/architecture.md` | the *section* you need | design rationale + Known Constraints |
 | Decisions | `docs/decisions/<area>.md` | the *fences* of your area, then the entry you need | settled decisions in full + reversal markers, one file per area |
