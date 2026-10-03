@@ -211,7 +211,7 @@ these scripts: **spec-lint fails every existing spec in CI** (no frontmatter, a 
 in the body), and docs-lint fails the old `docs/specs/INDEX.md` and `docs/decisions/INDEX.md`, every
 flat area file, the `| Area | Fences |` table in `CLAUDE.md`, every area rule, and every rulebook. Every one of those FAILs names this section. Migrate in one branch, by hand — not by a
 script: splitting files is the mechanical splice that drops an entry while every check stays green,
-which is why the last step counts and compares.
+which is why the last step is reading what moved, in a diff.
 
 Let `OLD` be the commit before the migration branch.
 
@@ -271,113 +271,53 @@ Let `OLD` be the commit before the migration branch.
 5. **Generate and delete.** `sh scripts/gen-index.sh`, then `git rm docs/specs/INDEX.md
    docs/decisions/INDEX.md` and every old `docs/decisions/<slug>.md`. Run every gate: `spec-lint.sh`,
    `spec-lint-test.sh`, `docs-lint.sh`, `docs-lint-test.sh`.
-6. **Verify against `OLD`, and do not skip it** — green gates prove the new files are well-formed, not
-   that nothing was lost. Each check below is a script you paste whole: it runs in its own `sh` from the
-   repo root wherever you start it, works in a temporary directory it removes, leaves nothing behind,
-   refuses outright when either side is empty, and exits non-zero on any failure — only a full pass
-   prints the success line. Neither hands a line of a doc to a shell: a code span such as
-   `` `git clean -fdx` `` in an entry is text here, not a command.
+6. **Read the migration diff, and do not skip it.** Green gates prove the new files are well-formed,
+   not that nothing was lost — and **nothing here proves that mechanically**. This is a diff for a
+   person to read, in the migration PR. That is a deliberate trade: three mechanical verifiers written
+   for this step each misread a valid old form (a fence with a plain hyphen, a `#` line in a code block,
+   a bulleted *Depends On*), and a checker that misreads passes what it misread. The new linters, with
+   their tested corpus, hold the new layout; your reading holds the move. Set `OLD` first — the commit
+   before the migration branch — in the shell you run these in, from anywhere inside the repo.
 
-   **Specs** — id, status, title and `depends_on`, from each old spec's own header (the authority in
-   the old layout), against the new frontmatter. Two things it prints are for the record and do not
-   fail it: rows of the old INDEX whose status had already drifted from their header, and the arcs —
-   the old *Arcs* section was free-form, so it prints the old section beside the generated arcs and
-   **comparing them is yours, by eye**.
+   **Specs.** One diff, nothing parsed:
 
    ```sh
-   OLD=<the commit before the migration> sh <<'EOF'
-   set -eu
-   cd "$(git rev-parse --show-toplevel)"
-   tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-   git ls-tree --name-only "$OLD" docs/specs/ | grep '/SPEC-[^/]*\.md$' > "$tmp/old.list" || true
-   find docs/specs -maxdepth 1 -type f -name 'SPEC-*.md' | sort > "$tmp/new.list"
-   [ -s "$tmp/old.list" ] || { echo "REFUSED: no docs/specs/SPEC-*.md at $OLD"; exit 1; }
-   [ -s "$tmp/new.list" ] || { echo "REFUSED: no docs/specs/SPEC-*.md in the tree"; exit 1; }
-   while IFS= read -r f; do git show "$OLD:$f" | F="${f##*/}" awk '{ sub(/\r$/, "") }
-       /^# Spec:/ && t == "" { t = $0; sub(/^# Spec:[ \t]*/, "", t); sub(/[ \t]+$/, "", t) }
-       /^\*\*Status:\*\*/ { st = $0; sub(/^\*\*Status:\*\*[ \t]*/, "", st); sub(/[ \t]+$/, "", st) }
-       /^\*\*Depends On:\*\*/ { d = $0; sub(/^\*\*Depends On:\*\*[ \t]*/, "", d); sub(/[ \t]+$/, "", d)
-                                if (d ~ /^([Nn]one|-)?$/) d = ""; gsub(/[ \t]*,[ \t]*/, ",", d) }
-       END { match(ENVIRON["F"], /^SPEC-[0-9]+/); print substr(ENVIRON["F"], RSTART, RLENGTH) "\t" st "\t" t "\t" d }'
-   done < "$tmp/old.list" | sort > "$tmp/before.tsv"
-   while IFS= read -r f; do LC_ALL=C awk -f scripts/frontmatter.awk "$f"; done < "$tmp/new.list" \
-     | awk -F'\t' '$2 == "F" { n++; file[n] = $1 } $2 == "K" { k[$1, $3] = $4 }
-         $2 == "I" && $3 == "depends_on" { d[$1] = d[$1] (d[$1] == "" ? "" : ",") $4 }
-         END { for (i = 1; i <= n; i++) { f = file[i]; print k[f, "id"] "\t" k[f, "spec_status"] "\t" k[f, "title"] "\t" d[f] } }' \
-     | sort > "$tmp/after.tsv"
-   rc=0
-   if diff "$tmp/before.tsv" "$tmp/after.tsv"; then echo "every spec carried: id, status, title and depends_on equal"
-   else echo "MISMATCH above — < the old header, > the new frontmatter (id, status, title, depends_on)"; rc=1; fi
-   echo "--- for the record, not a defect: old INDEX rows whose status had drifted from the spec's header"
-   git show "$OLD:docs/specs/INDEX.md" 2>/dev/null | awk -F'|' 'match($2, /SPEC-[0-9]+/) { st = $4
-       gsub(/^[ \t]+|[ \t]+$/, "", st); print substr($2, RSTART, RLENGTH) "\t" st }' > "$tmp/index.tsv" || true
-   awk -F'\t' 'NR == FNR { h[$1] = $2; next } ($1 in h) && h[$1] != $2 { print "  " $1 ": the INDEX said " $2 ", the header " h[$1] }' \
-     "$tmp/before.tsv" "$tmp/index.tsv"
-   echo "--- by eye, not checked: the old Arcs section, then the generated arcs"
-   git show "$OLD:docs/specs/INDEX.md" 2>/dev/null | sed -n '/^## Arcs/,$p' || true
-   sed -n '/^arcs:/,$p' docs/specs/index.yaml
-   exit "$rc"
-   EOF
+   : "${OLD:?set OLD to the commit before the migration}"
+   git -c core.quotePath=false diff "$OLD" -- ':/docs/specs/'
    ```
 
-   **Register** — it does not try to tell where one old entry ends and the next begins (a `#` line in
-   a code block once fooled a version that did). It holds three counts that need no boundaries: the
-   old area files' `### ` entry headings — read per file, outside fenced blocks — number exactly the
-   decision files now; every old fence text is some decision's `description`; and every non-blank
-   line of every old entry and area intro occurs in the new `docs/decisions/` tree **at least as often
-   as it did before** — a multiset, so where two old entries shared a line, keeping it in only one
-   decision is caught. (A line moved whole from one decision to another passes: telling the two apart
-   needs the boundaries this check gave up. The decision's History says where it went.)
+   Expected in each spec: the old header lines removed — `# Spec: …`, `**ID:** …`, `**Status:** …`,
+   `**Last Updated:** …`, `**Depends On:** …` — and a frontmatter block added in their place, carrying
+   the same title, status and dependencies; `INDEX.md` deleted and `index.yaml` added. **Any other
+   removed line in a spec body is a loss or an edit** — find it, and put it back or account for it.
+
+   **Decisions.** For each old area file, a word diff of that file against the new area directory's
+   files concatenated — the area concept first, then the decisions in file-name order — the temporary
+   files in a directory that is removed however the loop ends:
 
    ```sh
-   OLD=<the commit before the migration> sh <<'EOF'
-   set -eu
-   cd "$(git rev-parse --show-toplevel)"
-   tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-   git ls-tree --name-only "$OLD" docs/decisions/ | grep '\.md$' | grep -v '/INDEX\.md$' > "$tmp/old.list" || true
-   find docs/decisions -mindepth 2 -maxdepth 2 -type f -name '*.md' | sort > "$tmp/new.list"
-   [ -s "$tmp/old.list" ] || { echo "REFUSED: no area files under docs/decisions/ at $OLD"; exit 1; }
-   [ -s "$tmp/new.list" ] || { echo "REFUSED: no files under docs/decisions/<area>/ in the tree"; exit 1; }
-   n=0; while IFS= read -r f; do n=$((n + 1)); git show "$OLD:$f" > "$tmp/old-$n.md"; done < "$tmp/old.list"
-   while IFS= read -r f; do LC_ALL=C awk -f scripts/frontmatter.awk "$f"; done < "$tmp/new.list" > "$tmp/new.fm"
-   for f in "$tmp"/old-*.md; do awk '
-     function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
-     function run(x) { if (match(x, /^[ \t]*(````*|~~~~*)/)) { x = substr(x, RSTART, RLENGTH); sub(/^[ \t]*/, "", x); return x } return "" }
-     function fence_out() { if (txt != "") print "F\t" trim(txt); txt = "" }
-     { sub(/\r$/, "") }
-     fence != "" { r = run($0); rest = $0; sub(/^[ \t]*[`~]*/, "", rest)
-                   if (r != "" && substr(r, 1, 1) == substr(fence, 1, 1) && length(r) >= length(fence) && rest ~ /^[ \t]*$/) fence = ""
-                   if ((sec == "E" || sec == "I") && $0 ~ /[^ \t]/) print "L\t" trim($0); next }
-     run($0) != "" { fence = run($0); if (sec == "E" || sec == "I") print "L\t" trim($0); next }
-     FNR == 1 && /^# / { sec = "I"; next }
-     /^## Contents[ \t]*$/ && sec != "E" { sec = "C"; next }
-     /^## Fences[ \t]*$/ && sec != "E" { sec = "N"; next }
-     /^### / { fence_out(); sec = "E"; print "H"; next }
-     sec == "N" { if ($0 ~ /^---[ \t]*$/) { fence_out(); sec = "-" }
-                  else if ($0 ~ /^- \*\*/) { fence_out(); txt = $0; i = index(txt, "** — "); txt = (i ? substr(txt, i) : ""); sub(/^\*\* — /, "", txt) }
-                  else if ($0 ~ /^[ \t]+[^ \t]/ && txt != "") txt = txt " " trim($0)
-                  else fence_out()
-                  next }
-     (sec == "E" || sec == "I") && /[^ \t]/ { print "L\t" trim($0) }
-     END { fence_out() }' "$f"; done > "$tmp/old.tsv"
-   awk -F'\t' -v newlist="$tmp/new.list" '
-     function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
-     FILENAME == ARGV[1] { if ($2 == "K" && $3 == "type" && $4 == "Decision") nd++
-                           if ($2 == "K" && $3 == "description") desc[$4] = 1
-                           if ($2 == "B") body[$1] = $3; next }
-     !loaded { loaded = 1
-               while ((getline f < newlist) > 0) {
-                 ln = 0
-                 while ((getline line < f) > 0) { ln++; sub(/\r$/, "", line); if (ln >= body[f] + 0 && line ~ /[^ \t]/) have[trim(line)]++ }
-                 close(f) }
-               close(newlist) }
-     { x = $0; sub(/^[^\t]*\t/, "", x) }
-     $1 == "H" { ne++; next }
-     $1 == "F" { if (!(x in desc)) { print "FENCE not carried: " x; bad = 1 } next }
-     $1 == "L" { if (!(x in need)) order[++nl] = x; need[x]++ }
-     END { if (ne != nd) { print "COUNT: " ne " entries in the old register, " nd " decision files now"; bad = 1 }
-           for (i = 1; i <= nl; i++) { x = order[i]; if (have[x] < need[x]) { print "LOST (" need[x] - have[x] " of " need[x] "): " x; bad = 1 } }
-           if (!bad) print "every entry counted, every fence carried, every line survived"
-           exit bad }' "$tmp/new.fm" "$tmp/old.tsv"
-   EOF
+   : "${OLD:?set OLD to the commit before the migration}"
+   ( cd "$(git rev-parse --show-toplevel)" && tmp=$(mktemp -d) &&
+     trap 'rm -rf "$tmp"' EXIT && trap 'exit 1' INT TERM HUP &&
+     git -c core.quotePath=false ls-tree -r --name-only "$OLD" -- docs/decisions/ |
+     while IFS= read -r f; do
+       case $f in */INDEX.md) continue ;; *.md) ;; *) continue ;; esac
+       a=${f#docs/decisions/}; a=${a%.md}
+       git show "$OLD:$f" > "$tmp/old"
+       c="docs/decisions/$a/${a##*/}.md"
+       { if [ -f "$c" ]; then cat "$c"; fi
+         for d in "docs/decisions/$a"/*.md; do [ "$d" = "$c" ] || cat "$d"; done; } > "$tmp/new" 2>/dev/null
+       printf '\n===== %s  ->  docs/decisions/%s/\n' "$f" "$a"
+       git --no-pager diff --no-index --word-diff --diff-algorithm=patience "$tmp/old" "$tmp/new" || :
+     done )
    ```
+
+   Read `[-…-]` as removed and `{+…+}` as added. **Expected removals:** the `# <Area> — decisions`
+   title, the `## Contents` list, the `## Fences` heading, each fence bullet's `- **Label** —` (its
+   text comes back as an added `description: "…"`), the `---` separator, and each `### Label` heading
+   (it comes back as `title: "Label"`). **Expected additions:** each file's frontmatter, and each
+   decision's `## History`. Where a decision's file name sorts away from its old position, its whole
+   entry shows as removed in one place and added in another. **A loss is a removed passage that comes
+   back nowhere** in that area's additions — a line of an entry, a line of a code block, a
+   `Rejected:` or `Do NOT build:` line, a fence whose text no `description:` repeats. An area file
+   whose directory does not exist shows as wholly removed.

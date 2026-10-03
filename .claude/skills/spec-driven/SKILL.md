@@ -85,7 +85,8 @@ When a repo has no spec-driven docs yet:
 migration, not a copy: the new `spec-lint.sh` fails every old spec in CI the moment it lands, and
 `docs-lint.sh` fails the old indexes, rulebooks and register files. Follow
 `docs/process/knowledge-layout.md` → *Migrating a repo that predates this layout* — by hand, in one
-branch, ending with its verification step against the pre-migration commit.
+branch, ending by reading the migration diff against the pre-migration commit — a diff for a person to
+read, since nothing in it proves the migration lossless mechanically.
 
 Keep the always-loaded tier (`CLAUDE.md`) lean — it must not regrow into a wall of prose. `docs-lint.sh`
 now enforces that rather than asking you to remember it. In a project that ran this template the
