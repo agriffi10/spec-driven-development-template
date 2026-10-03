@@ -293,7 +293,9 @@ Let `OLD` be the commit before the migration branch.
 
    **Decisions.** For each old area file, a word diff of that file against the new area directory's
    files concatenated — the area concept first, then the decisions in file-name order — the temporary
-   files in a directory that is removed however the loop ends:
+   files in a directory that is removed however the loop ends. It uses no glob, so it reads the same in
+   `sh`, `dash`, `bash` and `zsh` (whose no-match error would otherwise end the loop at a missing
+   directory):
 
    ```sh
    : "${OLD:?set OLD to the commit before the migration}"
@@ -306,7 +308,8 @@ Let `OLD` be the commit before the migration branch.
        git show "$OLD:$f" > "$tmp/old"
        c="docs/decisions/$a/${a##*/}.md"
        { if [ -f "$c" ]; then cat "$c"; fi
-         for d in "docs/decisions/$a"/*.md; do [ "$d" = "$c" ] || cat "$d"; done; } > "$tmp/new" 2>/dev/null
+         find "docs/decisions/$a" -type f -name '*.md' 2>/dev/null | LC_ALL=C sort |
+         while IFS= read -r d; do [ "$d" = "$c" ] || cat "$d"; done; } > "$tmp/new"
        printf '\n===== %s  ->  docs/decisions/%s/\n' "$f" "$a"
        git --no-pager diff --no-index --word-diff --diff-algorithm=patience "$tmp/old" "$tmp/new" || :
      done )
