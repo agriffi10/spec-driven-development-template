@@ -131,7 +131,7 @@ stale_after: 2999-01-01T00:00:00+05:30
 - ✅ And the other.[^b]
 
 [^a]: Source A
-[^b]: Source B
+[^b]: Source: B
 @@@ file docs/best-practices/y/y.md
 ---
 type: Rulebook
@@ -153,7 +153,7 @@ stale_after: 2999-13-01T00:00:00Z
 - ✅ And the other.[^b]
 
 [^a]: Source A
-[^b]: Source B
+[^b]: Source: B
 @@@ file docs/best-practices/z/z.md
 ---
 type: Rulebook
@@ -175,7 +175,7 @@ stale_after: 2027-02-29T00:00:00Z
 - ✅ And the other.[^b]
 
 [^a]: Source A
-[^b]: Source B
+[^b]: Source: B
 @@@ file docs/best-practices/w/w.md
 ---
 type: Rulebook
@@ -197,4 +197,4 @@ stale_after: 2999-01-01
 - ✅ And the other.[^b]
 
 [^a]: Source A
-[^b]: Source B
+[^b]: Source: B

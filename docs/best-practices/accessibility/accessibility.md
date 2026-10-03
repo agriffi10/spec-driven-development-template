@@ -202,9 +202,9 @@ Keep doing manual keyboard + screen-reader passes for those.
 
 ## Sources
 
-[^wcag22]: Web Content Accessibility Guidelines (WCAG) 2.2 — https://www.w3.org/TR/WCAG22/
-[^wcag22-quickref]: How to Meet WCAG (Quick Reference) — https://www.w3.org/WAI/WCAG22/quickref/
-[^wcag22-new]: What's New in WCAG 2.2 — https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/
-[^sc-3-3-1]: Understanding SC 3.3.1: Error Identification — https://www.w3.org/WAI/WCAG22/Understanding/error-identification.html
-[^sc-3-3-3]: Understanding SC 3.3.3: Error Suggestion — https://www.w3.org/WAI/WCAG22/Understanding/error-suggestion.html
-[^sc-3-3-4]: Understanding SC 3.3.4: Error Prevention (Legal, Financial, Data) — https://www.w3.org/WAI/WCAG22/Understanding/error-prevention-legal-financial-data.html
+[^wcag22]: Web Content Accessibility Guidelines (WCAG) 2.2
+[^wcag22-quickref]: How to Meet WCAG (Quick Reference)
+[^wcag22-new]: What's New in WCAG 2.2
+[^sc-3-3-1]: Understanding SC 3.3.1: Error Identification
+[^sc-3-3-3]: Understanding SC 3.3.3: Error Suggestion
+[^sc-3-3-4]: Understanding SC 3.3.4: Error Prevention (Legal, Financial, Data)

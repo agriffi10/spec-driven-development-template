@@ -1,5 +1,7 @@
 @@@ expect exit=1
 @@@ match but .claude/rules/decisions-area-a.md does not exist
+@@@ match         Files matching these paths are governed by the **Area A** decisions in `docs/decisions/area-a/`.
+@@@ match           - "docs/specs/**"
 @@@ file CLAUDE.md
 # P
 

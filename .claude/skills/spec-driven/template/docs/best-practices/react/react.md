@@ -289,9 +289,9 @@ Vitest + React Testing Library, jsdom. Tests describe **user-observable behavior
 
 ## Sources
 
-[^react-rules]: Rules of React — https://react.dev/reference/rules
-[^react-19]: React v19 — https://react.dev/blog/2024/12/05/react-19
-[^react-19-2]: React 19.2 — https://react.dev/blog/2025/10/01/react-19-2
-[^use-effect-event]: useEffectEvent — https://react.dev/reference/react/useEffectEvent
-[^react-compiler]: React Compiler: Introduction — https://react.dev/learn/react-compiler/introduction
-[^react-compiler-target]: React Compiler: target — https://react.dev/reference/react-compiler/target
+[^react-rules]: Rules of React
+[^react-19]: React v19
+[^react-19-2]: React 19.2
+[^use-effect-event]: useEffectEvent
+[^react-compiler]: React Compiler: Introduction
+[^react-compiler-target]: React Compiler: target

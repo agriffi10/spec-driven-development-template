@@ -28,7 +28,8 @@
 #   F7  arc without arc_order or the reverse; arc not a slug; arc_order not a positive integer
 #   F8  two specs in one arc with the same arc_order (the build order is ambiguous)
 #   F9  a depends_on naming a spec LATER in the same arc (the order contradicts the dependency)
-#   F10 two files with one SPEC-<number> prefix
+#   F10 two files with one SPEC number (compared as numbers: SPEC-1 and SPEC-001 collide)
+#   F13 a depends_on entry listed twice, or a dependency cycle (a spec built after itself)
 #   F11 a bold header line (**Status:** and kin) in the body: a second copy of the frontmatter
 #   F12 a `# ` title line in the body: the title's one home is the frontmatter `title`
 #
@@ -131,7 +132,11 @@ awk '
     nf++; file[nf] = $1; verdict[$1] = $3
     b = $1; sub(/.*\//, "", b)
     pre[$1] = (match(b, /^SPEC-[0-9]+/) ? substr(b, 1, RLENGTH) : "")
-    if (pre[$1] != "") { npre[pre[$1]]++; ppath[pre[$1], npre[pre[$1]]] = $1 }
+    if (pre[$1] != "") {
+      npre[pre[$1]]++; ppath[pre[$1], npre[pre[$1]]] = $1
+      # The NUMBER, for F10: SPEC-1 and SPEC-001 are two strings and one spec number.
+      num[$1] = substr(pre[$1], 6) + 0; nnum[num[$1]]++; npath[num[$1], nnum[num[$1]]] = $1
+    }
     next
   }
   function out(f, msg) { printf "%s\tFAIL  %s: %s\n", f, f, msg }
@@ -144,14 +149,15 @@ awk '
           split(e[f, j], p, "\t")
           printf "%s\tFAIL  %s:%s: frontmatter: %s\n", f, f, p[1], p[2]
         }
-        printf "%s\t      The frontmatter subset: docs/process/knowledge-layout.md (Frontmatter). A spec written before\n", f
-        printf "%s\t      specs carried frontmatter: the same part, Migrating. No other frontmatter check ran on this file.\n", f
+        printf "%s\t      The frontmatter subset: docs/process/knowledge-layout.md (Frontmatter). If this spec predates\n", f
+        printf "%s\t      frontmatter, see the same part, Migrating. No other frontmatter check ran on this file.\n", f
         continue
       }
-      # F10 — one id per file, from the filename (so it holds whatever the frontmatter says).
-      if (pre[f] != "" && npre[pre[f]] > 1)
-        for (j = 1; j <= npre[pre[f]]; j++) if (ppath[pre[f], j] != f)
-          out(f, "its " pre[f] " prefix is shared with " ppath[pre[f], j] ". Two specs cannot have one id: renumber one.")
+      # F10 — one spec number per file, from the filename (so it holds whatever the frontmatter
+      # says), compared as a NUMBER so SPEC-1 and SPEC-001 collide.
+      if (pre[f] != "" && nnum[num[f]] > 1)
+        for (j = 1; j <= nnum[num[f]]; j++) if (npath[num[f], j] != f)
+          out(f, "its spec number " num[f] " (" pre[f] ") is shared with " npath[num[f], j] ". Two specs cannot have one number: renumber one.")
       # F2 — required keys.
       for (j = 1; j in req; j++) {
         k = req[j]
@@ -176,6 +182,8 @@ awk '
       if (kind[f, "depends_on"] == "K") out(f, "depends_on is not a flow list. Write `depends_on: [SPEC-001, SPEC-002]`, or `[]`.")
       else for (j = 1; j <= ni[f, "depends_on"]; j++) {
         d = li[f, "depends_on", j]
+        if ((f, d) in listed) { out(f, "depends_on lists " d " twice."); continue }
+        listed[f, d] = 1
         if (d !~ /^SPEC-[0-9]+$/) out(f, "depends_on names \"" d "\", which is not SPEC-<number>.")
         else if (d == pre[f]) out(f, "depends_on names " d ", which is this spec.")
         else if (!(d in npre)) out(f, "depends_on names " d ", but no " d "-*.md is in the spec directory.")
@@ -192,6 +200,24 @@ awk '
         arc[f] = kv[f, "arc"]; ord[f] = kv[f, "arc_order"] + 0
         nslot[arc[f], ord[f]]++; slot[arc[f], ord[f], nslot[arc[f], ord[f]]] = f
       }
+    }
+    # F13 — a dependency cycle: a walk from this spec through depends_on (resolved by filename)
+    # that comes back to it. Depending on itself directly is F6; this is the longer loop.
+    for (i = 1; i <= nf; i++) {
+      f = file[i]
+      if (verdict[f] != "ok") continue
+      split("", seen); sp = 0; cyc = 0
+      for (j = 1; j <= ni[f, "depends_on"]; j++) { d = li[f, "depends_on", j]
+        for (m = 1; m <= npre[d]; m++) if (ppath[d, m] != f) stack[++sp] = ppath[d, m] }
+      while (sp > 0) {
+        g = stack[sp--]
+        if (g == f) { cyc = 1; break }
+        if ((g in seen) || verdict[g] != "ok") continue
+        seen[g] = 1
+        for (j = 1; j <= ni[g, "depends_on"]; j++) { d = li[g, "depends_on", j]
+          for (m = 1; m <= npre[d]; m++) stack[++sp] = ppath[d, m] }
+      }
+      if (cyc) out(f, "depends_on leads back to this spec — a dependency cycle, so no build order exists. Break the cycle.")
     }
     # F8 and F9 need every file read first.
     for (i = 1; i <= nf; i++) {
@@ -235,12 +261,12 @@ for f in $specs; do
     { gsub(/<!--[^>]*-->/, "", line) }
     line ~ /<!--/ { in_comment = 1; next }
     line ~ /^\*\*(ID|Status|Last Updated|Depends On):\*\*/ {
-      printf "FAIL  %s: line %d is a bold header line (%s) — a spec from before frontmatter: docs/process/knowledge-layout.md, Migrating.\n", file, FNR, substr(line, 1, 40)
+      printf "FAIL  %s: line %d is a bold header line (%s) — if this spec predates frontmatter, see docs/process/knowledge-layout.md, Migrating.\n", file, FNR, substr(line, 1, 40)
       printf "      Its field lives in the frontmatter now; delete the line.\n"
       found = 1
     }
     line ~ /^# / {
-      printf "FAIL  %s: line %d is a `# ` title line (%s) — a spec from before frontmatter: docs/process/knowledge-layout.md, Migrating.\n", file, FNR, substr(line, 1, 40)
+      printf "FAIL  %s: line %d is a `# ` title line (%s) — if this spec predates frontmatter, see docs/process/knowledge-layout.md, Migrating.\n", file, FNR, substr(line, 1, 40)
       printf "      The title has one home, the frontmatter `title`; delete the line.\n"
       found = 1
     }

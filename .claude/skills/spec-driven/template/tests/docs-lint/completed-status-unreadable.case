@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match docs/specs/SPEC-001-x.md: its spec_status cannot be read (a spec from before frontmatter: docs/process/knowledge-layout.md, Migrating).
+@@@ match docs/specs/SPEC-001-x.md: its spec_status cannot be read (if this spec predates frontmatter, see docs/process/knowledge-layout.md, Migrating).
 @@@ file CLAUDE.md
 # P
 

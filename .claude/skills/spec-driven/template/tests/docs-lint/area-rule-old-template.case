@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match .claude/rules/decisions-area-a.md: an area rule from before one file per decision — it names a register file (docs/process/knowledge-layout.md, Migrating).
+@@@ match .claude/rules/decisions-area-a.md: the body is the area template from before one file per decision — it names a register file (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating).
 @@@ file CLAUDE.md
 # P
 

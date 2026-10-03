@@ -1,7 +1,7 @@
 @@@ expect exit=1
 @@@ match FAIL  docs/specs/SPEC-001-x.md:1: frontmatter: no frontmatter — line 1 is not `---`
 @@@ match No other frontmatter check ran on this file
-@@@ match specs carried frontmatter: the same part, Migrating.
+@@@ match frontmatter, see the same part, Migrating. No other frontmatter check ran on this file.
 @@@ absent ok    docs/specs/SPEC-001-x.md
 @@@ file docs/specs/SPEC-001-x.md
 # Spec: X

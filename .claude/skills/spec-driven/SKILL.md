@@ -73,7 +73,9 @@ When a repo has no spec-driven docs yet:
    that would fail — if a check doesn't apply, drop it. This makes "land on green CI" cover the language
    gates, not just spec-lint.
 7. Run `sh scripts/spec-lint.sh` and `sh scripts/docs-lint.sh` to confirm both pass (each no-ops or
-   passes cleanly on a fresh scaffold). Then run `sh scripts/spec-lint-test.sh`, `sh scripts/docs-lint-test.sh`,
+   passes cleanly on a fresh scaffold — docs-lint only until the shipped rulebooks' `stale_after`
+   date, after which it fails them until their sources are re-read: `docs/process/knowledge-layout.md`
+   → *Rulebooks*). Then run `sh scripts/spec-lint-test.sh`, `sh scripts/docs-lint-test.sh`,
    `sh scripts/pr-queue-test.sh` and `sh scripts/pr-queue/install-test.sh`. The two doc-linter
    corpora hold a case floor and fail when the fixtures did not arrive; for the two queue corpora
    **check the case COUNTS, not the exit status** — each reports "N passed", and an N of 0 there

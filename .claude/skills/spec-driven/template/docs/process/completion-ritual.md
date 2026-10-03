@@ -16,8 +16,13 @@ When a spec is done, in the same pass:
    body is the **entry**, ending in a dated `## History` whose first entry is when it was settled. Fence
    and entry are written together, in one file, so the fence is **never the only home of a fact**; it
    is never a paragraph and never a line in `CLAUDE.md`. Only a new *area* touches `CLAUDE.md` — a new
-   directory with its area concept, copied from `docs/decisions/example-area/`, and a row in the Key
-   Decisions table in slug order. Then `sh scripts/gen-index.sh`. The rules:
+   directory `docs/decisions/<slug>/` with its concept `<slug>.md` (`type: Decision Area`, `title`,
+   `governs`), a row in the Key Decisions table in slug order, and — when it governs a tree — its rule
+   `.claude/rules/decisions-<slug>.md`, `paths:` the globs and the body exactly
+   ``Files matching these paths are governed by the **<Area>** decisions in `docs/decisions/<slug>/`.``
+   then ``Read the area's fences in `docs/decisions/index.yaml` first — they are not loaded with CLAUDE.md.``
+   Then `sh scripts/gen-index.sh`. Deprecating a decision is a reversal: set `status: deprecated` and
+   add a dated History entry saying so. The rules and both templates in full:
    `knowledge-layout.md` → *The decision register*.
    If the decision **reverses or refines an earlier one**, rewrite that decision's file in place —
    title, fence, entry — and add a dated History entry at the top saying what changed and why; mark it

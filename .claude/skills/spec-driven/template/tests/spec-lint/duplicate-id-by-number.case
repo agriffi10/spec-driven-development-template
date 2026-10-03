@@ -1,0 +1,55 @@
+@@@ expect exit=1
+@@@ match FAIL  docs/specs/SPEC-1-a.md: its spec number 1 (SPEC-1) is shared with docs/specs/SPEC-001-b.md.
+@@@ match FAIL  docs/specs/SPEC-001-b.md: its spec number 1 (SPEC-001) is shared with docs/specs/SPEC-1-a.md.
+@@@ file docs/specs/SPEC-1-a.md
+---
+type: Spec
+id: SPEC-1
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+
+@@@ file docs/specs/SPEC-001-b.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

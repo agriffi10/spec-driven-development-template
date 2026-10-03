@@ -126,5 +126,5 @@ stale_after: 2999-12-31T00:00:00Z
 
 - Rule.[^a]
 
-[^a]: A
-[^b]: B, defined but cited nowhere
+[^a]: Source A
+[^b]: Source: B

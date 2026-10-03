@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match docs/decisions/INDEX.md exists (the layout before one file per decision: docs/process/knowledge-layout.md, Migrating).
+@@@ match docs/decisions/INDEX.md exists (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating).
 @@@ file CLAUDE.md
 # P
 

@@ -129,4 +129,4 @@ stale_after: 2000-01-01T00:00:00Z
 - ✅ And the other.[^b]
 
 [^a]: Source A
-[^b]: Source B
+[^b]: Source: B

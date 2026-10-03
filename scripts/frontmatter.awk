@@ -180,6 +180,10 @@ $0 == "---" {
 
 index($0, "\t")          { err(NR, "a tab — the frontmatter is indented with spaces, and a value may not hold a tab"); next }
 /[[:cntrl:]]/            { err(NR, "a control character"); next }
+# U+0085, U+2028 and U+2029, as UTF-8 bytes: YAML reads each as a line break, so a value holding one
+# is two lines to PyYAML and one line here. Refused rather than read two ways.
+index($0, "\302\205") || index($0, "\342\200\250") || index($0, "\342\200\251") {
+  err(NR, "a Unicode line or paragraph separator (U+0085, U+2028 or U+2029), which YAML reads as a line break"); next }
 /^ *$/                   { err(NR, "a blank line — the frontmatter carries none"); next }
 /^ *#/                   { err(NR, "a comment — the frontmatter carries none, and this reader does not skip them"); next }
 /^[a-z_][a-z0-9_]*:/     { top($0); next }

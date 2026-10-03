@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match docs/specs/INDEX.md exists (the layout before generated indexes: docs/process/knowledge-layout.md, Migrating).
+@@@ match docs/specs/INDEX.md exists (if this repo predates generated indexes, see docs/process/knowledge-layout.md, Migrating).
 @@@ file CLAUDE.md
 # P
 

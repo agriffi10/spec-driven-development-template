@@ -1,7 +1,7 @@
 @@@ expect exit=1
-@@@ match a table whose header is not | Area | Directory | (a register written before one file per decision: docs/process/knowledge-layout.md, Migrating)
-@@@ match a row that is not | <area> | `docs/decisions/<slug>/` | — one area (a name, not blank), its directory, nothing else in the row (a row from before one file per decision: docs/process/knowledge-layout.md, Migrating)
-@@@ match Key Decisions has no | Area | Directory | table row (a table from before one file per decision: docs/process/knowledge-layout.md, Migrating).
+@@@ match a table whose header is not | Area | Directory | (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating)
+@@@ match a row that is not | <area> | `docs/decisions/<slug>/` | — one area (a name, not blank), its directory, nothing else in the row (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating)
+@@@ match Key Decisions has no | Area | Directory | table row (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating).
 @@@ file CLAUDE.md
 # P
 

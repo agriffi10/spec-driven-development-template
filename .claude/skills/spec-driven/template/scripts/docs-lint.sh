@@ -309,7 +309,7 @@ awk -v scap="$KEY_DECISIONS_MAX_BYTES" '
     if (after_table) { bad("a second table after the area table"); next }
     if (!in_table) {
       in_table = 1; want_sep = 1
-      if ($0 !~ /^\|[ \t]*Area[ \t]*\|[ \t]*Directory[ \t]*\|[ \t]*$/) bad("a table whose header is not | Area | Directory | (a register written before one file per decision: docs/process/knowledge-layout.md, Migrating)")
+      if ($0 !~ /^\|[ \t]*Area[ \t]*\|[ \t]*Directory[ \t]*\|[ \t]*$/) bad("a table whose header is not | Area | Directory | (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating)")
       next
     }
     if (want_sep) { want_sep = 0; if ($0 !~ /^\|[ \t]*:?-+:?[ \t]*\|[ \t]*:?-+:?[ \t]*\|[ \t]*$/) bad("a table without a |---|---| separator row under its header"); next }
@@ -322,7 +322,7 @@ awk -v scap="$KEY_DECISIONS_MAX_BYTES" '
       if (slug in slugs) bad("a duplicate area directory: docs/decisions/" slug "/")
       names[name] = 1; slugs[slug] = 1; rows++
       printf "ROW\t%s\t%s\n", name, slug
-    } else bad("a row that is not | <area> | `docs/decisions/<slug>/` | — one area (a name, not blank), its directory, nothing else in the row (a row from before one file per decision: docs/process/knowledge-layout.md, Migrating)")
+    } else bad("a row that is not | <area> | `docs/decisions/<slug>/` | — one area (a name, not blank), its directory, nothing else in the row (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating)")
     next
   }
   in_table            { in_table = 0; after_table = 1 }
@@ -338,7 +338,7 @@ awk -v scap="$KEY_DECISIONS_MAX_BYTES" '
     if (!found)
       printf "FAIL  No `## Key Decisions` section found. It cannot be renamed, cased differently\n      or hidden behind an unclosed fence earlier in the file: every check on the register\n      goes quiet when the section cannot be located, which is a silent pass.\n"
     else if (!rows)
-      printf "FAIL  Key Decisions has no | Area | Directory | table row (a table from before one file per decision: docs/process/knowledge-layout.md, Migrating).\n      With no row every check on the register iterates nothing — an empty table is a missing parse\n      anchor, not an empty set.\n"
+      printf "FAIL  Key Decisions has no | Area | Directory | table row (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating).\n      With no row every check on the register iterates nothing — an empty table is a missing parse\n      anchor, not an empty set.\n"
     if (bytes > scap)
       printf "FAIL  The Key Decisions section is %d bytes (cap %d). It is an intro and one row per AREA —\n      a decision is a file in its area directory, never a line here.\n", bytes, scap
   }
@@ -375,10 +375,10 @@ rm -f "${TMPDIR:-/tmp}/docs-lint-kd.$$"
 #   5a an area declaring globs with no rule      5b a rule whose globs differ from `governs`
 #   5c a rule for an area declaring none         5d `governs` missing or not a flow list
 #   5e the file at decisions-<slug>.md is not this area's rule (body not template B for it)
-[ ! -e "$OLD_REGISTER" ] || note "$OLD_REGISTER exists (the layout before one file per decision: docs/process/knowledge-layout.md, Migrating).
+[ ! -e "$OLD_REGISTER" ] || note "$OLD_REGISTER exists (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating).
       The register is one directory per area under $REGISTER_DIR/; there is no stub at the old path — a
       stale pointer must fail, not land on an empty file."
-[ ! -e "$REGISTER_DIR/INDEX.md" ] || note "$REGISTER_DIR/INDEX.md exists (the layout before one file per decision: docs/process/knowledge-layout.md, Migrating).
+[ ! -e "$REGISTER_DIR/INDEX.md" ] || note "$REGISTER_DIR/INDEX.md exists (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating).
       The register index is $REGISTER_DIR/index.yaml, generated from the frontmatter; there is no stub at
       the old path, and the register's rules live in docs/process/knowledge-layout.md."
 
@@ -400,12 +400,18 @@ if [ -d "$REGISTER_DIR" ]; then
   # an area is a decision no index lists and no check reads.
   find "$REGISTER_DIR" -mindepth 1 -maxdepth 1 -type f -name '*.md' | sort | while IFS= read -r f; do
     [ "$f" = "$REGISTER_DIR/INDEX.md" ] && continue   # 3e names it
-    note "$f is directly under $REGISTER_DIR/ (a flat area file is the layout before one file per decision: docs/process/knowledge-layout.md, Migrating).
+    note "$f is directly under $REGISTER_DIR/ (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating).
       A decision is a file in its area's directory, $REGISTER_DIR/<area>/<decision>.md."
   done
   find "$REGISTER_DIR" -mindepth 3 -name '*.md' | sort | while IFS= read -r f; do
     note "$f is in a subdirectory of an area. Decisions are one flat set per area directory; a file a
       level down is listed by no index and read by no check."
+  done
+  # 4z — every file under docs/decisions/ is a .md (a decision or an area concept) or the generated
+  # index. Anything else — a `.MD`, a `.txt` draft, a stray — is a file every check here skips.
+  find "$REGISTER_DIR" -type f ! -name '*.md' ! -path "$REGISTER_DIR/index.yaml" | sort | while IFS= read -r f; do
+    note "$f is under $REGISTER_DIR/ but is neither a .md file nor the generated index.yaml. Every file there is a
+      decision, an area concept or the index; anything else is a file no check reads."
   done
   find "$REGISTER_DIR" -mindepth 1 -maxdepth 1 -type d | sort > "$REG_AREAS"
   # Every governed file through the reader, by redirect so fm_read's exit 2 reaches this shell.
@@ -457,7 +463,7 @@ awk -F'\t' -v cap="$DIGEST_MAX_BYTES" -v info="$REG_AREA_INFO" -v fences="$REG_F
       out(f, "is named " base ", which OKF reserves at every level of a bundle (index.md a listing, log.md a history). A decision takes a name of its own.")
     if (v[f] != "ok") {
       for (j = 1; j <= ne[f]; j++) { split(e[f, j], p, "\t"); printf "FAIL  %s:%s: frontmatter: %s\n", f, p[1], p[2] }
-      printf "      Every .md under docs/decisions/<area>/ opens with frontmatter (a register from before one file per\n      decision: docs/process/knowledge-layout.md, Migrating). No other check on this file ran.\n"
+      printf "      Every .md under docs/decisions/<area>/ opens with frontmatter (if this register predates one file per\n      decision, see docs/process/knowledge-layout.md, Migrating). No other check on this file ran.\n"
       next
     }
     if (t == "A") {
@@ -494,11 +500,16 @@ awk -F'\t' -v cap="$DIGEST_MAX_BYTES" -v info="$REG_AREA_INFO" -v fences="$REG_F
 ' "$REG_REC" "$REG_PLAN" >> "$FAILS"
 
 # 4k, 4w, 4x — the BODY of each readable file: the entry, its History, and no second title.
+#   4k counts as an entry only a line that says something: not a blank, not a heading, not an
+#      HTML comment — a fenced block does count. 4w also refuses a History date after today, and a
+#      deprecated decision whose newest History entry does not say it was deprecated.
+TODAY=$(date -u +%Y-%m-%d)
 awk -F'\t' '$2 == "F" && $3 == "ok" { print $1 }' "$REG_REC" > "${TMPDIR:-/tmp}/docs-lint-regok.$$"
 while IFS='	' read -r t slug f; do
   grep -qxF "$f" "${TMPDIR:-/tmp}/docs-lint-regok.$$" || continue
   start=$(F="$f" awk -F'\t' '$1 == ENVIRON["F"] && $2 == "B" { print $3 }' "$REG_REC")
-  awk -v start="$start" -v file="$f" -v kind="$t" '
+  dep=$(F="$f" awk -F'\t' '$1 == ENVIRON["F"] && $2 == "K" && $3 == "status" && $4 == "deprecated" { print 1 }' "$REG_REC")
+  awk -v start="$start" -v file="$f" -v kind="$t" -v today="$TODAY" -v deprecated="${dep:-0}" '
     function out(msg) { printf "FAIL  %s: %s\n", file, msg }
     function valid(dt,   y, m, d, dim) {
       if (dt !~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/) return 0
@@ -507,10 +518,19 @@ while IFS='	' read -r t slug f; do
       dim = (m == 2) ? (((y % 4 == 0 && y % 100 != 0) || y % 400 == 0) ? 29 : 28) : ((m == 4 || m == 6 || m == 9 || m == 11) ? 30 : 31)
       return d >= 1 && d <= dim
     }
+    # A fence closes only on a run of its own character at least as long as the one that opened it.
+    function fence_run(s) { if (match(s, /^[ \t]*(````*|~~~~*)/)) { s = substr(s, RSTART, RLENGTH); sub(/^[ \t]*/, "", s); return s } return "" }
     FNR < start { next }
     { sub(/\r$/, "") }
-    /^[ \t]*(```|~~~)/ { fence = !fence; if (!hist) content = 1; next }
-    fence { if (!hist) content = 1; next }
+    fence != "" {
+      r = fence_run($0); rest = $0; sub(/^[ \t]*[`~]*/, "", rest)
+      if (r != "" && substr(r, 1, 1) == substr(fence, 1, 1) && length(r) >= length(fence) && rest ~ /^[ \t]*$/) { fence = ""; next }
+      if (!hist && $0 ~ /[^ \t]/) content = 1      # a line of code says something; an empty fence does not
+      next
+    }
+    fence_run($0) != "" { fence = fence_run($0); next }
+    in_comment { if ($0 ~ /-->/) in_comment = 0; next }
+    { line = $0; gsub(/<!--([^-]|-[^-])*-->/, "", line); if (line ~ /<!--/) { in_comment = 1; sub(/<!--.*$/, "", line) } }
     /^# / { out("line " FNR " is a `# ` title line. The title has one home, the frontmatter `title`; the body starts with the entry."); next }
     /^## / {
       h = $0; sub(/^## +/, "", h); sub(/[ \t]+$/, "", h)
@@ -520,17 +540,21 @@ while IFS='	' read -r t slug f; do
     }
     hist && /^### / {
       dt = $0; sub(/^### +/, "", dt); sub(/[ \t]+$/, "", dt)
+      newest_done = (dates > 0)
       if (!valid(dt)) { out("History heading \"### " dt "\" (line " FNR ") is not a YYYY-MM-DD date. Each entry is dated, OKF log form."); next }
       dates++
+      if (dt > today) out("History entry " dt " (line " FNR ") is dated after today (" today "). History records what has happened.")
       if (last != "" && dt >= last) out("History entry " dt " (line " FNR ") is not older than the one above it (" last "). Entries run newest first, one heading per date.")
       last = dt; next
     }
-    !hist && /[^ \t]/ { content = 1 }
+    hist && dates == 1 && !newest_done && tolower(line) ~ /deprecat/ { said = 1 }
+    !hist && line !~ /^[ \t]*$/ && line !~ /^#+[ \t]/ { content = 1 }
     END {
       if (kind != "D") exit
       if (!hist) out("has no `## History`. A decision ends with its dated History, newest first — the first entry is when it was settled.")
       else if (!dates) out("its `## History` has no dated entry (`### YYYY-MM-DD`). The first is when the decision was settled.")
-      if (!content) out("is a fence with no entry: nothing above `## History` says what was decided and why. A fence is never the only home of a fact.")
+      if (!content) out("is a fence with no entry: nothing above `## History` says what was decided and why — a heading or a comment is not an entry. A fence is never the only home of a fact.")
+      if (deprecated && dates && !said) out("has status: deprecated, but its newest History entry does not say so. Deprecating a decision adds a dated History entry at the top saying it was retired, and why.")
     }
   ' "$f" >> "$FAILS"
 done < "$REG_PLAN"
@@ -573,7 +597,10 @@ if [ -s "$REG_AREA_INFO" ]; then
     fi
     if [ ! -f "$rule" ]; then
       note "Area \"$title\" governs $(printf '%s' "$want" | tr '\n' ' '| sed 's/ $//'), but $rule does not exist. A governed tree has a
-      path-scoped rule with exactly those globs, so the fences fire when a matching file is opened."
+      path-scoped rule with exactly those globs, so the fences fire when a matching file is opened. Write it as:
+$({ printf '%s\n' '---' 'paths:'; printf '%s\n' "$want" | sed 's/^/  - "/; s/$/"/'; printf '%s\n' '---' \
+  "Files matching these paths are governed by the **$title** decisions in \`docs/decisions/$slug/\`." \
+  "Read the area's fences in \`docs/decisions/index.yaml\` first — they are not loaded with CLAUDE.md."; } | sed 's/^/        /')"
       continue
     fi
     # The file must BE this area's rule — template B naming this area — not merely a rule with
@@ -622,7 +649,7 @@ if [ -d "$SPEC_DIR" ]; then
     case "$st" in
       Draft|"In Progress") continue ;;
       Completed) ;;
-      *) note "$f: its spec_status cannot be read (a spec from before frontmatter: docs/process/knowledge-layout.md, Migrating).
+      *) note "$f: its spec_status cannot be read (if this spec predates frontmatter, see docs/process/knowledge-layout.md, Migrating).
       Whether it owes a delivery doc cannot be checked, and a silent skip here is indistinguishable from a
       pass. spec-lint.sh names the defect."
          continue ;;
@@ -934,7 +961,7 @@ if [ -d "$PROCESS_DIR" ]; then
         # docs/decisions/<slug>.md; said apart from a malformed process rule, so the FAIL can name
         # the migration rather than leave the adopter to work out which template it once was.
         if [ -n "$(printf '%s\n' "$body" | sed -n '1s/^Files matching these paths are governed by the \*\*.*\*\* decisions in `docs\/decisions\/[A-Za-z0-9_-]*\.md`\.$/old/p')" ]; then
-          note "$r: an area rule from before one file per decision — it names a register file (docs/process/knowledge-layout.md, Migrating).
+          note "$r: the body is the area template from before one file per decision — it names a register file (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating).
       Its body is now the area template naming \`docs/decisions/<slug>/\` and \`docs/decisions/index.yaml\`."
           continue
         fi
@@ -1271,10 +1298,10 @@ check_index() {   # check_index <tree> <specs|decisions>
     0|1) ;;
     *) echo "error: docs-lint: $GENERATOR --print $2 failed (exit $grc): $(head -1 "$GEN_ERR")" >&2; exit 2 ;;
   esac
-  [ "$grc" -eq 0 ] || note "$GENERATOR cannot regenerate $idx — it refuses the tree (files from before frontmatter: docs/process/knowledge-layout.md, Migrating):
+  [ "$grc" -eq 0 ] || note "$GENERATOR cannot regenerate $idx — it refuses the tree (if these files predate frontmatter, see docs/process/knowledge-layout.md, Migrating):
 $(sed 's/^/      /' "$GEN_ERR")"
   if [ ! -f "$idx" ]; then
-    note "$idx is missing (a repo from before generated indexes: docs/process/knowledge-layout.md, Migrating).
+    note "$idx is missing (if this repo predates generated indexes, see docs/process/knowledge-layout.md, Migrating).
       It is generated from the frontmatter: run \`sh $GENERATOR\` and commit it."
   elif [ "$grc" -eq 0 ] && ! cmp -s "$GEN_OUT" "$idx"; then
     note "$idx is stale — it differs from what the frontmatter generates. Run \`sh $GENERATOR\` and commit
@@ -1282,7 +1309,7 @@ $(sed 's/^/      /' "$GEN_ERR")"
   fi
 }
 if [ -d "$SPEC_DIR" ]; then
-  [ ! -e "$SPEC_DIR/INDEX.md" ] || note "$SPEC_DIR/INDEX.md exists (the layout before generated indexes: docs/process/knowledge-layout.md, Migrating).
+  [ ! -e "$SPEC_DIR/INDEX.md" ] || note "$SPEC_DIR/INDEX.md exists (if this repo predates generated indexes, see docs/process/knowledge-layout.md, Migrating).
       The spec index is $SPEC_DIR/index.yaml, generated from each spec's frontmatter; there is no stub at
       the old path — a stale pointer must fail, not land on an empty file."
   check_index "$SPEC_DIR" specs
@@ -1341,11 +1368,26 @@ if [ -d "$RULEBOOK_DIR" ]; then
         return 1
       }
       # Blank every inline code span, so a regex written in a rule (`[^a-z]`) is not read as a
-      # footnote. A fenced block is skipped whole, below.
-      function nocode(s,   pad) {
-        while (match(s, /`[^`]*`/)) { pad = sprintf("%*s", RLENGTH, ""); s = substr(s, 1, RSTART - 1) pad substr(s, RSTART + RLENGTH) }
-        return s
+      # footnote. A span opens with a run of backticks and closes at the next run of EXACTLY that
+      # many (CommonMark), so ``a `b` c`` is one span; an unmatched run is literal backticks.
+      function nocode(s,   out, pre, rest, run, t, off, k) {
+        out = ""
+        while (match(s, /``*/)) {
+          run = RLENGTH; pre = substr(s, 1, RSTART - 1); rest = substr(s, RSTART + RLENGTH)
+          t = rest; off = 0; k = 0
+          while (match(t, /``*/)) {
+            if (RLENGTH == run) { k = off + RSTART; break }
+            off += RSTART + RLENGTH - 1; t = substr(t, RSTART + RLENGTH)
+          }
+          if (!k) { out = out pre substr(s, length(pre) + 1, run); s = rest; continue }
+          out = out pre sprintf("%*s", run + (k - 1) + run, ""); s = substr(rest, k + run)
+        }
+        return out s
       }
+      # A fence opens with a run of three or more backticks or tildes, and closes only on a run of
+      # the SAME character at least as long, with nothing after it — a four-backtick fence holding a
+      # three-backtick example stays open across it.
+      function fence_run(x) { if (match(x, /^[ \t]*(````*|~~~~*)/)) { x = substr(x, RSTART, RLENGTH); sub(/^[ \t]*/, "", x); return x } return "" }
       NR == FNR {
         if ($2 == "F") verdict = $3
         else if ($2 == "E") { ne++; eline[ne] = $3; emsg[ne] = $4 }
@@ -1356,28 +1398,54 @@ if [ -d "$RULEBOOK_DIR" ]; then
         next
       }
       verdict != "ok" || FNR < body { next }
-      { line = $0 }
-      line ~ /^[ \t]*(```|~~~)/ { fence = !fence; next }
-      fence { next }
+      FNR == body { prevblank = 1 }
+      { line = $0; sub(/\r$/, "", line) }
+      fence != "" {
+        r = fence_run(line); rest = line; sub(/^[ \t]*[`~]*/, "", rest)
+        if (r != "" && substr(r, 1, 1) == substr(fence, 1, 1) && length(r) >= length(fence) && rest ~ /^[ \t]*$/) fence = ""
+        next
+      }
+      fence_run(line) != "" { fence = fence_run(line); prevblank = 0; next }
+      # An HTML comment cites nothing: everything between <!-- and --> is dropped, across lines.
+      in_comment { if (line !~ /-->/) next; in_comment = 0; sub(/^.*-->/, "", line) }
+      { gsub(/<!--([^-]|-[^-])*-->/, "", line); if (line ~ /<!--/) { in_comment = 1; sub(/<!--.*$/, "", line) } }
+      # An indented code block — four spaces or a tab, after a blank line, outside a list — is code.
+      { blank = (line ~ /^[ \t]*$/) }
+      icode && (blank || line ~ /^(    |\t)/) { prevblank = blank; next }
+      { icode = 0 }
+      !inlist && prevblank && line ~ /^(    |\t)/ { icode = 1; prevblank = 0; next }
+      line ~ /^ ? ? ?([-*+]|[0-9]+[.)])([ \t]|$)/ { inlist = 1 }
+      !blank && line ~ /^[^ \t]/ && line !~ /^([-*+]|[0-9]+[.)])([ \t]|$)/ { inlist = 0 }
+      { prevblank = blank }
       {
+        raw = line
         line = nocode(line)
+        # A URL cites nothing either, even when a `[^…]` sits inside one.
+        gsub(/[A-Za-z][A-Za-z0-9+.-]*:\/\/[^ \t<>]*/, "", line)
         # Labels are kept in order of first appearance and reported in that order: awk walks an
-        # array in an unspecified order, and the corpus must read the same on every awk.
-        if (match(line, /^\[\^[A-Za-z0-9_.-]+\]:/)) {
+        # array in an unspecified order, and the corpus must read the same on every awk. A label
+        # GFM would read as a footnote (no space, no `]`) but outside A-Za-z0-9_.- is refused,
+        # not ignored: ignored, it would render as a footnote nothing checks.
+        if (match(line, /^\[\^[^] \t]+\]:/)) {
           lab = substr(line, 3, RLENGTH - 4)
-          if (!(lab in def)) { ndef++; defs[ndef] = lab; def[lab] = FNR }
+          if (lab !~ /^[A-Za-z0-9_.-]+$/) badlab[++nbad] = lab "\t" FNR
+          else if (!(lab in def)) {
+            ndef++; defs[ndef] = lab; def[lab] = FNR
+            dt = raw; sub(/^[ \t]*\[\^[^]]*\]:[ \t]*/, "", dt); sub(/[ \t]+$/, "", dt); deftext[lab] = dt
+          }
           line = substr(line, RLENGTH + 1)
         }
-        while (match(line, /\[\^[A-Za-z0-9_.-]+\]/)) {
+        while (match(line, /\[\^[^] \t]+\]/)) {
           lab = substr(line, RSTART + 2, RLENGTH - 3)
-          if (!(lab in ref)) { nref++; refs[nref] = lab; ref[lab] = FNR }
           line = substr(line, RSTART + RLENGTH)
+          if (lab !~ /^[A-Za-z0-9_.-]+$/) { badlab[++nbad] = lab "\t" FNR; continue }
+          if (!(lab in ref)) { nref++; refs[nref] = lab; ref[lab] = FNR }
         }
       }
       END {
         if (verdict != "ok") {
           for (i = 1; i <= ne; i++) printf "FAIL  %s:%s: frontmatter: %s\n", file, eline[i], emsg[i]
-          printf "      A rulebook opens with frontmatter (one from before rulebooks carried it: docs/process/knowledge-layout.md, Migrating).\n      No other rulebook check ran on this file.\n"
+          printf "      A rulebook opens with frontmatter (if it predates rulebook frontmatter, see docs/process/knowledge-layout.md, Migrating).\n      No other rulebook check ran on this file.\n"
           exit
         }
         if (k["type"] != "Rulebook")
@@ -1389,16 +1457,24 @@ if [ -d "$RULEBOOK_DIR" ]; then
         for (n = 1; n <= nsrc; n++) {
           for (j = split("id resource title", fld, " "); j >= 1; j--)
             if (sf[n, fld[j]] == "") out("sources item " n " has no `" fld[j] "`.")
+          rs = sf[n, "resource"]
+          if (rs != "" && rs !~ /^[A-Za-z][A-Za-z0-9+.-]*:\/\/[^ \t]+$/ && rs !~ /^\/[^ \t]*$/)
+            out("sources item " n " has resource \"" rs "\", which is neither an absolute URL nor a /bundle path. A source names what was read.")
           id = sf[n, "id"]
           if (id == "") continue
           if (id in sid) out("source id \"" id "\" is used twice. A footnote resolves to exactly one source.")
-          sid[id] = 1
+          sid[id] = 1; stitle[id] = sf[n, "title"]
         }
         v = k["stale_after"]
         if (v != "" && !instant(v))
           out("stale_after \"" v "\" is not YYYY-MM-DDTHH:MM:SSZ — a real UTC instant, `Z` for the offset (OKF allows any offset; this subset takes Z, so staleness is a byte comparison).")
         else if (v != "" && now >= v)
           out("is stale since " v ": re-fetch every source it cites, correct any rule a source no longer supports, and move\n      stale_after forward. This check reads the date as well as the tree, by design (docs/process/knowledge-layout.md, Rulebooks).")
+        for (i = 1; i <= nbad; i++) { split(badlab[i], bl, "\t")
+          out("line " bl[2] " carries the footnote label [^" bl[1] "], outside A-Za-z0-9_.- — a footnote label is a source id. If it is not a footnote, put it in a code span.") }
+        for (i = 1; i <= ndef; i++) { lab = defs[i]
+          if ((lab in sid) && deftext[lab] != stitle[lab])
+            out("footnote definition [^" lab "] (line " def[lab] ") reads \"" deftext[lab] "\", not its source title \"" stitle[lab] "\". The definition is the title, so the fact has one home; the URL lives in `resource`.") }
         for (i = 1; i <= nref; i++) { lab = refs[i]
           if (!(lab in def)) out("line " ref[lab] " cites [^" lab "] with no `[^" lab "]:` definition.")
           if (!(lab in sid)) out("footnote [^" lab "] (line " ref[lab] ") names no `sources` id. A footnote label IS the source id it attributes to.") }

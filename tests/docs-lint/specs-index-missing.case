@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match docs/specs/index.yaml is missing (a repo from before generated indexes: docs/process/knowledge-layout.md, Migrating).
+@@@ match docs/specs/index.yaml is missing (if this repo predates generated indexes, see docs/process/knowledge-layout.md, Migrating).
 @@@ no-index docs/specs/index.yaml
 @@@ file CLAUDE.md
 # P

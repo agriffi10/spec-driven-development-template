@@ -204,9 +204,9 @@ Modules stay importable; avoid Python's fancy machinery.
 
 ## Sources
 
-[^pep-8]: PEP 8 – Style Guide for Python Code — https://peps.python.org/pep-0008/
-[^pep-257]: PEP 257 – Docstring Conventions — https://peps.python.org/pep-0257/
-[^pep-484]: PEP 484 – Type Hints — https://peps.python.org/pep-0484/
-[^pep-526]: PEP 526 – Syntax for Variable Annotations — https://peps.python.org/pep-0526/
-[^pep-604]: PEP 604 – Allow writing union types as X | Y — https://peps.python.org/pep-0604/
-[^google-style]: Google Python Style Guide — https://google.github.io/styleguide/pyguide.html
+[^pep-8]: PEP 8 – Style Guide for Python Code
+[^pep-257]: PEP 257 – Docstring Conventions
+[^pep-484]: PEP 484 – Type Hints
+[^pep-526]: PEP 526 – Syntax for Variable Annotations
+[^pep-604]: PEP 604 – Allow writing union types as X | Y
+[^google-style]: Google Python Style Guide

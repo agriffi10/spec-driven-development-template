@@ -138,7 +138,7 @@ text
 
 ### 2026-01-01
 
-- **Settled.**
+- **Deprecated:** the gateway was removed and is not coming back.
 @@@ file docs/decisions/api/errors-are-problem-json.md
 ---
 type: Decision

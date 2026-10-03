@@ -167,6 +167,6 @@ A Lambda is also ordinary code in a language — §1–§12 govern its *Lambda* 
 
 ## Sources
 
-[^aws-best-practices]: Best practices for working with AWS Lambda functions — https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html
-[^aws-runtimes]: Lambda runtimes — https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html
-[^pep-8]: PEP 8 – Style Guide for Python Code — https://peps.python.org/pep-0008/
+[^aws-best-practices]: Best practices for working with AWS Lambda functions
+[^aws-runtimes]: Lambda runtimes
+[^pep-8]: PEP 8 – Style Guide for Python Code

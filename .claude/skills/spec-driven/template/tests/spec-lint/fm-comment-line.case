@@ -1,4 +1,5 @@
 @@@ expect exit=1
+@@@ absent title line
 @@@ match FAIL  docs/specs/SPEC-001-x.md:8: frontmatter: a comment — the frontmatter carries none
 @@@ match No other frontmatter check ran on this file
 @@@ absent ok    docs/specs/SPEC-001-x.md

@@ -127,7 +127,7 @@ stale_after: 2999-12-31T00:00:00Z
 - ✅ And the other.[^b]
 
 [^a]: Source A
-[^b]: Source B
+[^b]: Source: B
 @@@ file docs/best-practices/INDEX.md
 # Best Practices — Index
 
@@ -153,4 +153,4 @@ stale_after: 2028-02-29T23:59:59Z
 - ✅ And the other.[^b]
 
 [^a]: Source A
-[^b]: Source B
+[^b]: Source: B

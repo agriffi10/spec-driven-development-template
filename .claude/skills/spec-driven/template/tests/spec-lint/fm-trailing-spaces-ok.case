@@ -1,0 +1,28 @@
+@@@ expect exit=0
+@@@ match ok    docs/specs/SPEC-001-x.md
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec   
+id: SPEC-001  
+title: X 
+description: "A spec."   
+spec_status: In Progress   
+depends_on: []  
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+
