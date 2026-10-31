@@ -20,30 +20,25 @@ Measured 2026-09-02: the suite carries 41 sink tests.
 
 nothing
 
-@@@ file docs/decisions/INDEX.md
-# Key Decisions — the register
-
-## Areas
-
-| Area | Fences | Governs |
-|---|---|---|
-| Area one | `docs/decisions/area-one.md#fences` | none |
-@@@ file docs/decisions/area-one.md
-# Area one — decisions
-
-intro
-
-## Contents
-
-- [Fences](#fences)
-- [Alpha rule](#alpha-rule)
-
-## Fences
-
-- **Alpha rule** — short claim and its fence.
-
+@@@ file docs/decisions/area-one/area-one.md
+---
+type: Decision Area
+title: Area one
+governs: []
 ---
 
-### Alpha rule
+intro
+@@@ file docs/decisions/area-one/alpha-rule.md
+---
+type: Decision
+title: Alpha rule
+description: short claim and its fence.
+---
 
 Reasoning.
+
+## History
+
+### 2026-01-01
+
+- **Settled.**

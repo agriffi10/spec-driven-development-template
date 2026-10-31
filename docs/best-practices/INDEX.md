@@ -29,4 +29,9 @@ the whole files.
 
 - One file per domain at `best-practices/<domain>/<domain>.md`, written as a token-efficient agent
   reference: a short "how to use" + an internal index + imperative ✅/🔴 rules (match the existing two).
+- It opens with frontmatter — `type: Rulebook`, `title`, `description`, its `sources` and a
+  `stale_after` date — and a rule resting on a version-specific fact carries a footnote naming its
+  source. Every source is fetched and read before it is cited. `docs/process/knowledge-layout.md`
+  (*Rulebooks*) has the rules; `scripts/docs-lint.sh` fails a rulebook without them, and every `.md`
+  under this directory but this index is a rulebook.
 - Add **one row** to the table above and nothing more here — the detail lives in the doc, not the index.

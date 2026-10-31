@@ -1,0 +1,57 @@
+@@@ expect exit=1
+@@@ match FAIL  docs/specs/SPEC-001-x.md:8: frontmatter: a blank line
+@@@ match ok    docs/specs/SPEC-002-y.md
+@@@ absent depends_on names SPEC-001, but no
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+
+@@@ file docs/specs/SPEC-002-y.md
+---
+type: Spec
+id: SPEC-002
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: [SPEC-001]
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

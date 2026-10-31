@@ -9,7 +9,7 @@ description: >-
   (no Open Questions), spec/plan/diff each pass a blocking fresh-context review gate, the diff review
   gates the push rather than the merge, builds run off a reviewed plan straight to completion (no
   per-phase checkpoints), every PR is watched and merged on green, main is always watched, and the
-  always-loaded tier stays lean (budget + a fences-first register file per decision area).
+  always-loaded tier stays lean (budget + a register of one file per decision, its fences in a generated index).
   Triggers on phrases like "set up
   spec-driven", "scaffold the docs structure", "write a spec", "start SPEC-XXX", "build this spec",
   "complete the spec / run the completion ritual", "run several agents at once", "which model
@@ -49,7 +49,7 @@ When a repo has no spec-driven docs yet:
    mirror of `template/`, `scripts/sync-from-skill.sh` regenerates it, and edits belong in `template/`
    followed by a sync. Steps 3 and 6 below would fill in the mirror and delete `ci.yml.example`, which
    must survive there.
-2. `chmod +x scripts/spec-lint.sh scripts/spec-lint-test.sh scripts/docs-lint.sh scripts/docs-lint-test.sh scripts/pr-queue-test.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh scripts/pr-queue/install-test.sh`.
+2. `chmod +x scripts/spec-lint.sh scripts/spec-lint-test.sh scripts/docs-lint.sh scripts/docs-lint-test.sh scripts/gen-index.sh scripts/pr-queue-test.sh scripts/pr-queue/queue.sh scripts/pr-queue/pre-push scripts/pr-queue/install.sh scripts/pr-queue/install-test.sh`.
 3. Fill in the placeholders in `CLAUDE.md` (Project Overview, Layout, Tech Stack, Code Conventions,
    Common Commands) from what the repo actually is — detect the language/build/test/lint tooling from
    the manifest (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, …) rather than guessing.
@@ -73,11 +73,20 @@ When a repo has no spec-driven docs yet:
    that would fail — if a check doesn't apply, drop it. This makes "land on green CI" cover the language
    gates, not just spec-lint.
 7. Run `sh scripts/spec-lint.sh` and `sh scripts/docs-lint.sh` to confirm both pass (each no-ops or
-   passes cleanly on a fresh scaffold). Then run `sh scripts/spec-lint-test.sh`, `sh scripts/docs-lint-test.sh`,
+   passes cleanly on a fresh scaffold — docs-lint only until the shipped rulebooks' `stale_after`
+   date, after which it fails them until their sources are re-read: `docs/process/knowledge-layout.md`
+   → *Rulebooks*). Then run `sh scripts/spec-lint-test.sh`, `sh scripts/docs-lint-test.sh`,
    `sh scripts/pr-queue-test.sh` and `sh scripts/pr-queue/install-test.sh`. The two doc-linter
    corpora hold a case floor and fail when the fixtures did not arrive; for the two queue corpora
    **check the case COUNTS, not the exit status** — each reports "N passed", and an N of 0 there
    exits 0 exactly like a healthy one.
+
+**Updating a repo scaffolded before specs, decisions and rulebooks carried frontmatter** is a
+migration, not a copy: the new `spec-lint.sh` fails every old spec in CI the moment it lands, and
+`docs-lint.sh` fails the old indexes, rulebooks and register files. Follow
+`docs/process/knowledge-layout.md` → *Migrating a repo that predates this layout* — by hand, in one
+branch, ending by reading the migration diff against the pre-migration commit — a diff for a person to
+read, since nothing in it proves the migration lossless mechanically.
 
 Keep the always-loaded tier (`CLAUDE.md`) lean — it must not regrow into a wall of prose. `docs-lint.sh`
 now enforces that rather than asking you to remember it. In a project that ran this template the
@@ -116,7 +125,8 @@ things that are true of operating this skill rather than of the method.
 Write from `docs/templates/spec-template.md` (before scaffolding, this skill's
 `template/docs/templates/spec-template.md`), then follow `docs/process/authoring-a-spec.md` — it carries
 what makes a spec buildable, the 3–6 FR aim and the split above 8, and the reviewer gate that stands
-between Draft and Draft-ready. Add a row to `docs/specs/INDEX.md`, and run `sh scripts/spec-lint.sh`
+between Draft and Draft-ready. Fill in its frontmatter (`docs/process/knowledge-layout.md`), run
+`sh scripts/gen-index.sh` — the spec index is generated, never edited — and `sh scripts/spec-lint.sh`
 before handing off.
 
 ## 2. Build a spec (plan-gated)
@@ -169,9 +179,14 @@ right one, and when unsure it is one tier up, never down.
 
 ## spec-lint reference
 
-`scripts/spec-lint.sh [dir]` (default `docs/specs`). **FAIL** (exit 1): a spec missing a required
-section (`## Overview`, `## Scope`, `## Functional Requirements`, `## Implementation Phases`), or
-containing an `Open Questions` / `Checkpoint` heading. **WARN** (exit 0): unfilled placeholders, a
+`scripts/spec-lint.sh [dir]` (default `docs/specs`). **FAIL** (exit 1): a spec whose frontmatter the
+shared reader refuses, or that lacks `type: Spec`, an `id` equal to its filename prefix, `title`,
+`description`, a `spec_status` of Draft, In Progress or Completed, or a `depends_on` list naming specs
+that exist (not itself); arc keys that are half-present, malformed, ambiguous (two specs in one place)
+or that contradict a dependency; two files with one id; a bold header line (`**Status:** …`) left in
+the body; a spec missing a required section (`## Overview`, `## Scope`, `## Functional Requirements`,
+`## Implementation Phases`), or containing an `Open Questions` / `Checkpoint` heading. **ERROR** (exit
+2): the reader (`scripts/frontmatter.awk`) is missing, fails, or returns no verdict. **WARN** (exit 0): unfilled placeholders, a
 spec with FRs but no acceptance criteria anywhere in it, and a spec carrying more than
 `FR_CEILING` (8) distinct FRs. POSIX `sh` — no runtime dependency. `scripts/spec-lint-test.sh` is its
 fixture corpus (`tests/spec-lint/*.case`, plus an unfilled copy of the spec template as a live case):
@@ -181,16 +196,21 @@ CI runs it before the lint, and a change to the linter runs it locally.
 
 `scripts/docs-lint.sh` (no arguments; resolves its own repo root). **FAIL** (exit 1), no WARN tier:
 `CLAUDE.md` over `CLAUDE_MAX_BYTES`; anything in its Key Decisions section but intro prose and one
-`| Area | Fences |` table, or that table empty; `docs/decisions/INDEX.md` missing, empty, or naming
-areas that differ from the table in name, file or order; a stub at `docs/decisions.md`; an area file
-with no row or a row with no file; in an area file: a title not matching the row, a `##` other than
-Contents and Fences, Fences not first in Contents or not first after it, a fence over
-`DIGEST_MAX_BYTES` (a bullet with its continuations joined) or of the wrong shape, a fence with no
-`###` entry or an entry with no fence, an entry absent from the Contents, a Contents row that names
-one entry and links to another, an entry whose opening bold label contradicts its heading, a pointer
-in Fences that resolves to nothing; an area whose *Governs* globs have no matching rule, or a rule for an area that
-governs none; a `Status: Completed` spec with no
-`docs/spec-delivery/SPEC-NNN-*.md`; a delivery doc over `DELIVERY_MAX_LINES`; a relative link or `@`
+`| Area | Directory |` table, or that table empty; a row whose name is not its area's `title`, rows
+out of slug order, a row with no directory under `docs/decisions/` or a directory with no row; a
+stub at `docs/decisions.md` or `docs/decisions/INDEX.md`; an area directory without its concept file
+(`<slug>/<slug>.md`, `type: Decision Area`, `title`, `governs`); a decision file whose frontmatter the
+reader refuses or that lacks `type: Decision`, `title` or a `description` — its fence, capped at
+`DIGEST_MAX_BYTES` — or carries a `status` other than stable or deprecated; a fence with no entry
+above its `## History`; a History missing, undated, out of newest-first order or not last; a `# `
+title line in a body; a `.md` flat under `docs/decisions/`, one a level below an area, or one named
+`index.md` or `log.md`; a pointer in a fence that resolves to nothing; an area whose `governs` globs
+have no matching rule, or a rule for an area that governs none; a `spec_status: Completed` spec with no
+`docs/spec-delivery/SPEC-NNN-*.md`, or a spec whose `spec_status` cannot be read; a generated index
+(`docs/specs/index.yaml`, `docs/decisions/index.yaml`) missing, stale or refused by `gen-index.sh`, or a
+stub at the old `docs/specs/INDEX.md`; a rulebook under `docs/best-practices/` without its frontmatter, with a footnote
+that names no source or a source nothing cites, or past its `stale_after` (the one check that reads
+the date as well as the tree); a delivery doc over `DELIVERY_MAX_LINES`; a relative link or `@`
 pointer in an always-loaded file that resolves to nothing. On the **routed process tier** it also
 fails: a `docs/process/` with no router; a stub at `docs/process.md`; a router row `CLAUDE.md` does
 not import or an import the router does not name; the always-loaded set (derived from the router's
@@ -200,12 +220,12 @@ byte 0, with an inline or missing `paths:`, an extra key, a glob outside the fiv
 matching nothing, a body that is not the two-line template, or a pointer to an unrouted part; a
 `.claude/agents/` file without frontmatter, a `name` not equal to its stem, a `model` outside
 `sonnet|opus|haiku|fable`, or one the routing table does not name (and the reverse); a part, rule,
-agent or area file in a subdirectory of its tree (dotfiles there are checked like any other file);
+agent or decision file in a subdirectory of its tree (dotfiles there are checked like any other file);
 and, in any standing doc, script or workflow file, a dated measurement — `measured` or `as of`
 beside an ISO date — with no short commit SHA in the same paragraph, bullet or comment block
 (frozen records under `docs/specs`, `docs/spec-delivery` and `docs/templates` are exempt, and so
-is `tests/`). Entries labelled `(example)` are exempt, so a fresh
-scaffold is green. **`scripts/docs-lint-test.sh` is its fixture corpus — run it after any change to
+is `tests/`). Nothing is exempt: the shipped example area and decision are conformant, so a
+fresh scaffold is green by conformance. **`scripts/docs-lint-test.sh` is its fixture corpus — run it after any change to
 `docs-lint.sh`.** The linter passing against your own docs says nothing about whether its checks
 work; the corpus is what says that. The budgets are **ratchets against accretion**: when one fires because a doc grew a line at a time, cut and re-ratchet at the new
 measurement — never raise it to fit the edit. **After a structural CUT the regime inverts**: what remains is fences rather than accretion, so leave headroom deliberately and record why beside the number, or the next change that legitimately needs a line takes one from another area. POSIX `sh` — no runtime dependency.

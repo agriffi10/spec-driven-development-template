@@ -5,6 +5,14 @@
 Measured 2026-08-07: 5,980 events in one emit.
 
 @@@ file docs/specs/SPEC-099-example.md
+---
+type: Spec
+id: SPEC-099
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
 # SPEC-099
 
 Measured 2026-09-01: 1,398 lines.
@@ -31,38 +39,33 @@ Measured 2026-09-01: 1,398 lines.
 
 Intro prose; every decision is a fence in its area file.
 
-| Area | Fences |
+| Area | Directory |
 |---|---|
-| Area one | `docs/decisions/area-one.md#fences` |
+| Area one | `docs/decisions/area-one/` |
 
 ## Out of Scope
 
 nothing
 
-@@@ file docs/decisions/INDEX.md
-# Key Decisions — the register
-
-## Areas
-
-| Area | Fences | Governs |
-|---|---|---|
-| Area one | `docs/decisions/area-one.md#fences` | none |
-@@@ file docs/decisions/area-one.md
-# Area one — decisions
-
-intro
-
-## Contents
-
-- [Fences](#fences)
-- [Alpha rule](#alpha-rule)
-
-## Fences
-
-- **Alpha rule** — short claim and its fence.
-
+@@@ file docs/decisions/area-one/area-one.md
+---
+type: Decision Area
+title: Area one
+governs: []
 ---
 
-### Alpha rule
+intro
+@@@ file docs/decisions/area-one/alpha-rule.md
+---
+type: Decision
+title: Alpha rule
+description: short claim and its fence.
+---
 
 Reasoning.
+
+## History
+
+### 2026-01-01
+
+- **Settled.**

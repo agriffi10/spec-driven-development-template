@@ -1,6 +1,31 @@
+---
+type: Rulebook
+title: React best practices
+description: "Imperative React rules for coding agents: purity, state, effects, Hooks, performance, tooling and tests."
+sources:
+  - id: react-rules
+    resource: https://react.dev/reference/rules
+    title: Rules of React
+  - id: react-19
+    resource: https://react.dev/blog/2024/12/05/react-19
+    title: React v19
+  - id: react-19-2
+    resource: https://react.dev/blog/2025/10/01/react-19-2
+    title: React 19.2
+  - id: use-effect-event
+    resource: https://react.dev/reference/react/useEffectEvent
+    title: useEffectEvent
+  - id: react-compiler
+    resource: https://react.dev/learn/react-compiler/introduction
+    title: "React Compiler: Introduction"
+  - id: react-compiler-target
+    resource: https://react.dev/reference/react-compiler/target
+    title: "React Compiler: target"
+stale_after: 2027-10-02T00:00:00Z
+---
 # React Best Practices — Agent Reference
 
-> Token-efficient rulebook for LLM coding agents writing/refactoring React. Each section is self-contained; load only the sections relevant to the task. Rules are imperative; ✅ = do, 🔴 = don't. Defaults assume function components + Hooks, React 18/19.
+> Token-efficient rulebook for LLM coding agents writing/refactoring React. Each section is self-contained; load only the sections relevant to the task. Rules are imperative; ✅ = do, 🔴 = don't. Defaults assume function components + Hooks, React 18/19 (19 is stable[^react-19]); purity and the Hooks rules (§1, §5) are the Rules of React[^react-rules]. A rule that holds only from a given version says so where it is stated.
 
 ## How to use this doc
 - Find the relevant section ID(s) in the Index below.
@@ -142,9 +167,9 @@ Effects are an escape hatch for syncing with external systems. If no external sy
 ## §13 Events vs Effects
 - **Event handler logic is non-reactive**: runs only on the specific interaction; can read latest reactive values without re-running. Put interaction-caused logic here (e.g. send message on click).
 - **Effect logic is reactive**: re-runs whenever a read reactive value changes. Put "stay synchronized" logic here (e.g. connect to room).
-- **useEffectEvent** extracts a non-reactive slice out of a reactive Effect — it always sees the latest props/state but does NOT trigger re-sync. Use it when part of an Effect shouldn't react (e.g. read latest `theme`/`isMuted`/`numberOfItems`/a prop callback inside a connection Effect).
+- **useEffectEvent** (stable from **React 19.2**[^react-19-2] — not available on React 18 or 19.0/19.1, where the value stays in the deps) extracts a non-reactive slice out of a reactive Effect — it always sees the latest props/state but does NOT trigger re-sync. Use it when part of an Effect shouldn't react (e.g. read latest `theme`/`isMuted`/`numberOfItems`/a prop callback inside a connection Effect).
   - Declared with `const onX = useEffectEvent(() => {...})`.
-  - 🔴 Omit Effect Events from the deps array (they're non-reactive). 🔴 Only call them inside Effects; never pass to other components/Hooks. Declare next to the Effect that uses them.
+  - 🔴 Omit Effect Events from the deps array (they're non-reactive; their identity changes every render). 🔴 Only call them inside Effects or other Effect Events; never during render, from an event handler, or passed to other components/Hooks[^use-effect-event]. Declare next to the Effect that uses them.
 - Use it to avoid suppressing the linter when you want "react to A but not B" (§12).
 
 ## §14 Custom Hooks
@@ -153,7 +178,7 @@ Effects are an escape hatch for syncing with external systems. If no external sy
 - Custom Hooks share **logic, not state** — each call has its own independent state. To share state itself, lift it up (§3).
 - Custom Hooks re-run on every render, get latest props/state, and must be **pure** like components.
 - ✅ Name after a concrete high-level purpose: `useData(url)`, `useChatRoom(opts)`, `useMediaQuery(q)`. 🔴 Avoid generic lifecycle wrappers: `useMount`, `useEffectOnce`, `useUpdateEffect` (they hide reactivity from the linter and don't fit the model).
-- When a custom Hook takes an event-handler arg, wrap it in `useEffectEvent` so it isn't a dep (§13).
+- When a custom Hook takes an event-handler arg, wrap it in `useEffectEvent` so it isn't a dep (§13; React 19.2+).
 - Wrapping Effects in custom Hooks makes data flow explicit and eases later migration (e.g. to `useSyncExternalStore` or `use`).
 
 ## §15 Performance
@@ -161,7 +186,7 @@ Effects are an escape hatch for syncing with external systems. If no external sy
 - **`useMemo(fn, deps)`** — cache an expensive calculation between renders; runs only when deps change; must be a pure calc. Don't help first render; helps updates. Measure with `console.time` before adding (significant ≈ ≥1ms; test on throttled CPU / production build).
 - **`useCallback(fn, deps)`** — memoize a function reference, mainly when passing it to memoized children or as an Effect/Hook dep.
 - **`React.memo(Component)`** — skip re-render when props are referentially unchanged; pair with stable props (useMemo/useCallback).
-- **React Compiler (React 19)** auto-memoizes much of this — manual `useMemo`/`useCallback`/`memo` often become unnecessary. Still useful for very hot paths, function/object props, or libs relying on reference equality.
+- **React Compiler** auto-memoizes much of this. It is a separate build-time tool (a Babel plugin), **not part of React 19**[^react-compiler]: it targets React 17, 18 and 19, and 17/18 need the `react-compiler-runtime` package[^react-compiler-target]. With it on: in new code rely on the compiler and keep `useMemo`/`useCallback` as escape hatches for precise control; leave existing memoization in place unless you test its removal — removing it can change the compiled output[^react-compiler].
 - Note: splitting one state object into several variables does NOT reduce re-renders by itself; any state change re-renders the component.
 
 ## §16 Architecture & mental model
@@ -259,3 +284,14 @@ Vitest + React Testing Library, jsdom. Tests describe **user-observable behavior
 - **Component/feature test** — behavior a user drives through the UI, with services mocked at the boundary. Don't re-assert service parsing here.
 - **Hook test** (`renderHookWithProviders`) — only for hooks with non-trivial state/derivation not better exercised through a component.
 - 🔴 Don't test the same logic at two levels. If the service test covers a parse branch, the component test asserts the *rendered outcome*, not the parse.
+
+---
+
+## Sources
+
+[^react-rules]: Rules of React
+[^react-19]: React v19
+[^react-19-2]: React 19.2
+[^use-effect-event]: useEffectEvent
+[^react-compiler]: React Compiler: Introduction
+[^react-compiler-target]: React Compiler: target

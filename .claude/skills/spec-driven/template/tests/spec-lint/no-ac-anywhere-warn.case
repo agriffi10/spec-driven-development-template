@@ -2,10 +2,14 @@
 @@@ match WARN  docs/specs/SPEC-001-x.md: has FR-* requirements but no 'Acceptance Criteria'
 @@@ match 0 file(s) failed, 1 warning(s)
 @@@ file docs/specs/SPEC-001-x.md
-# Spec: X
-
-**ID:** SPEC-001
-**Status:** Draft
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
 
 ## Overview
 

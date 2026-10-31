@@ -1,9 +1,20 @@
-# Spec: [Feature Name]
+---
+type: Spec
+id: SPEC-XXX
+title: "[Feature Name]"
+description: "[Feature Name] in one sentence: what it delivers, and for whom."
+spec_status: Draft
+depends_on: []
+---
 
-**ID:** SPEC-XXX  
-**Status:** Draft | In Progress | Completed  
-**Last Updated:** YYYY-MM-DD  
-**Depends On:** SPEC-XXX, SPEC-XXX (or "None")
+<!--
+  The frontmatter above is the ONE home of this spec's id, title, status and dependencies —
+  never restate them in the body. id is SPEC-<number> and equals the filename prefix;
+  spec_status is Draft, In Progress or Completed; depends_on lists the spec ids this one
+  needs, e.g. [SPEC-003, SPEC-007], or [] for none. A spec in an arc adds two keys, arc: <slug>
+  and arc_order: <n>. The subset and its rules: docs/process/knowledge-layout.md (Frontmatter);
+  arcs: docs/process/spec-lifecycle.md. After any change to it, run sh scripts/gen-index.sh.
+-->
 
 ## Overview
 
@@ -32,8 +43,8 @@ the purpose after reading this section alone.
   reference them in prompts: "implement FR-001 through FR-003 only."
 
   Size: aim for 3-6 FRs. Past 8, split into a second spec and record the
-  pair as an arc in docs/specs/INDEX.md - don't grow this one. The second
-  spec restarts at FR-001; IDs are spec-local.
+  pair as an arc (arc and arc_order in both specs' frontmatter) - don't
+  grow this one. The second spec restarts at FR-001; IDs are spec-local.
 
   spec-lint WARNS above 8 rather than failing, because a genuinely
   indivisible spec may sit above the line. If yours does, say so in one

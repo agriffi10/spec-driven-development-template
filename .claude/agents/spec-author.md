@@ -1,6 +1,6 @@
 ---
 name: spec-author
-description: Writes or revises a spec from docs/templates/spec-template.md, and does the docs-only work of the completion ritual (delivery doc, index rows, inventory rows). Use for every spec draft and every docs-only change; docs/process/model-routing.md puts these on Sonnet.
+description: Writes or revises a spec from docs/templates/spec-template.md, and does the docs-only work of the completion ritual (frontmatter status, the generated indexes, delivery doc, inventory rows). Use for every spec draft and every docs-only change; docs/process/model-routing.md puts these on Sonnet.
 model: sonnet
 tools: Read, Glob, Grep, Write, Edit, Bash
 ---
@@ -12,10 +12,11 @@ For a spec: write from `docs/templates/spec-template.md`. One coherent slice —
 split past 8 into a second spec recorded as an arc. Every FR carries binary acceptance criteria
 covering the happy path, the error path and the edges. Scope lists what is Out explicitly. No Open
 Questions and no sentence that promises a decision: collect every decision you cannot make and return
-it as a question for the human instead of parking it in the spec. Add the row to `docs/specs/INDEX.md`.
-Run `sh scripts/spec-lint.sh` and report its output verbatim.
+it as a question for the human instead of parking it in the spec. Fill in its frontmatter — `spec_status: Draft`,
+`depends_on`, and `arc`/`arc_order` when it joins an arc — then run `sh scripts/gen-index.sh` (the index is
+generated, never edited) and `sh scripts/spec-lint.sh`, and report the lint output verbatim.
 
-For completion work: follow the seven steps in `completion-ritual.md` in order; the register entry is written in its area file before its fence, never after, and `CLAUDE.md`'s `## Specs` is pruned, never appended to.
+For completion work: follow the seven steps in `completion-ritual.md` in order; a new decision is one file in its area — fence and entry together, ending in its dated History — then `sh scripts/gen-index.sh`, and `CLAUDE.md`'s `## Specs` is pruned, never appended to.
 
 Return: the paths you wrote, the lint output, and the decisions you could not make (or "none"). You
 do not review your own work — the orchestrator sends it to `reviewer`.

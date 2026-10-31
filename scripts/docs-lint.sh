@@ -3,7 +3,7 @@
 #
 # Why this exists as a script rather than a rule. Every check below already existed in
 # prose — in `docs/process/completion-ritual.md` (*Anti-regrowth & doc hygiene*), in `CLAUDE.md`'s own
-# doc-size guardrail, and in the register's rules header (now `docs/decisions/INDEX.md`) — and in the sibling
+# doc-size guardrail, and in the register's rules (now `docs/process/knowledge-layout.md`) — and in the sibling
 # project `log-forge` (published as `log-foundry`) several were violated anyway. Its
 # `CLAUDE.md` grew from 7,350 bytes at `ad898fc8` to 89,340 at `e60b60d`, more than
 # tenfold — most of it while that repo carried only a TWO-SENTENCE version of the rule,
@@ -18,20 +18,28 @@
 # lands on whoever caused it rather than on a shared branch.
 #
 # FAIL (exit 1): an always-loaded file is over budget or has been removed outright, a
-#   Key Decisions section carries anything but its intro and area table, the register INDEX or an
-#   area file is missing or disagrees with the table, a fence has no entry or an entry no fence,
-#   an entry is unreachable from its Contents or is named by a row that links elsewhere, an entry
-#   opens its body with a label that contradicts its heading, a fence has become the reasoning, a
-#   Completed spec has no delivery doc, a delivery doc has become an essay, a pointer out of an
+#   Key Decisions section carries anything but its intro and area table, an area directory is
+#   missing, unnamed by the table or named otherwise than its title, a decision file's frontmatter
+#   is not a decision's or its History is missing or out of order, a fence has no entry or an entry
+#   no fence, a fence has become the reasoning, an area's rule disagrees with what it governs, a
+#   Completed spec has no delivery doc — or a spec's `spec_status` cannot be read, so whether it
+#   owes one cannot be told — a delivery doc has become an essay, a pointer out of an
 #   always-loaded file goes nowhere, the routed process tier has lost its shape (router, imports,
-#   parts, rules, agents — checks 9–13), a stub has reappeared at either old single-file path, or a
-#   dated measurement in a standing doc or script carries no commit to re-measure from (14).
+#   parts, rules, agents — checks 9–13), a stub has reappeared at an old path, a dated measurement
+#   in a standing doc or script carries no commit to re-measure from (14), a generated index is
+#   missing, stale, or cannot be regenerated (15), or a rulebook lacks its frontmatter, cites a
+#   footnote that is not one of its sources, carries a source it never cites, or is past its
+#   `stale_after` (16 — the one check that reads the DATE as well as the tree, by design).
+# ERROR (exit 2): the shared frontmatter reader or the index generator is missing, fails, or
+#   returns no verdict — the checks that read through them cannot run, and must not read as passed.
 #
 # There is no WARN tier: `spec-lint.sh` owns the soft per-spec judgements, and every rule
 # here is a shape the layering depends on — a shape is either held or it isn't.
 # Deliberately NOT checked here: anything `spec-lint.sh` already owns (required spec
-# sections, banned headers, the FR ceiling). A rule with two enforcement homes gets
-# qualified in one of them and read from the other.
+# sections, banned headers, the FR ceiling, and every rule on a spec's frontmatter — this
+# script reads a spec's `spec_status` for check 6 and regenerates the spec index for check 15,
+# through the same reader, and names spec-lint for the defect). A rule with two enforcement
+# homes gets qualified in one of them and read from the other.
 #
 # Usage: sh scripts/docs-lint.sh          (run from anywhere; resolves its own root)
 # POSIX sh — no bashisms, no dependencies; runs anywhere /bin/sh exists.
@@ -68,9 +76,13 @@ cd "$ROOT"
 # first filled-in Project Overview take its bytes from somewhere else. Each carries room,
 # stated in words rather than as a number that goes stale: CLAUDE_MAX_BYTES has room for
 # a filled Project Overview, Layout, Tech Stack and Code Conventions plus one
-# current-work paragraph; ALWAYS_LOADED_MAX_BYTES has that same room plus two rows in
-# the router. Re-derive both after any further structural change — a cap that can no
-# longer fail is still advertised as a fence.
+# current-work paragraph. ALWAYS_LOADED_MAX_BYTES does NOT have that room: this comment
+# once said it had the same room plus two router rows, which the two numbers never allowed
+# (the set's headroom was smaller than CLAUDE.md's alone), and the router row that
+# docs/process/knowledge-layout.md added spent part of what there was. So filling CLAUDE.md
+# in fires this budget first — the adoption re-ratchet above is where it gets its room.
+# Re-derive both after any further structural change — a cap that can no longer fail is
+# still advertised as a fence.
 CLAUDE_MAX_BYTES=11000
 
 # The whole always-loaded set — CLAUDE.md plus every file the router's "Loaded every
@@ -87,12 +99,10 @@ ALWAYS_LOADED_MAX_BYTES=26000
 # never fire and was still advertised as a fence.
 KEY_DECISIONS_MAX_BYTES=2500
 
-# The longest a single FENCE may be — a bullet under `## Fences` in an area file, with its
-# continuation lines joined. Measured on the LOGICAL unit because measuring
-# the physical line looks equivalent and is not: the moment the section is rewritten as
-# wrapped prose the longest physical line collapses to the wrap width, and the guard can
-# never fire again while still being advertised in the process docs. Named DIGEST for
-# history: the fences ARE the digest, now beside their entries.
+# The longest a single FENCE may be — a decision's frontmatter `description`, unescaped. A fence
+# is one YAML scalar on one line, so the logical unit and the physical one are the same thing and
+# a wrapped fence cannot hide from the cap (the reader refuses a value continued onto a second
+# line). Named DIGEST for history: the fences ARE the digest, listed in the generated index.
 #
 # BYTES, not characters: awk length() is byte-based in the one-true-awk that ships on
 # BSD and macOS, so em dashes and smart quotes count for more than one. Named for what
@@ -107,7 +117,6 @@ DELIVERY_MAX_LINES=150
 
 CLAUDE="CLAUDE.md"
 REGISTER_DIR="docs/decisions"
-REGISTER_INDEX="$REGISTER_DIR/INDEX.md"
 OLD_REGISTER="docs/decisions.md"
 SPEC_DIR="docs/specs"
 DELIVERY_DIR="docs/spec-delivery"
@@ -117,6 +126,12 @@ ROUTING="$PROCESS_DIR/model-routing.md"
 OLD_PROCESS="docs/process.md"
 RULES_DIR=".claude/rules"
 AGENTS_DIR=".claude/agents"
+RULEBOOK_DIR="docs/best-practices"
+# The frontmatter reader and the index generator are SHARED with spec-lint.sh, so a file is never
+# read two ways (docs/process/knowledge-layout.md). Missing either is an environment error, not a
+# pass: every check that reads through them would otherwise iterate over nothing.
+READER="scripts/frontmatter.awk"
+GENERATOR="scripts/gen-index.sh"
 
 # Every failure lands in one file rather than incrementing a counter. A `| while` loop
 # runs in a subshell, so a count raised inside one is lost the moment the pipeline ends
@@ -129,6 +144,24 @@ trap 'rm -f "$FAILS" "${TMPDIR:-/tmp}"/docs-lint-*.$$' EXIT INT TERM
 : > "$FAILS"
 
 note() { printf 'FAIL  %s\n' "$1" >> "$FAILS"; }
+
+# Read one governed file through the shared reader, appending its records to $2. Two guards, and
+# neither alone is enough: the reader exit status, and exactly one verdict (F) record. An awk
+# that dies on a syntax error prints nothing, and a check iterating over no records passes. Called
+# from the main shell, never a pipeline, so the `exit 2` reaches the script.
+FM_ONE="${TMPDIR:-/tmp}/docs-lint-fmone.$$"
+fm_read() {
+  [ -f "$READER" ] || { echo "error: docs-lint: the frontmatter reader $READER is missing; docs-lint.sh, spec-lint.sh and gen-index.sh read every frontmatter through it" >&2; exit 2; }
+  if ! awk -f "$READER" "$1" > "$FM_ONE" 2> "$FM_ONE.err"; then
+    echo "error: docs-lint: the frontmatter reader failed on $1: $(head -1 "$FM_ONE.err")" >&2
+    exit 2
+  fi
+  if [ "$(awk -F'\t' '$2 == "F"' "$FM_ONE" | wc -l | tr -d '[:space:]')" != 1 ]; then
+    echo "error: docs-lint: the frontmatter reader returned no single verdict for $1 — a reader that prints nothing passes every check that reads through it" >&2
+    exit 2
+  fi
+  cat "$FM_ONE" >> "$2"
+}
 
 report() {
   count=$(grep -c '^FAIL  ' "$FAILS" || true)
@@ -147,7 +180,8 @@ report() {
   exit 1
 }
 
-# Shared by checks 4 and 8: every relative link and `@path.md` pointer in a file resolves.
+# Shared by checks 4 and 8: every relative link and `@path.md` / `@path.yaml` pointer in a file
+# resolves — `.yaml` because the generated indexes are pointed at the same way.
 # Defined here because the register check (4) runs before the always-loaded check (8).
 # Code-span-BLIND on purpose — see the note at check 8.
 check_pointers() {
@@ -163,7 +197,7 @@ check_pointers() {
         if (p != "" && p !~ /^(https?:|mailto:)/ && p !~ /[*?]/) print p
       }
       line = $0
-      while (match(line, /@[A-Za-z0-9_.*?\/-]+\.md/)) {
+      while (match(line, /@[A-Za-z0-9_.*?\/-]+\.(md|yaml)/)) {
         p = substr(line, RSTART + 1, RLENGTH - 1)
         line = substr(line, RSTART + RLENGTH)
         # A pointer written as a glob (@docs/specs/SPEC-XXX-*.md) names a shape, not a
@@ -238,37 +272,36 @@ fi
 
 # ── 2. Key Decisions is an INTRO and ONE AREA TABLE, measured whole ───────────
 #
-# The digest left this file: decisions live as FENCES at the top of one register file per
-# area (docs/decisions/<slug>.md), and this section names the areas. The fixed-shape rule
-# stays — it replaced a markdown parser that shipped three rounds of fixes, each opening a
-# fresh escape — and the shape is now smaller: plain prose, then exactly one table with the
-# header `| Area | Fences |` and rows `| <name> | \`docs/decisions/<slug>.md#fences\` |`.
-# Bullets, a second table, prose after the table, blockquotes, headings and fenced blocks
-# are refused by name. Every one of them was a way past a check once.
+# Decisions live one file per decision, one directory per area (docs/decisions/<slug>/), and this
+# section names the areas. The fixed-shape rule stays — it replaced a markdown parser that shipped
+# three rounds of fixes, each opening a fresh escape — and the shape is small: plain prose, then
+# exactly one table with the header `| Area | Directory |` and rows
+# `| <name> | \`docs/decisions/<slug>/\` |`. Bullets, a second table, prose after the table,
+# blockquotes, headings and fenced blocks are refused by name. Every one of them was a way past a
+# check once.
 #
-# The table is the AUTHORITY for the closed set of areas and their order; the register
-# INDEX and the rules are held to it below. An empty table is therefore a parse anchor
-# missing, not an empty set: with no row, every check on the register iterates nothing and
-# passes — so no row FAILS.
+# An empty table is a parse anchor missing, not an empty set: with no row, every check on the
+# register would iterate nothing and pass — so no row FAILS. With at least one row, and every row
+# required to name a directory that exists (4a), the register cannot be vacuous.
 #
 # Terminating conditions (each with a fixture): 2a no section  2b no table row  2c header
-# not | Area | Fences |  2d malformed row  2e duplicate area name  2f duplicate slug  2g a
+# not | Area | Directory |  2d malformed row  2e duplicate area name  2f duplicate directory  2g a
 # second table  2h content after the table  2i bullet/list in the intro  2j blockquote in
 # the intro  2k indented line in the intro  2l raw HTML in the intro  2m heading inside the
 # section  2n fenced block  2o section over KEY_DECISIONS_MAX_BYTES  2p separator row missing
-# 2q an | Area | Fences | table outside the section
+# 2q an | Area | Directory | table outside the section
 KD_ROWS="${TMPDIR:-/tmp}/docs-lint-kdrows.$$"
 awk -v scap="$KEY_DECISIONS_MAX_BYTES" '
   function bad(why) {
-    printf "FAIL  Key Decisions, line %d: %s\n      The section is plain intro prose and ONE table (| Area | Fences |) whose rows name an area\n      and its register file — nothing else. A bullet, a second table, prose after the table, a\n      blockquote, a heading or a fenced block is refused: each was a way past this check once.\n      Offending line: %s\n", FNR, why, substr($0, 1, 60)
+    printf "FAIL  Key Decisions, line %d: %s\n      The section is plain intro prose and ONE table (| Area | Directory |) whose rows name an area\n      and its directory — nothing else. A bullet, a second table, prose after the table, a\n      blockquote, a heading or a fenced block is refused: each was a way past this check once.\n      Offending line: %s\n", FNR, why, substr($0, 1, 60)
   }
   in_sec && /^## /    { in_sec = 0 }
   /^[ \t]*(```|~~~)/ { if (in_sec) { bytes += length($0) + 1; bad("a fenced block") }
                       fence = !fence; next }
   fence               { if (in_sec) bytes += length($0) + 1; next }
   !in_sec && /^## Key Decisions/ { if (!fence) { in_sec = 1; found = 1 } next }
-  !in_sec && /^\|[ \t]*Area[ \t]*\|[ \t]*Fences[ \t]*\|/ {
-    printf "FAIL  %s, line %d: an | Area | Fences | table outside the Key Decisions section. The section holds the\n      one area table; a second one elsewhere names areas nothing checks.\n", FILENAME, FNR; next }
+  !in_sec && /^\|[ \t]*Area[ \t]*\|[ \t]*Directory[ \t]*\|/ {
+    printf "FAIL  %s, line %d: an | Area | Directory | table outside the Key Decisions section. The section holds the\n      one area table; a second one elsewhere names areas nothing checks.\n", FILENAME, FNR; next }
   !in_sec             { next }
   { bytes += length($0) + 1; sub(/\r$/, "") }
   /^[ \t]*$/          { if (in_table) { in_table = 0; after_table = 1 } next }
@@ -276,23 +309,25 @@ awk -v scap="$KEY_DECISIONS_MAX_BYTES" '
     if (after_table) { bad("a second table after the area table"); next }
     if (!in_table) {
       in_table = 1; want_sep = 1
-      if ($0 !~ /^\|[ \t]*Area[ \t]*\|[ \t]*Fences[ \t]*\|[ \t]*$/) bad("a table whose header is not | Area | Fences |")
+      if ($0 !~ /^\|[ \t]*Area[ \t]*\|[ \t]*Directory[ \t]*\|[ \t]*$/) bad("a table whose header is not | Area | Directory | (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating)")
       next
     }
     if (want_sep) { want_sep = 0; if ($0 !~ /^\|[ \t]*:?-+:?[ \t]*\|[ \t]*:?-+:?[ \t]*\|[ \t]*$/) bad("a table without a |---|---| separator row under its header"); next }
-    if ($0 ~ /^\|[ \t]*[^|`][^|`]*\|[ \t]*`docs\/decisions\/[A-Za-z0-9_-]+\.md#fences`[ \t]*\|[ \t]*$/) {
+    # The name holds at least one character that is not blank: a blank name would leave an empty
+    # first field, which `read` with a tab IFS collapses — the row would then skip every check.
+    if ($0 ~ /^\|[ \t]*[^|` \t][^|`]*\|[ \t]*`docs\/decisions\/[A-Za-z0-9_-]+\/`[ \t]*\|[ \t]*$/) {
       name = $0; sub(/^\|[ \t]*/, "", name); sub(/[ \t]*\|.*$/, "", name)
-      slug = $0; sub(/^.*`docs\/decisions\//, "", slug); sub(/\.md#fences`.*$/, "", slug)
+      slug = $0; sub(/^.*`docs\/decisions\//, "", slug); sub(/\/`.*$/, "", slug)
       if (name in names) bad("a duplicate area name: " name)
-      if (slug in slugs) bad("a duplicate register file: docs/decisions/" slug ".md")
+      if (slug in slugs) bad("a duplicate area directory: docs/decisions/" slug "/")
       names[name] = 1; slugs[slug] = 1; rows++
       printf "ROW\t%s\t%s\n", name, slug
-    } else bad("a row that is not | <area> | `docs/decisions/<slug>.md#fences` | — one area, one file, nothing else in the row")
+    } else bad("a row that is not | <area> | `docs/decisions/<slug>/` | — one area (a name, not blank), its directory, nothing else in the row (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating)")
     next
   }
   in_table            { in_table = 0; after_table = 1 }
   after_table         { bad("content after the area table"); next }
-  /^[-*+][ \t]/       { bad("a bullet in the intro — a decision belongs in its area file as a fence"); next }
+  /^[-*+][ \t]/       { bad("a bullet in the intro — a decision is a file in its area directory"); next }
   /^[0-9]+[.)][ \t]/  { bad("an ordered-list item in the intro"); next }
   /^>/                { bad("a blockquote in the intro"); next }
   /^[ \t]+[^ \t]/     { bad("an indented line in the intro"); next }
@@ -303,337 +338,322 @@ awk -v scap="$KEY_DECISIONS_MAX_BYTES" '
     if (!found)
       printf "FAIL  No `## Key Decisions` section found. It cannot be renamed, cased differently\n      or hidden behind an unclosed fence earlier in the file: every check on the register\n      goes quiet when the section cannot be located, which is a silent pass.\n"
     else if (!rows)
-      printf "FAIL  Key Decisions has no | Area | Fences | table row. The table is the authority for the set\n      of areas, and with no row every check on the register iterates nothing — an empty table is\n      a missing parse anchor, not an empty set.\n"
+      printf "FAIL  Key Decisions has no | Area | Directory | table row (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating).\n      With no row every check on the register iterates nothing — an empty table is a missing parse\n      anchor, not an empty set.\n"
     if (bytes > scap)
-      printf "FAIL  The Key Decisions section is %d bytes (cap %d). It is an intro and one row per AREA —\n      a decision belongs in its area file as a fence, never here.\n", bytes, scap
+      printf "FAIL  The Key Decisions section is %d bytes (cap %d). It is an intro and one row per AREA —\n      a decision is a file in its area directory, never a line here.\n", bytes, scap
   }
 ' "$CLAUDE" > "${TMPDIR:-/tmp}/docs-lint-kd.$$"
 grep -v '^ROW	' "${TMPDIR:-/tmp}/docs-lint-kd.$$" >> "$FAILS" || true
 grep '^ROW	' "${TMPDIR:-/tmp}/docs-lint-kd.$$" | cut -f2- > "$KD_ROWS" || true
 rm -f "${TMPDIR:-/tmp}/docs-lint-kd.$$"
 
-# ── 3, 4 & 5. The register: INDEX equals the table, every area file fences-first ──
+# ── 3, 4 & 5. The register: one directory per area, one file per decision ─────
 #
-# The inversion this template once shipped — a digest that WAS the register, every settled
-# decision full-length in the file that loads on every turn — is now structurally
-# impossible: CLAUDE.md carries area names, and each area file carries its fences first and
-# its entries behind them, so the label match is within one file. What is held instead:
+# docs/decisions/<slug>/<slug>.md is the AREA CONCEPT (type: Decision Area — its `title` is the
+# area name, its `governs` the code trees its fences apply to), and every other .md beside it is
+# one DECISION (type: Decision — `title` the label, `description` the FENCE, optional `status`,
+# and a body that is the entry, ending in a dated History). docs/decisions/index.yaml is generated
+# from them (check 15) and lists every area's fences; the frontmatter is the one authority. Every
+# file is read through the shared reader (docs/process/knowledge-layout.md, The decision register).
 #
-#   3a docs/decisions.md still exists (a stub)   3b INDEX missing   3c INDEX has no row
-#   3d INDEX rows differ from the table (name, slug or order)
-#   4a a table row with no file   4b an area file with no row   4c H1 not "# <name> — decisions"
-#   4d a `##` other than Contents and Fences   4e no Contents   4f Contents first item not Fences
-#   4g no Fences / Fences not first after Contents   4h a fence of the wrong shape
-#   4i a fence over DIGEST_MAX_BYTES   4j an unclosed fence label   4k a fence with no entry
-#   4l an entry with no fence   4m an entry absent from Contents   4n a Fences pointer unresolved
-#   4o an area file in a subdirectory   4p a second `## Contents`   4q a fence-shaped bullet outside Fences
-#   4r a Contents anchor no entry carries   ((example) labels are exempt only in a file titled `# (example) …`)
-#   5a an area declaring globs with no rule   5b a rule whose globs differ from Governs
-#   5c a rule for an area declaring none   5d Governs neither `none` nor backticked globs
+# The area set and its order belong to the frontmatter, not to this table: the table lists the
+# area directories in slug order — the order the index lists them — and each row's name is its
+# area's title. Held instead of what the single-file register needed (Contents, anchors, the
+# fences-first section, the opening-label checks), which died with the file they guarded.
+#
+#   3a docs/decisions.md still exists (a stub)   3e docs/decisions/INDEX.md still exists (a stub)
+#   3d a row named otherwise than its area's title, or rows out of slug order
+#   4a a row whose directory does not exist      4b an area directory with no row
+#   4o a .md deeper than docs/decisions/<area>/  4s a .md directly under docs/decisions/
+#   4t an area directory with no <slug>.md       4u frontmatter refused, or the wrong type or keys
+#   4y a decision named index.md or log.md (OKF reserves both)
+#   4v a status other than stable or deprecated  4i a fence over DIGEST_MAX_BYTES
+#   4l a decision with no fence (description)    4k a fence with no entry (no body before History)
+#   4w History missing (4w1), a date not YYYY-MM-DD (4w2), not strictly newest first (4w3), no
+#      dated entry (4w4), or a `##` after it (4w5)   4x a `# ` title line in a decision or area body
+#   4n a pointer in a fence that resolves to nothing
+#   5a an area declaring globs with no rule      5b a rule whose globs differ from `governs`
+#   5c a rule for an area declaring none         5d `governs` missing or not a flow list
 #   5e the file at decisions-<slug>.md is not this area's rule (body not template B for it)
-[ ! -e "$OLD_REGISTER" ] || note "$OLD_REGISTER exists. The register is one file per area under $REGISTER_DIR/; there is no
-      stub at the old path — a stale pointer must fail, not land on an empty file."
-if [ ! -f "$REGISTER_INDEX" ]; then
-  note "$REGISTER_INDEX is missing. The register is one file per area behind that index, and the
-      Key Decisions table in $CLAUDE names the areas: without the index there is nothing to hold the
-      table and the files to."
-else
-  IDX_ROWS="${TMPDIR:-/tmp}/docs-lint-idxrows.$$"
-  # Rows of the INDEX table: | name | `docs/decisions/<slug>.md#fences` | governs |. Header and
-  # separator rows carry no backticked fences path and fall out.
-  awk '
-    /^[ \t]*(```|~~~)/ { fence = !fence; next }
-    fence { next }
-    /^\|/ && /`docs\/decisions\/[A-Za-z0-9_-]+\.md#fences`/ {
-      line = $0; sub(/\r$/, "", line)
-      n = split(line, c, /\|/)
-      # c[1] is empty (leading pipe); c[2] name, c[3] fences, c[4] governs
-      name = c[2]; gsub(/^[ \t]+|[ \t]+$/, "", name)
-      slug = c[3]; sub(/^.*`docs\/decisions\//, "", slug); sub(/\.md#fences`.*$/, "", slug)
-      gov = (n >= 5) ? c[4] : ""; gsub(/^[ \t]+|[ \t]+$/, "", gov)
-      printf "%s\t%s\t%s\n", name, slug, gov
-    }
-  ' "$REGISTER_INDEX" > "$IDX_ROWS"
-  if [ ! -s "$IDX_ROWS" ]; then
-    note "$REGISTER_INDEX has no | Area | Fences | Governs | row. With no row the register cannot be held to
-      the table — an empty table is a missing parse anchor, not an empty set."
-  elif ! cmp -s "$KD_ROWS" "$(cut -f1,2 "$IDX_ROWS" > "${TMPDIR:-/tmp}/docs-lint-idx2.$$"; echo "${TMPDIR:-/tmp}/docs-lint-idx2.$$")"; then
-    note "$REGISTER_INDEX names areas that differ from the Key Decisions table in $CLAUDE — by name, file or
-      order. The table is the authority: the index repeats its rows in the same order and adds only the
-      Governs column.
-      table:  $(tr '\n\t' '; ' < "$KD_ROWS")
-      index:  $(cut -f1,2 "$IDX_ROWS" | tr '\n\t' '; ')"
-  fi
-  rm -f "${TMPDIR:-/tmp}/docs-lint-idx2.$$"
+[ ! -e "$OLD_REGISTER" ] || note "$OLD_REGISTER exists (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating).
+      The register is one directory per area under $REGISTER_DIR/; there is no stub at the old path — a
+      stale pointer must fail, not land on an empty file."
+[ ! -e "$REGISTER_DIR/INDEX.md" ] || note "$REGISTER_DIR/INDEX.md exists (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating).
+      The register index is $REGISTER_DIR/index.yaml, generated from the frontmatter; there is no stub at
+      the old path, and the register's rules live in docs/process/knowledge-layout.md."
 
-  # Every area file is a row, every row a file — and the register is one flat set, so it can be
-  # enumerated by eye and by this loop; a file one directory deeper is invisible to both.
-  refuse_deep_md "$REGISTER_DIR" "Area files are one flat set, one per table row;
-      a file a level down is a register nothing checks."
-  list_flat_md "$REGISTER_DIR" | while IFS= read -r f; do
-    [ -f "$f" ] || continue
-    [ "$f" = "$REGISTER_INDEX" ] && continue
-    slug=$(basename "$f" .md)
-    cut -f2 "$KD_ROWS" | grep -qxF "$slug" || note "$f is not a row in the Key Decisions table in $CLAUDE. An area file the table does not
-      name is a register nobody is pointed at — add the row (here and in $REGISTER_INDEX), or move
-      its decisions into an area that has one."
+# 4a — every row names a directory that exists, whether or not docs/decisions/ does: a table
+# routing to areas that are not there must fail, not go quiet with the directory.
+while IFS='	' read -r name slug; do
+  [ -n "$slug" ] || continue
+  [ -d "$REGISTER_DIR/$slug" ] || note "$CLAUDE routes area \"$name\" to $REGISTER_DIR/$slug/, which does not exist. A row with no
+      directory sends the next session nowhere."
+done < "$KD_ROWS"
+
+REG_REC="${TMPDIR:-/tmp}/docs-lint-regrec.$$"
+REG_PLAN="${TMPDIR:-/tmp}/docs-lint-regplan.$$"
+REG_AREAS="${TMPDIR:-/tmp}/docs-lint-regareas.$$"
+: > "$REG_REC"; : > "$REG_PLAN"; : > "$REG_AREAS"
+if [ -d "$REGISTER_DIR" ]; then
+  # 4s / 4o — the register is directories of files, one level deep, and nothing else. A .md
+  # directly under docs/decisions/ is the pre-directory layout (or a stray), and one a level below
+  # an area is a decision no index lists and no check reads.
+  find "$REGISTER_DIR" -mindepth 1 -maxdepth 1 -type f -name '*.md' | sort | while IFS= read -r f; do
+    [ "$f" = "$REGISTER_DIR/INDEX.md" ] && continue   # 3e names it
+    note "$f is directly under $REGISTER_DIR/ (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating).
+      A decision is a file in its area's directory, $REGISTER_DIR/<area>/<decision>.md."
   done
-
-  while IFS='	' read -r name slug; do
-    [ -n "$slug" ] || continue
-    f="$REGISTER_DIR/$slug.md"
-    if [ ! -f "$f" ]; then
-      note "$CLAUDE routes area \"$name\" to $f, which does not exist. A row with no file sends the next
-      session nowhere."
-      continue
+  find "$REGISTER_DIR" -mindepth 3 -name '*.md' | sort | while IFS= read -r f; do
+    note "$f is in a subdirectory of an area. Decisions are one flat set per area directory; a file a
+      level down is listed by no index and read by no check."
+  done
+  # 4z — every file under docs/decisions/ is a .md (a decision or an area concept) or the generated
+  # index. Anything else — a `.MD`, a `.txt` draft, a stray — is a file every check here skips.
+  find "$REGISTER_DIR" -type f ! -name '*.md' ! -path "$REGISTER_DIR/index.yaml" | sort | while IFS= read -r f; do
+    note "$f is under $REGISTER_DIR/ but is neither a .md file nor the generated index.yaml. Every file there is a
+      decision, an area concept or the index; anything else is a file no check reads."
+  done
+  find "$REGISTER_DIR" -mindepth 1 -maxdepth 1 -type d | sort > "$REG_AREAS"
+  # Every governed file through the reader, by redirect so fm_read's exit 2 reaches this shell.
+  # The plan records each file's kind: A an area concept, D a decision.
+  while IFS= read -r a; do
+    slug=${a##*/}
+    # 4b — every area directory is a row (dot-directories included: find sees them).
+    cut -f2 "$KD_ROWS" | grep -qxF "$slug" || note "$a/ is not a row in the Key Decisions table in $CLAUDE. An area the table does not
+      name is a register nobody is pointed at — add the row (in slug order), or move its decisions into
+      an area that has one."
+    # 4t — the area concept names the area and says what it governs.
+    if [ -f "$a/$slug.md" ]; then
+      printf 'A\t%s\t%s\n' "$slug" "$a/$slug.md" >> "$REG_PLAN"
+      fm_read "$a/$slug.md" "$REG_REC"
+    else
+      note "$a/ has no $slug.md. Every area directory carries its area concept — type: Decision Area, its
+      title the area name and its \`governs\` the trees its fences apply to."
     fi
-    FENCES="${TMPDIR:-/tmp}/docs-lint-fences.$$"
-    awk -v ucap="$DIGEST_MAX_BYTES" -v name="$name" -v file="$f" -v fences="$FENCES" '
-      function trim(s) { sub(/^[ \t\r]+/, "", s); sub(/[ \t\r]+$/, "", s); return s }
-      function anchor(s,   t) {
-        t = tolower(trim(s)); gsub(/`/, "", t); gsub(/\*/, "", t)
-        gsub(/[^a-z0-9 _-]/, "", t); gsub(/ /, "-", t); return t
-      }
-      function has_close(u,   s, j, k, p) {
-        s = u; sub(/^- \*\*/, "", s); p = 1
-        while ((j = index(substr(s, p), "**")) > 0) {
-          k = p + j - 1
-          if (substr(s, k + 2, 1) != "*") return (k > 1)
-          p = k + 1
-        }
-        return 0
-      }
-      function label_of(u,   s, i, j, k, p, pad, orig) {
-        s = u; sub(/^- \*\*/, "", s)
-        while (match(s, /`[^`]*`/)) { pad = sprintf("%*s", RLENGTH, ""); s = substr(s, 1, RSTART - 1) pad substr(s, RSTART + RLENGTH) }
-        i = 0; p = 1
-        while ((j = index(substr(s, p), "**")) > 0) {
-          k = p + j - 1
-          if (substr(s, k + 2, 1) != "*") { i = k; break }
-          p = k + 1
-        }
-        if (i <= 1) return ""
-        orig = u; sub(/^- \*\*/, "", orig)
-        return trim(substr(orig, 1, i - 1))
-      }
-      function flush(   n, l) {
-        if (unit == "") return
-        n = length(unit)
-        if (n > ucap)
-          printf "FAIL  %s: a fence is %d bytes (cap %d): %s…\n      A fence is the claim and its constraint in one line; the reasoning goes in the entry below it.\n", file, n, ucap, substr(unit, 1, 70)
-        if (!has_close(unit))
-          printf "FAIL  %s: a fence never closes its `**` label: %s…\n      An unclosed label yields no label at all, so nothing requires an entry for it.\n", file, substr(unit, 1, 70)
-        else { l = label_of(unit); if (l != "" && (!example_file || l !~ /^\(example\)/)) fence_lbl[l] = 1 }
-        unit = ""
-      }
-      function bad(why) {
-        printf "FAIL  %s, line %d (Fences): %s\n      Fences are `- **Label** — …` bullets at column 0 with indented continuations and blank lines,\n      nothing else — every other construct was a way past the cap once.\n      Offending line: %s\n", file, FNR, why, substr($0, 1, 60)
-      }
-      { sub(/\r$/, "") }
-      /^[ \t]*(```|~~~)/ { if (in_fences) { bad("a fenced block"); } fence = !fence; next }
-      fence { next }
-      FNR == 1 {
-        example_file = ($0 ~ /^# \(example\)/)
-        if ($0 != "# " name " — decisions")
-          printf "FAIL  %s does not open with `# %s — decisions` (the name in the Key Decisions table). The\n      row, the title and any rule name the area identically.\n", file, name
-        next
-      }
-      /^## / {
-        if (in_fences) flush()
-        in_fences = 0; in_toc = 0
-        h = trim(substr($0, 4))
-        if (h == "Contents") {
-          if (toc_seen) printf "FAIL  %s carries a second `## Contents`. One Contents, at the top: a second one lower down would\n      let an entry be reachable from a list nobody reads first.\n", file
-          toc_seen = 1; in_toc = 1; toc_first = 1
-        }
-        else if (h == "Fences") {
-          fences_seen = 1; in_fences = 1
-          if (!toc_seen) fences_before_toc = 1
-          if (toc_seen && sections_since_toc > 0) fences_not_first = 1
-        } else {
-          printf "FAIL  %s carries a `## %s` section. An area file has exactly two: Contents, then Fences; the\n      entries are `###` headings. A fence stated as prose under another section is a fence nothing\n      checks.\n", file, h
-        }
-        if (toc_seen && h != "Contents") sections_since_toc++
-        next
-      }
-      in_toc && /^[ \t]*---[ \t]*$/ { in_toc = 0; next }
-      in_toc {
-        if ($0 ~ /^[ \t]*$/) next
-        if (toc_first) {
-          toc_first = 0
-          if (trim($0) != "- [Fences](#fences)") first_not_fences = 1
-        }
-        line = $0
-        while (match(line, /\(#[a-z0-9_-]+\)/)) { seen[substr(line, RSTART + 2, RLENGTH - 3)] = 1; line = substr(line, RSTART + RLENGTH) }
-        # A SECOND pass over the same line, for the row itself rather than its
-        # reachability. Deliberately not folded into the loop above: narrowing that one to
-        # the full `[text](#anchor)` form would stop a bare `(#anchor)` reaching `seen`, and
-        # the entry it names would then be reported as absent from a Contents that lists it
-        # — weakening a working check in order to add one. A link text containing `]` never
-        # matches and is exempt in silence; balancing brackets here is markdown parsing,
-        # which this script is the standing argument against.
-        line = $0
-        while (match(line, /\[[^]]*\]\(#[a-z0-9_-]+\)/)) {
-          m = substr(line, RSTART, RLENGTH)
-          line = substr(line, RSTART + RLENGTH)
-          rt = m; sub(/^\[/, "", rt); sub(/\]\(#[a-z0-9_-]+\)$/, "", rt)
-          ra = m; sub(/^.*\]\(#/, "", ra); sub(/\)$/, "", ra)
-          # ONE-BASED, and the increment comes first. An uninitialised awk variable used as
-          # a subscript is the empty string, not zero, so `rowtext[nrow]` with nrow unset
-          # stored the first row under "" and a 0-based loop then read past it — the FIRST
-          # Contents row went unchecked while every later one worked.
-          if (ra != "fences" && (!example_file || rt !~ /^\(example\)/)) { nrow++; rowtext[nrow] = rt; rowanchor[nrow] = ra }
-        }
-        next
-      }
-      /^### / {
-        if (in_fences) { flush(); in_fences = 0 }
-        s = trim(substr($0, 5))
-        allhead[anchor(s)] = 1
-        want_label = 0
-        if (!example_file || s !~ /^\(example\)/) { entry_lbl[s] = 1; head[anchor(s)] = s; cur_head = s; want_label = 1 }
-        next
-      }
-      # The label is `.+`, not `[^*]+`: nine fences in this very register carry an italic or a
-      # code span inside the label, and excluding `*` let every one of those shapes be restated
-      # outside `## Fences`, where nothing cross-checks it — the plain-label control was caught
-      # and the italic one was not. Greedy is right here because only the EXISTENCE of the fence
-      # signature matters, not which `**` pair closes the label.
-      !in_fences && !in_toc && /^- \*\*.+\*\* — / {
-        printf "FAIL  %s, line %d: a fence-shaped bullet (`- **Label** — …`) outside `## Fences`. A fence stated\n      anywhere else is a fence nothing cross-checks; move it under Fences, or write the entry text\n      without the fence signature.\n", file, FNR; next
-      }
-      in_fences {
-        print > fences
-        if ($0 ~ /^[ \t]*---[ \t]*$/) { flush(); in_fences = 0; next }
-        if ($0 ~ /^[ \t]*\r?$/) { flush(); next }
-        if ($0 ~ /^- \*\*/) { flush(); unit = $0; next }
-        if ($0 ~ /^- /) { bad("a bullet that does not open with a **bold label**"); next }
-        if ($0 ~ /^[ \t]+[^ \t]/) { if (unit == "") { bad("indented line with no fence above it to continue"); next }
-                                    x = $0; sub(/^[ \t]+/, "", x); unit = unit " " x; next }
-        if ($0 ~ /^[|>]/) { bad("a table or blockquote row"); next }
-        if ($0 ~ /^[0-9]+[.)][ \t]/) { bad("an ordered-list item"); next }
-        if ($0 ~ /^[*+][ \t]/) { bad("a `*` or `+` bullet — use `-`"); next }
-        bad("prose in the Fences section"); next
-      }
-      # ---- the opening bold label of an entry body ----
-      # A decision heading is written down in four places here and two of them are checked
-      # elsewhere: the Contents anchor and the heading itself. This is the one nothing else
-      # can see. An entry can open its body with a bold label that disagrees with the heading
-      # above it, which costs more here than it would elsewhere: the whole register model is
-      # that a fence greps straight to its entry, and that bold label is what such a grep
-      # lands on.
-      #
-      # Scoped to DISAGREEMENT, not to presence. An entry opening with plain prose is left
-      # alone — the live register has such entries — so demanding the restatement would be a
-      # gate inventing a rule the rules header of the register never stated. The escape is
-      # therefore real and deliberate: delete the label and nothing fires. A heading with no
-      # restatement contradicts nothing; a heading with the WRONG restatement contradicts
-      # itself. These rules sit below the Fences block so that a line inside `## Fences`
-      # never reaches them.
-      !want_label { next }
-      /^[ \t]*$/ { next }
-      # A superseded marker is a BLOCKQUOTE, and the completion ritual puts one at every doc
-      # site still stating the old claim — so it lands directly under the heading, on exactly
-      # the path this check exists for: superseding is WHEN a heading gets renamed. Read as
-      # the body line, it silences the stale label below it.
-      /^[ \t]*>/ { next }
-      {
-        want_label = 0
-        if ($0 !~ /^\*\*/) next
-        s = $0; sub(/^\*\*/, "", s)
-        lab = label_of("- **" s)
-        if (lab == "")
-          printf "FAIL  %s: \"### %s\" opens its body with a `**` that never closes.\n      An unclosed label yields no label at all, so the one line that has to restate the\n      heading is never compared against it. It opens and closes on the FIRST body line: a\n      label wrapped onto a second line reads here as one that never closes.\n", file, cur_head
-        else if (lab != cur_head)
-          printf "FAIL  %s: \"### %s\" opens its body with the label \"%s\".\n      The bold label opening an entry restates its heading, and is what a fence greps to. A\n      label that does not match its heading is visible to no other check here: the heading is\n      right, the Contents row is right, and the two disagree only with each other.\n      A superseded marker belongs in a blockquote above the label, where it is skipped.\n", file, cur_head, lab
-        next
-      }
-      END {
-        flush()
-        if (!toc_seen) printf "FAIL  %s has no `## Contents`. Fences and entries are found through it; without it the file is\n      read whole, which is the cost the layering exists to avoid.\n", file
-        else if (first_not_fences) printf "FAIL  %s: the first item of Contents is not `- [Fences](#fences)`. Fences come first so a session that\n      opens the file for them stops reading after them.\n", file
-        if (!fences_seen) printf "FAIL  %s has no `## Fences` section. Every area file opens with its fences — the one-line claims\n      the always-loaded tier used to carry.\n", file
-        else if (fences_before_toc || fences_not_first) printf "FAIL  %s: `## Fences` is not the first section after `## Contents`. Fences first, entries after.\n", file
-        for (l in fence_lbl) if (!(l in entry_lbl))
-          printf "FAIL  %s: fence \"%s\" has no `### %s` entry in the same file.\n      Entry first, fence second: a fence is never the only home of a fact.\n", file, l, l
-        for (l in entry_lbl) if (!(l in fence_lbl))
-          printf "FAIL  %s: entry \"### %s\" has no fence under `## Fences`.\n      An entry no fence points at is a decision that gets re-litigated.\n", file, l
-        for (a in head) if (!(a in seen))
-          printf "FAIL  %s: \"### %s\" is absent from the Contents — findable only by reading the whole file,\n      which is the cost the layering exists to avoid.\n", file, head[a]
-        for (a in seen) if (a != "fences" && !(a in allhead))
-          printf "FAIL  %s: Contents links to #%s, which no `###` entry carries. A stale anchor sends the reader to\n      the top of the file; fix the link or the heading.\n", file, a
-        # Indexed rather than `for (i in rowtext)`: awk iterates an associative array in an
-        # unspecified order, so two bad rows would report in a different order on a different
-        # awk and the corpus would be flaky on exactly the machines it is meant to protect.
-        for (i = 1; i <= nrow; i++) {
-          if (anchor(rowtext[i]) == rowanchor[i]) continue
-          if (rowanchor[i] in head)
-            printf "FAIL  %s Contents: the row named \"%s\" links to \"#%s\", the anchor of \"### %s\".\n      A row that names one decision and points at another reads as correct from either end,\n      because the link still works — nothing looks broken until a reader trusts the name.\n", file, rowtext[i], rowanchor[i], head[rowanchor[i]]
-          else
-            printf "FAIL  %s Contents: the row named \"%s\" links to \"#%s\", but its own anchor is\n      \"#%s\". The Contents row is the only place a name and the link under it are written\n      side by side, so a disagreement between the two is checkable nowhere else.\n", file, rowtext[i], rowanchor[i], anchor(rowtext[i])
-        }
-      }
-    ' "$f" >> "$FAILS"
-    [ -f "$FENCES" ] && check_pointers "$FENCES" "$f (Fences)"
-    rm -f "$FENCES"
-  done < "$KD_ROWS"
+    find "$a" -mindepth 1 -maxdepth 1 -type f -name '*.md' | sort > "${TMPDIR:-/tmp}/docs-lint-regdec.$$"
+    while IFS= read -r d; do
+      [ "$d" = "$a/$slug.md" ] && continue
+      printf 'D\t%s\t%s\n' "$slug" "$d" >> "$REG_PLAN"
+      fm_read "$d" "$REG_REC"
+    done < "${TMPDIR:-/tmp}/docs-lint-regdec.$$"
+    rm -f "${TMPDIR:-/tmp}/docs-lint-regdec.$$"
+  done < "$REG_AREAS"
+fi
 
-  # 5 — Governs ↔ rules. An area that governs a tree has a rule with exactly those globs; an
-  # area that governs none has no rule. Either direction missing fails by name.
-  while IFS='	' read -r name slug gov; do
-    [ -n "$slug" ] || continue
+# 4u, 4v, 4i, 4l, 4y — the frontmatter of each file, for its kind. Writes FAIL lines to $FAILS
+# and, for each area whose concept reads, one `AREA <slug> <title>` line plus its governs globs,
+# for 3d and 5 below; and each readable decision's fence to a scratch file per decision, for 4n.
+REG_AREA_INFO="${TMPDIR:-/tmp}/docs-lint-reginfo.$$"
+REG_FENCES="${TMPDIR:-/tmp}/docs-lint-fencelist.$$"
+awk -F'\t' -v cap="$DIGEST_MAX_BYTES" -v info="$REG_AREA_INFO" -v fences="$REG_FENCES" \
+    -v pfx="${TMPDIR:-/tmp}/docs-lint-fence" -v pid="$$" '
+  function out(f, msg) { printf "FAIL  %s: %s\n", f, msg }
+  FILENAME == ARGV[1] {
+    if ($2 == "F") v[$1] = $3
+    else if ($2 == "E") { ne[$1]++; e[$1, ne[$1]] = $3 "\t" $4 }
+    else if ($2 == "K") { kind[$1, $3] = "K"; k[$1, $3] = $4 }
+    else if ($2 == "L") { kind[$1, $3] = "L"; nl[$1, $3] = $4 }
+    else if ($2 == "I") { ni[$1, $3]++; li[$1, $3, ni[$1, $3]] = $4 }
+    next
+  }
+  {
+    t = $1; slug = $2; f = $3
+    base = f; sub(/^.*\//, "", base)
+    if (t == "D" && (base == "index.md" || base == "log.md"))
+      out(f, "is named " base ", which OKF reserves at every level of a bundle (index.md a listing, log.md a history). A decision takes a name of its own.")
+    if (v[f] != "ok") {
+      for (j = 1; j <= ne[f]; j++) { split(e[f, j], p, "\t"); printf "FAIL  %s:%s: frontmatter: %s\n", f, p[1], p[2] }
+      printf "      Every .md under docs/decisions/<area>/ opens with frontmatter (if this register predates one file per\n      decision, see docs/process/knowledge-layout.md, Migrating). No other check on this file ran.\n"
+      next
+    }
+    if (t == "A") {
+      if (k[f, "type"] != "Decision Area")
+        out(f, "type is \"" k[f, "type"] "\", not \"Decision Area\". " slug ".md is the area concept: its title names the area, its governs says what the area governs.")
+      if (kind[f, "title"] != "K" || k[f, "title"] == "") out(f, "frontmatter has no `title` — the area name the Key Decisions row repeats.")
+      if (kind[f, "governs"] != "L")
+        out(f, "`governs` is " (kind[f, "governs"] == "" ? "missing" : "not a flow list") ". Write the globs the area governs, `governs: [src/api/**, src/models/*.py]`, or `governs: []` for none.")
+      if (kind[f, "status"] != "") out(f, "an area concept carries no `status`; a decision does.")
+      if (k[f, "type"] == "Decision Area" && k[f, "title"] != "" && kind[f, "governs"] == "L") {
+        printf "AREA\t%s\t%s\n", slug, k[f, "title"] > info
+        for (j = 1; j <= ni[f, "governs"]; j++) printf "GLOB\t%s\t%s\n", slug, li[f, "governs", j] > info
+      }
+      next
+    }
+    if (k[f, "type"] != "Decision")
+      out(f, "type is \"" k[f, "type"] "\", not \"Decision\". Every .md in an area directory but the area concept is one decision.")
+    if (kind[f, "title"] != "K" || k[f, "title"] == "") out(f, "frontmatter has no `title` — the decision label.")
+    d = k[f, "description"]
+    if (kind[f, "description"] != "K" || d == "")
+      out(f, "has no fence: its frontmatter has no `description`. The fence is the claim and its constraint in one line,\n      and it is what the index lists — an entry no fence points at is a decision that gets re-litigated.")
+    else {
+      if (length(d) > cap)
+        out(f, "its fence (description) is " length(d) " bytes (cap " cap "): " substr(d, 1, 70) "…\n      A fence is the claim and its constraint in one line; the reasoning goes in the entry below.")
+      # One scratch file per fence, closed as it is written — awk holds only a few files open.
+      n++; ff = pfx n "." pid; printf "%s\n", d > ff; close(ff); printf "%s\t%s\n", f, ff > fences
+    }
+    s = k[f, "status"]
+    if (kind[f, "status"] == "L") out(f, "frontmatter `status` is a list; it takes one value.")
+    else if (s == "draft") out(f, "status is \"draft\". A register holds settled decisions; an unsettled one belongs in its spec until it settles.")
+    else if (kind[f, "status"] == "K" && s != "stable" && s != "deprecated")
+      out(f, "status \"" s "\" is not stable or deprecated (absent means stable). deprecated is for a decision retired with no replacement.")
+  }
+' "$REG_REC" "$REG_PLAN" >> "$FAILS"
+
+# 4k, 4w, 4x — the BODY of each readable file: the entry, its History, and no second title.
+#   4k counts as an entry only a line that says something: not a blank, not a heading, not an
+#      HTML comment — a fenced block does count. 4w also refuses a History date after today, and a
+#      deprecated decision whose newest History entry does not say it was deprecated.
+TODAY=$(date -u +%Y-%m-%d)
+awk -F'\t' '$2 == "F" && $3 == "ok" { print $1 }' "$REG_REC" > "${TMPDIR:-/tmp}/docs-lint-regok.$$"
+while IFS='	' read -r t slug f; do
+  grep -qxF "$f" "${TMPDIR:-/tmp}/docs-lint-regok.$$" || continue
+  start=$(F="$f" awk -F'\t' '$1 == ENVIRON["F"] && $2 == "B" { print $3 }' "$REG_REC")
+  dep=$(F="$f" awk -F'\t' '$1 == ENVIRON["F"] && $2 == "K" && $3 == "status" && $4 == "deprecated" { print 1 }' "$REG_REC")
+  awk -v start="$start" -v file="$f" -v kind="$t" -v today="$TODAY" -v deprecated="${dep:-0}" '
+    function out(msg) { printf "FAIL  %s: %s\n", file, msg }
+    function valid(dt,   y, m, d, dim) {
+      if (dt !~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/) return 0
+      y = substr(dt, 1, 4) + 0; m = substr(dt, 6, 2) + 0; d = substr(dt, 9, 2) + 0
+      if (m < 1 || m > 12) return 0
+      dim = (m == 2) ? (((y % 4 == 0 && y % 100 != 0) || y % 400 == 0) ? 29 : 28) : ((m == 4 || m == 6 || m == 9 || m == 11) ? 30 : 31)
+      return d >= 1 && d <= dim
+    }
+    # A fence closes only on a run of its own character at least as long as the one that opened it.
+    function fence_run(s) { if (match(s, /^[ \t]*(````*|~~~~*)/)) { s = substr(s, RSTART, RLENGTH); sub(/^[ \t]*/, "", s); return s } return "" }
+    FNR < start { next }
+    { sub(/\r$/, "") }
+    fence != "" {
+      r = fence_run($0); rest = $0; sub(/^[ \t]*[`~]*/, "", rest)
+      if (r != "" && substr(r, 1, 1) == substr(fence, 1, 1) && length(r) >= length(fence) && rest ~ /^[ \t]*$/) { fence = ""; next }
+      if (!hist && $0 ~ /[^ \t]/) content = 1      # a line of code says something; an empty fence does not
+      next
+    }
+    fence_run($0) != "" { fence = fence_run($0); next }
+    in_comment { if ($0 ~ /-->/) in_comment = 0; next }
+    { line = $0; gsub(/<!--([^-]|-[^-])*-->/, "", line); if (line ~ /<!--/) { in_comment = 1; sub(/<!--.*$/, "", line) } }
+    /^# / { out("line " FNR " is a `# ` title line. The title has one home, the frontmatter `title`; the body starts with the entry."); next }
+    /^## / {
+      h = $0; sub(/^## +/, "", h); sub(/[ \t]+$/, "", h)
+      if (kind == "D" && h == "History" && !hist) { hist = 1; next }
+      if (hist) out("line " FNR " is a `## " h "` after `## History`. History is the last section: an entry below it is read as history.")
+      next
+    }
+    hist && /^### / {
+      dt = $0; sub(/^### +/, "", dt); sub(/[ \t]+$/, "", dt)
+      newest_done = (dates > 0)
+      if (!valid(dt)) { out("History heading \"### " dt "\" (line " FNR ") is not a YYYY-MM-DD date. Each entry is dated, OKF log form."); next }
+      dates++
+      if (dt > today) out("History entry " dt " (line " FNR ") is dated after today (" today "). History records what has happened.")
+      if (last != "" && dt >= last) out("History entry " dt " (line " FNR ") is not older than the one above it (" last "). Entries run newest first, one heading per date.")
+      last = dt; next
+    }
+    hist && dates == 1 && !newest_done && tolower(line) ~ /deprecat/ { said = 1 }
+    !hist && line !~ /^[ \t]*$/ && line !~ /^#+[ \t]/ { content = 1 }
+    END {
+      if (kind != "D") exit
+      if (!hist) out("has no `## History`. A decision ends with its dated History, newest first — the first entry is when it was settled.")
+      else if (!dates) out("its `## History` has no dated entry (`### YYYY-MM-DD`). The first is when the decision was settled.")
+      if (!content) out("is a fence with no entry: nothing above `## History` says what was decided and why — a heading or a comment is not an entry. A fence is never the only home of a fact.")
+      if (deprecated && dates && !said) out("has status: deprecated, but its newest History entry does not say so. Deprecating a decision adds a dated History entry at the top saying it was retired, and why.")
+    }
+  ' "$f" >> "$FAILS"
+done < "$REG_PLAN"
+rm -f "${TMPDIR:-/tmp}/docs-lint-regok.$$"
+
+# 3d — the table repeats the areas: each row named by its area's title, the rows in slug order (the
+# order the index lists them). Compared only over rows whose area reads; a row with no directory is
+# 4a's, and an area that does not read is 4t's or 4u's — one message per defect.
+if [ -s "$KD_ROWS" ]; then
+  : >> "$REG_AREA_INFO"
+  awk -F'\t' -v claude="$CLAUDE" '
+    NR == FNR { if ($1 == "AREA") title[$2] = $3; next }
+    ($2 in title) {
+      if ($1 != title[$2])
+        printf "FAIL  %s names area docs/decisions/%s/ \"%s\", but its %s.md title is \"%s\". The row and the title name\n      the area identically; the title is the authority.\n", claude, $2, $1, $2, title[$2]
+      n++; got[n] = $2
+    }
+    END {
+      for (i = 2; i <= n; i++) if (got[i] < got[i - 1]) bad = 1
+      if (bad) {
+        s = got[1]; for (i = 2; i <= n; i++) s = s ", " got[i]
+        printf "FAIL  The Key Decisions table lists its areas in the order %s. Rows go in slug order — the order\n      docs/decisions/index.yaml lists them — so the table and the index read alike.\n", s
+      }
+    }
+  ' "$REG_AREA_INFO" "$KD_ROWS" >> "$FAILS"
+fi
+
+# 5 — governs ↔ rules. An area that governs a tree has a rule with exactly those globs; an area that
+# governs none has no rule. Either direction missing fails by name. Over the areas whose concept
+# reads with a `governs` list (5d is 4u's `governs` message above).
+if [ -s "$REG_AREA_INFO" ]; then
+  awk -F'\t' '$1 == "AREA" { print $2 "\t" $3 }' "$REG_AREA_INFO" > "${TMPDIR:-/tmp}/docs-lint-regareaonly.$$"
+  while IFS='	' read -r slug title; do
     rule="$RULES_DIR/decisions-$slug.md"
-    gov=$(printf '%s' "$gov" | sed -e 's/^`none`$/none/')
-    if [ "$gov" = "none" ]; then
-      [ ! -e "$rule" ] || note "$rule exists, but $REGISTER_INDEX says area \"$name\" governs none. Declare the globs
-      in the Governs column, or delete the rule."
-      continue
-    fi
-    want=$(printf '%s\n' "$gov" | tr ',' '\n' | sed -e 's/^[ \t]*`//' -e 's/`[ \t]*$//' | grep -v '^$' | sort -u)
-    if [ -z "$want" ] || printf '%s\n' "$gov" | grep -qv '`'; then
-      note "$REGISTER_INDEX: area \"$name\" has Governs \"$gov\", which is neither \`none\` nor a comma-separated
-      list of backticked globs."
+    want=$(awk -F'\t' -v s="$slug" '$1 == "GLOB" && $2 == s { print $3 }' "$REG_AREA_INFO" | sort -u)
+    if [ -z "$want" ]; then
+      [ ! -e "$rule" ] || note "$rule exists, but area \"$title\" governs none (\`governs: []\` in $REGISTER_DIR/$slug/$slug.md).
+      Declare the globs it governs, or delete the rule."
       continue
     fi
     if [ ! -f "$rule" ]; then
-      note "$REGISTER_INDEX says area \"$name\" governs $gov, but $rule does not exist. A governed tree has a
-      path-scoped rule with exactly those globs, so the fences fire when a matching file is opened."
+      note "Area \"$title\" governs $(printf '%s' "$want" | tr '\n' ' '| sed 's/ $//'), but $rule does not exist. A governed tree has a
+      path-scoped rule with exactly those globs, so the fences fire when a matching file is opened. Write it as:
+$({ printf '%s\n' '---' 'paths:'; printf '%s\n' "$want" | sed 's/^/  - "/; s/$/"/'; printf '%s\n' '---' \
+  "Files matching these paths are governed by the **$title** decisions in \`docs/decisions/$slug/\`." \
+  "Read the area's fences in \`docs/decisions/index.yaml\` first — they are not loaded with CLAUDE.md."; } | sed 's/^/        /')"
       continue
     fi
-    # The file must BE this area's rule — template B naming this area — not merely a rule
-    # with matching globs. Area rules carry the decisions- prefix so they can never collide
-    # with the process rules that share the directory.
+    # The file must BE this area's rule — template B naming this area — not merely a rule with
+    # matching globs. Area rules carry the decisions- prefix so they can never collide with the
+    # process rules that share the directory.
     rbody=$(tr -d '\r' < "$rule" | awk 'NR == 1 { next } b { print; next } /^---$/ { b = 1 }')
-    rexpect=$(printf 'Files matching these paths are governed by the **%s** decisions in `docs/decisions/%s.md`.\nRead its fences first — they are not loaded with CLAUDE.md.' "$name" "$slug")
+    rexpect=$(printf 'Files matching these paths are governed by the **%s** decisions in `docs/decisions/%s/`.\nRead the area'"'"'s fences in `docs/decisions/index.yaml` first — they are not loaded with CLAUDE.md.' "$title" "$slug")
     if [ "$rbody" != "$rexpect" ]; then
-      note "$rule is not the rule for area \"$name\": its body is not the area template naming
-      docs/decisions/$slug.md. A rule is bound to its area by its body, not by its globs."
+      note "$rule is not the rule for area \"$title\": its body is not the area template naming
+      docs/decisions/$slug/. A rule is bound to its area by its body, not by its globs."
       continue
     fi
     have=$(tr -d '\r' < "$rule" | awk 'NR == 1 { next } /^---$/ { exit } { print }' | sed -n 's/^  - "\([^"]*\)"$/\1/p' | sort -u)
-    [ "$want" = "$have" ] || note "$rule lists globs that differ from what $REGISTER_INDEX says area \"$name\" governs.
-      Governs: $(printf '%s' "$want" | tr '\n' ' ')
+    [ "$want" = "$have" ] || note "$rule lists globs that differ from what area \"$title\" governs.
+      governs: $(printf '%s' "$want" | tr '\n' ' ')
       rule:    $(printf '%s' "$have" | tr '\n' ' ')"
-  done < "$IDX_ROWS"
-  rm -f "$IDX_ROWS"
+  done < "${TMPDIR:-/tmp}/docs-lint-regareaonly.$$"
+  rm -f "${TMPDIR:-/tmp}/docs-lint-regareaonly.$$"
 fi
 
+# 4n — a pointer written in a fence resolves. Each fence is checked through the same helper as the
+# always-loaded files, from a scratch file of its own, and named by its decision.
+if [ -f "$REG_FENCES" ]; then
+  while IFS='	' read -r f ff; do
+    check_pointers "$ff" "$f (its fence)"
+    rm -f "$ff"
+  done < "$REG_FENCES"
+fi
+rm -f "$REG_REC" "$REG_PLAN" "$REG_AREAS" "$REG_AREA_INFO" "$REG_FENCES"
+
 # ── 6 & 7. The delivery tier ───────────────────────────────────────────────────
-# The Status match is deliberately permissive about what sits between "Status" and
-# "Completed" — ": ", " | " in a table row, "**" — because a spec whose header form
-# this fails to recognise is skipped SILENTLY, and a silent skip of the delivery-doc
-# check is indistinguishable from a pass.
+# A spec's status is its frontmatter `spec_status`, read through the shared reader — the body is
+# not consulted at all, so a spec quoting "Status: Completed" in an example cannot be mistaken for
+# a completed one. A spec whose `spec_status` cannot be read (frontmatter refused, key missing,
+# a value outside the vocabulary) FAILS here: a spec this check cannot read would otherwise be
+# skipped SILENTLY, and a silent skip of the delivery-doc check is indistinguishable from a pass.
+# spec-lint.sh names the defect itself; this only refuses to guess.
+#   6a a Completed spec with no delivery doc   6b a spec whose spec_status cannot be read
 if [ -d "$SPEC_DIR" ]; then
+  FM_REC="${TMPDIR:-/tmp}/docs-lint-fmrec.$$"
   for f in "$SPEC_DIR"/SPEC-*.md; do
     [ -f "$f" ] || continue
-    # Fence-aware: a Draft spec that quotes the completion ritual in a fenced block
-    # would otherwise be read as Completed and told it owes a delivery doc.
-    awk '
-      /^[ \t]*(```|~~~)/ { fence = !fence; next }
-      fence { next }
-      tolower($0) ~ /^[^a-z]*status[^a-z]+completed/ { found = 1 }
-      END { exit !found }
-    ' "$f" || continue
+    : > "$FM_REC"
+    fm_read "$f" "$FM_REC"
+    st=$(awk -F'\t' '$2 == "F" { v = $3 } $2 == "K" && $3 == "spec_status" { s = $4 } END { if (v == "ok") print s }' "$FM_REC")
+    case "$st" in
+      Draft|"In Progress") continue ;;
+      Completed) ;;
+      *) note "$f: its spec_status cannot be read (if this spec predates frontmatter, see docs/process/knowledge-layout.md, Migrating).
+      Whether it owes a delivery doc cannot be checked, and a silent skip here is indistinguishable from a
+      pass. spec-lint.sh names the defect."
+         continue ;;
+    esac
     num=$(basename "$f" | sed -n 's/^\(SPEC-[0-9][0-9]*\).*/\1/p')
     [ -n "$num" ] || continue
     found=0
@@ -656,7 +676,7 @@ fi
 
 # ── 8. Pointers out of the always-loaded files ─────────────────────────────────
 # The always-loaded set only, deliberately. A pointer that goes nowhere defeats the
-# layering these files defend: a session sent to a missing area file reads the fence in the
+# layering these files defend: a session sent to a missing file reads the fence in the
 # router and stops there. Link-checking every doc in the repo is a different job with a far wider
 # false-positive surface, and is not this script business.
 #
@@ -752,7 +772,7 @@ if [ -d "$PROCESS_DIR" ]; then
             pad = sprintf("%*s", RLENGTH, "")
             line = substr(line, 1, RSTART - 1) pad substr(line, RSTART + RLENGTH)
           }
-          while (match(line, /@[A-Za-z0-9_.\/-]+\.md/)) {
+          while (match(line, /@[A-Za-z0-9_.\/-]+\.(md|yaml)/)) {
             pre = (RSTART > 1) ? substr(line, RSTART - 1, 1) : " "
             p = substr(line, RSTART + 1, RLENGTH - 1)
             line = substr(line, RSTART + RLENGTH)
@@ -917,30 +937,38 @@ if [ -d "$PROCESS_DIR" ]; then
       never fires and is still advertised as a backstop."
         done
         # 12e / 12f — the body IS one of two templates: A, rendered for a routed process part;
-        # B, rendered for a Key Decisions area (name and slug from the table, filename = slug).
+        # B, rendered for a Key Decisions area (its title and directory, filename = slug).
         part=$(printf '%s\n' "$body" | sed -n '1s/^Files matching these paths are governed by `docs\/process\/\([A-Za-z0-9_-]*\)\.md`\.$/\1/p')
         expect=$(printf 'Files matching these paths are governed by `docs/process/%s.md`.\nRead it before changing one — it is not loaded with CLAUDE.md.' "$part")
-        aslug=$(printf '%s\n' "$body" | sed -n '1s/^Files matching these paths are governed by the \*\*.*\*\* decisions in `docs\/decisions\/\([A-Za-z0-9_-]*\)\.md`\.$/\1/p')
+        aslug=$(printf '%s\n' "$body" | sed -n '1s/^Files matching these paths are governed by the \*\*.*\*\* decisions in `docs\/decisions\/\([A-Za-z0-9_-]*\)\/`\.$/\1/p')
         if [ -n "$aslug" ]; then
           aname=$(printf '%s\n' "$body" | sed -n '1s/^Files matching these paths are governed by the \*\*\(.*\)\*\* decisions in `docs\/decisions\/.*$/\1/p')
-          bexpect=$(printf 'Files matching these paths are governed by the **%s** decisions in `docs/decisions/%s.md`.\nRead its fences first — they are not loaded with CLAUDE.md.' "$aname" "$aslug")
+          bexpect=$(printf 'Files matching these paths are governed by the **%s** decisions in `docs/decisions/%s/`.\nRead the area'"'"'s fences in `docs/decisions/index.yaml` first — they are not loaded with CLAUDE.md.' "$aname" "$aslug")
           if [ "$body" != "$bexpect" ]; then
             note "$r: the body is not the two-line area template (\"Files matching these paths are governed by the
-      **<Area>** decisions in \`docs/decisions/<slug>.md\`.\" / \"Read its fences first — they are not loaded
-      with CLAUDE.md.\")."
+      **<Area>** decisions in \`docs/decisions/<slug>/\`.\" / \"Read the area's fences in
+      \`docs/decisions/index.yaml\` first — they are not loaded with CLAUDE.md.\")."
           elif ! grep -qxF "$(printf '%s\t%s' "$aname" "$aslug")" "$KD_ROWS" 2>/dev/null; then
-            note "$r names area \"$aname\" in docs/decisions/$aslug.md, which is not a row of the Key Decisions
-      table in $CLAUDE (name and file must both match a row)."
+            note "$r names area \"$aname\" in docs/decisions/$aslug/, which is not a row of the Key Decisions
+      table in $CLAUDE (name and directory must both match a row)."
           elif [ "$(basename "$r" .md)" != "decisions-$aslug" ]; then
-            note "$r points at docs/decisions/$aslug.md but is not named decisions-$aslug.md. An area rule is named
-      decisions-<slug>.md — for its register file, and with a prefix no process rule can collide with."
+            note "$r points at docs/decisions/$aslug/ but is not named decisions-$aslug.md. An area rule is named
+      decisions-<slug>.md — for its area directory, and with a prefix no process rule can collide with."
           fi
+          continue
+        fi
+        # An area rule in the template from before one file per decision names a register FILE,
+        # docs/decisions/<slug>.md; said apart from a malformed process rule, so the FAIL can name
+        # the migration rather than leave the adopter to work out which template it once was.
+        if [ -n "$(printf '%s\n' "$body" | sed -n '1s/^Files matching these paths are governed by the \*\*.*\*\* decisions in `docs\/decisions\/[A-Za-z0-9_-]*\.md`\.$/old/p')" ]; then
+          note "$r: the body is the area template from before one file per decision — it names a register file (if this repo predates one file per decision, see docs/process/knowledge-layout.md, Migrating).
+      Its body is now the area template naming \`docs/decisions/<slug>/\` and \`docs/decisions/index.yaml\`."
           continue
         fi
         if [ -z "$part" ] || [ "$body" != "$expect" ]; then
           note "$r: the body is not the two-line process template (\"Files matching these paths are governed by
       \`docs/process/<part>.md\`.\" / \"Read it before changing one — it is not loaded with CLAUDE.md.\") nor
-      the area template (\"…governed by the **<Area>** decisions in \`docs/decisions/<slug>.md\`.\").
+      the area template (\"…governed by the **<Area>** decisions in \`docs/decisions/<slug>/\`.\").
       A committed rule reaches every teammate on every matching Read; a template leaves no room for a
       line that is not a pointer."
         elif [ "$have_parts" -eq 1 ] && ! grep -qxF "$PROCESS_DIR/$part.md" "$PARTS"; then
@@ -1246,6 +1274,219 @@ fi
       END { flush() }
     ' "$f" >> "$FAILS"
   done
+
+
+# ── 15. The generated indexes exist, are fresh, and can be regenerated ────────
+#
+# An index is a VIEW of the frontmatter, written by scripts/gen-index.sh and never by hand
+# (docs/process/knowledge-layout.md). Freshness is regenerate-and-compare: the generator prints
+# the index into a temp file and the committed copy must match it byte for byte — the index is
+# only ever written, never parsed, so there is no second reading of it to disagree with.
+# The generator runs whether or not the index exists, so a tree it refuses is named even when
+# the index is missing too: "run the generator" is no remedy when the generator refuses.
+#   15a the spec index is missing      15b the spec index is stale
+#   15c the decisions index is missing 15d the decisions index is stale
+#   15e the generator refuses a tree (its errors are printed)   15f a stub at docs/specs/INDEX.md
+#   (the stub at docs/decisions/INDEX.md is 3e, with the register)
+GEN_OUT="${TMPDIR:-/tmp}/docs-lint-genout.$$"
+GEN_ERR="${TMPDIR:-/tmp}/docs-lint-generr.$$"
+check_index() {   # check_index <tree> <specs|decisions>
+  idx="$1/index.yaml"
+  [ -f "$GENERATOR" ] || { echo "error: docs-lint: the index generator $GENERATOR is missing; docs-lint regenerates every index through it" >&2; exit 2; }
+  sh "$GENERATOR" --print "$2" > "$GEN_OUT" 2> "$GEN_ERR" && grc=0 || grc=$?
+  case "$grc" in
+    0|1) ;;
+    *) echo "error: docs-lint: $GENERATOR --print $2 failed (exit $grc): $(head -1 "$GEN_ERR")" >&2; exit 2 ;;
+  esac
+  [ "$grc" -eq 0 ] || note "$GENERATOR cannot regenerate $idx — it refuses the tree (if these files predate frontmatter, see docs/process/knowledge-layout.md, Migrating):
+$(sed 's/^/      /' "$GEN_ERR")"
+  if [ ! -f "$idx" ]; then
+    note "$idx is missing (if this repo predates generated indexes, see docs/process/knowledge-layout.md, Migrating).
+      It is generated from the frontmatter: run \`sh $GENERATOR\` and commit it."
+  elif [ "$grc" -eq 0 ] && ! cmp -s "$GEN_OUT" "$idx"; then
+    note "$idx is stale — it differs from what the frontmatter generates. Run \`sh $GENERATOR\` and commit
+      the result; never edit it by hand (a merge conflict in it is resolved the same way)."
+  fi
+}
+if [ -d "$SPEC_DIR" ]; then
+  [ ! -e "$SPEC_DIR/INDEX.md" ] || note "$SPEC_DIR/INDEX.md exists (if this repo predates generated indexes, see docs/process/knowledge-layout.md, Migrating).
+      The spec index is $SPEC_DIR/index.yaml, generated from each spec's frontmatter; there is no stub at
+      the old path — a stale pointer must fail, not land on an empty file."
+  check_index "$SPEC_DIR" specs
+fi
+[ ! -d "$REGISTER_DIR" ] || check_index "$REGISTER_DIR" decisions
+
+
+# ── 16. Rulebooks carry their sources, cite them, and are not stale ────────────
+#
+# A rulebook states rules an agent follows without checking them, so where a rule rests on a
+# version-specific fact it says where the fact came from: OKF `sources` in the frontmatter, and a
+# footnote whose label is a source id on the rule (docs/process/knowledge-layout.md, Rulebooks).
+# A fabricated or unread citation is the defect this exists to prevent — so every source must be
+# cited somewhere, every footnote must resolve to a source, and `stale_after` puts a date on the
+# claim that the sources were read. Past that date the rulebook FAILS, and this is the one check
+# here that reads the CLOCK as well as the tree: the same commit passes before that instant and
+# fails after it, in every repo that carries the rulebook. That is the intent — docs-lint has no
+# WARN tier — and the FAIL says what to do. The fixtures use dates far in the past and the future,
+# so the corpus is deterministic; there is no "now" override, which would be a bypass.
+#
+# `stale_after` is narrowed from OKF (any explicit offset) to UTC with `Z`, so "past" is a plain
+# byte comparison against `date -u` with no date arithmetic in awk.
+#
+# The population is every .md under docs/best-practices/ but its INDEX.md, found with `find` so a
+# second file in a domain directory, a dotfile or a deeper file is governed too — a rulebook nobody
+# held to this is exactly the one that would drift.
+#   16a frontmatter refused, or type not Rulebook   16b title, description, sources or stale_after
+#   missing   16c a source without id, resource or title   16d a duplicate source id   16e
+#   stale_after not YYYY-MM-DDTHH:MM:SSZ (a real date)   16f stale   16g a footnote reference with no
+#   definition   16h a footnote label that is no source id   16i a source never cited
+if [ -d "$RULEBOOK_DIR" ]; then
+  NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  case "$NOW" in
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z) ;;
+    *) echo "error: docs-lint: date -u did not give an ISO 8601 UTC instant ($NOW); staleness cannot be judged" >&2; exit 2 ;;
+  esac
+  RB_LIST="${TMPDIR:-/tmp}/docs-lint-rblist.$$"
+  RB_REC="${TMPDIR:-/tmp}/docs-lint-rbrec.$$"
+  find "$RULEBOOK_DIR" -type f -name '*.md' | sort > "$RB_LIST"
+  # Read by redirect, not a pipe: fm_read exits 2 on a reader failure, and inside a pipeline that
+  # exit would end a subshell rather than this script.
+  while IFS= read -r f; do
+    [ "$f" = "$RULEBOOK_DIR/INDEX.md" ] && continue
+    : > "$RB_REC"
+    fm_read "$f" "$RB_REC"
+    awk -F'\t' -v now="$NOW" -v file="$f" '
+      function out(msg) { printf "FAIL  %s: %s\n", file, msg }
+      function leap(y) { return (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 }
+      function instant(v,   y, m, d, dim) {
+        if (v !~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z$/) return 0
+        y = substr(v, 1, 4) + 0; m = substr(v, 6, 2) + 0; d = substr(v, 9, 2) + 0
+        if (m < 1 || m > 12) return 0
+        dim = (m == 2) ? (leap(y) ? 29 : 28) : ((m == 4 || m == 6 || m == 9 || m == 11) ? 30 : 31)
+        if (d < 1 || d > dim) return 0
+        if (substr(v, 12, 2) + 0 > 23 || substr(v, 15, 2) + 0 > 59 || substr(v, 18, 2) + 0 > 59) return 0
+        return 1
+      }
+      # Blank every inline code span, so a regex written in a rule (`[^a-z]`) is not read as a
+      # footnote. A span opens with a run of backticks and closes at the next run of EXACTLY that
+      # many (CommonMark), so ``a `b` c`` is one span; an unmatched run is literal backticks.
+      function nocode(s,   out, pre, rest, run, t, off, k) {
+        out = ""
+        while (match(s, /``*/)) {
+          run = RLENGTH; pre = substr(s, 1, RSTART - 1); rest = substr(s, RSTART + RLENGTH)
+          t = rest; off = 0; k = 0
+          while (match(t, /``*/)) {
+            if (RLENGTH == run) { k = off + RSTART; break }
+            off += RSTART + RLENGTH - 1; t = substr(t, RSTART + RLENGTH)
+          }
+          if (!k) { out = out pre substr(s, length(pre) + 1, run); s = rest; continue }
+          out = out pre sprintf("%*s", run + (k - 1) + run, ""); s = substr(rest, k + run)
+        }
+        return out s
+      }
+      # A fence opens with a run of three or more backticks or tildes, and closes only on a run of
+      # the SAME character at least as long, with nothing after it — a four-backtick fence holding a
+      # three-backtick example stays open across it.
+      function fence_run(x) { if (match(x, /^[ \t]*(````*|~~~~*)/)) { x = substr(x, RSTART, RLENGTH); sub(/^[ \t]*/, "", x); return x } return "" }
+      NR == FNR {
+        if ($2 == "F") verdict = $3
+        else if ($2 == "E") { ne++; eline[ne] = $3; emsg[ne] = $4 }
+        else if ($2 == "K") k[$3] = $4
+        else if ($2 == "L") lst[$3] = 1
+        else if ($2 == "B") body = $3
+        else if ($2 == "S") { n = $3 + 0; if (n > nsrc) nsrc = n; sf[n, $4] = $5 }
+        next
+      }
+      verdict != "ok" || FNR < body { next }
+      FNR == body { prevblank = 1 }
+      { line = $0; sub(/\r$/, "", line) }
+      fence != "" {
+        r = fence_run(line); rest = line; sub(/^[ \t]*[`~]*/, "", rest)
+        if (r != "" && substr(r, 1, 1) == substr(fence, 1, 1) && length(r) >= length(fence) && rest ~ /^[ \t]*$/) fence = ""
+        next
+      }
+      fence_run(line) != "" { fence = fence_run(line); prevblank = 0; next }
+      # An HTML comment cites nothing: everything between <!-- and --> is dropped, across lines.
+      in_comment { if (line !~ /-->/) next; in_comment = 0; sub(/^.*-->/, "", line) }
+      { gsub(/<!--([^-]|-[^-])*-->/, "", line); if (line ~ /<!--/) { in_comment = 1; sub(/<!--.*$/, "", line) } }
+      # An indented code block — four spaces or a tab, after a blank line, outside a list — is code.
+      { blank = (line ~ /^[ \t]*$/) }
+      icode && (blank || line ~ /^(    |\t)/) { prevblank = blank; next }
+      { icode = 0 }
+      !inlist && prevblank && line ~ /^(    |\t)/ { icode = 1; prevblank = 0; next }
+      line ~ /^ ? ? ?([-*+]|[0-9]+[.)])([ \t]|$)/ { inlist = 1 }
+      !blank && line ~ /^[^ \t]/ && line !~ /^([-*+]|[0-9]+[.)])([ \t]|$)/ { inlist = 0 }
+      { prevblank = blank }
+      {
+        raw = line
+        line = nocode(line)
+        # A URL cites nothing either, even when a `[^…]` sits inside one.
+        gsub(/[A-Za-z][A-Za-z0-9+.-]*:\/\/[^ \t<>]*/, "", line)
+        # Labels are kept in order of first appearance and reported in that order: awk walks an
+        # array in an unspecified order, and the corpus must read the same on every awk. A label
+        # GFM would read as a footnote (no space, no `]`) but outside A-Za-z0-9_.- is refused,
+        # not ignored: ignored, it would render as a footnote nothing checks.
+        if (match(line, /^\[\^[^] \t]+\]:/)) {
+          lab = substr(line, 3, RLENGTH - 4)
+          if (lab !~ /^[A-Za-z0-9_.-]+$/) badlab[++nbad] = lab "\t" FNR
+          else if (!(lab in def)) {
+            ndef++; defs[ndef] = lab; def[lab] = FNR
+            dt = raw; sub(/^[ \t]*\[\^[^]]*\]:[ \t]*/, "", dt); sub(/[ \t]+$/, "", dt); deftext[lab] = dt
+          }
+          line = substr(line, RLENGTH + 1)
+        }
+        while (match(line, /\[\^[^] \t]+\]/)) {
+          lab = substr(line, RSTART + 2, RLENGTH - 3)
+          line = substr(line, RSTART + RLENGTH)
+          if (lab !~ /^[A-Za-z0-9_.-]+$/) { badlab[++nbad] = lab "\t" FNR; continue }
+          if (!(lab in ref)) { nref++; refs[nref] = lab; ref[lab] = FNR }
+        }
+      }
+      END {
+        if (verdict != "ok") {
+          for (i = 1; i <= ne; i++) printf "FAIL  %s:%s: frontmatter: %s\n", file, eline[i], emsg[i]
+          printf "      A rulebook opens with frontmatter (if it predates rulebook frontmatter, see docs/process/knowledge-layout.md, Migrating).\n      No other rulebook check ran on this file.\n"
+          exit
+        }
+        if (k["type"] != "Rulebook")
+          out("type is \"" k["type"] "\", not \"Rulebook\". Every .md under docs/best-practices/ but its INDEX.md is a rulebook.")
+        split("title description stale_after", req, " ")
+        for (j = 1; j <= 3; j++) if (k[req[j]] == "") out("frontmatter has no `" req[j] "`, or it is empty.")
+        if (lst["sources"]) out("`sources` is a flow list. It is the block list of `  - id:` items, each with id, resource and title.")
+        else if (!nsrc) out("frontmatter has no `sources`. Every rulebook names what its rules rest on, each source with id, resource and title.")
+        for (n = 1; n <= nsrc; n++) {
+          for (j = split("id resource title", fld, " "); j >= 1; j--)
+            if (sf[n, fld[j]] == "") out("sources item " n " has no `" fld[j] "`.")
+          rs = sf[n, "resource"]
+          if (rs != "" && rs !~ /^[A-Za-z][A-Za-z0-9+.-]*:\/\/[^ \t]+$/ && rs !~ /^\/[^ \t]*$/)
+            out("sources item " n " has resource \"" rs "\", which is neither an absolute URL nor a /bundle path. A source names what was read.")
+          id = sf[n, "id"]
+          if (id == "") continue
+          if (id in sid) out("source id \"" id "\" is used twice. A footnote resolves to exactly one source.")
+          sid[id] = 1; stitle[id] = sf[n, "title"]
+        }
+        v = k["stale_after"]
+        if (v != "" && !instant(v))
+          out("stale_after \"" v "\" is not YYYY-MM-DDTHH:MM:SSZ — a real UTC instant, `Z` for the offset (OKF allows any offset; this subset takes Z, so staleness is a byte comparison).")
+        else if (v != "" && now >= v)
+          out("is stale since " v ": re-fetch every source it cites, correct any rule a source no longer supports, and move\n      stale_after forward. This check reads the date as well as the tree, by design (docs/process/knowledge-layout.md, Rulebooks).")
+        for (i = 1; i <= nbad; i++) { split(badlab[i], bl, "\t")
+          out("line " bl[2] " carries the footnote label [^" bl[1] "], outside A-Za-z0-9_.- — a footnote label is a source id. If it is not a footnote, put it in a code span.") }
+        for (i = 1; i <= ndef; i++) { lab = defs[i]
+          if ((lab in sid) && deftext[lab] != stitle[lab])
+            out("footnote definition [^" lab "] (line " def[lab] ") reads \"" deftext[lab] "\", not its source title \"" stitle[lab] "\". The definition is the title, so the fact has one home; the URL lives in `resource`.") }
+        for (i = 1; i <= nref; i++) { lab = refs[i]
+          if (!(lab in def)) out("line " ref[lab] " cites [^" lab "] with no `[^" lab "]:` definition.")
+          if (!(lab in sid)) out("footnote [^" lab "] (line " ref[lab] ") names no `sources` id. A footnote label IS the source id it attributes to.") }
+        for (i = 1; i <= ndef; i++) { lab = defs[i]
+          if (!(lab in ref) && !(lab in sid)) out("footnote definition [^" lab "] (line " def[lab] ") names no `sources` id, and nothing cites it.") }
+        for (n = 1; n <= nsrc; n++) { id = sf[n, "id"]
+          if (id != "" && !(id in ref)) out("source \"" id "\" is never cited. Cite it with [^" id "] on the rule it supports, or drop it: a source nothing cites is a citation nobody checked.") }
+      }
+    ' "$RB_REC" "$f" >> "$FAILS"
+  done < "$RB_LIST"
+  rm -f "$RB_LIST" "$RB_REC"
+fi
 
 
 report

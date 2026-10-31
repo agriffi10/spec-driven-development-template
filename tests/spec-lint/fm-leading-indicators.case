@@ -1,0 +1,48 @@
+@@@ expect exit=1
+@@@ match FAIL  docs/specs/SPEC-001-x.md:8: frontmatter: a value starting with "-" — double-quote it
+@@@ match FAIL  docs/specs/SPEC-001-x.md:9: frontmatter: a value starting with "?" — double-quote it
+@@@ match FAIL  docs/specs/SPEC-001-x.md:10: frontmatter: a value starting with ":" — double-quote it
+@@@ match FAIL  docs/specs/SPEC-001-x.md:11: frontmatter: a value starting with "," — double-quote it
+@@@ match FAIL  docs/specs/SPEC-001-x.md:12: frontmatter: a value starting with "]" — double-quote it
+@@@ match FAIL  docs/specs/SPEC-001-x.md:13: frontmatter: a value starting with "}" — double-quote it
+@@@ match FAIL  docs/specs/SPEC-001-x.md:14: frontmatter: a value starting with "#" — double-quote it
+@@@ match FAIL  docs/specs/SPEC-001-x.md:15: frontmatter: a value starting with "%" — double-quote it
+@@@ match FAIL  docs/specs/SPEC-001-x.md:16: frontmatter: a value starting with "@" — double-quote it
+@@@ match FAIL  docs/specs/SPEC-001-x.md:17: frontmatter: a value starting with "`" — double-quote it
+@@@ absent ok    docs/specs/SPEC-001-x.md
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+k0: -1 x
+k1: ?1 x
+k2: :1 x
+k3: ,1 x
+k4: ]1 x
+k5: }1 x
+k6: #1 x
+k7: %1 x
+k8: @1 x
+k9: `1 x
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

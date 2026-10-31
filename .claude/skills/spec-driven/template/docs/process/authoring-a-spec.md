@@ -1,7 +1,9 @@
 # Authoring a spec
 
 
-Specs are written from `docs/templates/spec-template.md`. What makes a spec *buildable*:
+Specs are written from `docs/templates/spec-template.md`. Its frontmatter is the spec's one home for
+its id, title, one-sentence description, status and dependencies — the keys and the subset they are
+written in: `knowledge-layout.md` → *Frontmatter*. What makes a spec *buildable*:
 
 - **Overview** — user/business intent, no implementation detail. Understandable cold.
 - **Scope: In / Out** — explicitly list what's *excluded*, especially anything a reader would
@@ -16,8 +18,8 @@ Specs are written from `docs/templates/spec-template.md`. What makes a spec *bui
   corpus — the rule below forbids a standing rule resting on a number that rots.) The 3–6 aim
   sits at or below that median deliberately: it is where the method is going, not a description
   of where it already is. Growing one spec is the wrong repair;
-  the right one is a second spec beside it, with the pair's build order recorded in `INDEX.md` as an
-  **arc** (`spec-lifecycle.md`). Splitting keeps paying off past the first cut — a three-spec arc reads better than
+  the right one is a second spec beside it, with the pair's build order recorded as an **arc** —
+  `arc` and `arc_order` in both specs' frontmatter (`spec-lifecycle.md`). Splitting keeps paying off past the first cut — a three-spec arc reads better than
   one fourteen-FR spec, and each piece earns its own reviewed plan, its own review gate and its own
   delivery doc. Cut along a seam the system already has — a layer, a surface, a switchover, the
   point where something inert goes live — never at "FR-009, because that is where the count ran
@@ -44,8 +46,9 @@ Specs are written from `docs/templates/spec-template.md`. What makes a spec *bui
   The commonest thing this catches is not a wrong requirement — it is an acceptance criterion that
   cannot fail, and an Out of Scope bullet that an FR quietly needs.
 
-`scripts/spec-lint.sh` enforces the structural side of this in CI: it **fails** a spec that is missing
-a required section or that contains an "Open Questions" / "Checkpoint" heading, and **warns** on
+`scripts/spec-lint.sh` enforces the structural side of this in CI: it **fails** a spec whose
+frontmatter breaks the subset or its rules (`knowledge-layout.md` → *Frontmatter* lists them), that is
+missing a required section, or that contains an "Open Questions" / "Checkpoint" heading, and **warns** on
 unfilled placeholders, a spec with FRs but no acceptance criteria anywhere in it, and a spec
 carrying more than 8 FRs. It cannot see a vacuous acceptance criterion, an acceptance criterion
 missing from one FR while its neighbours have them, two FRs that cannot both hold, or a decision

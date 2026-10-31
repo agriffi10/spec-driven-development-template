@@ -1,0 +1,40 @@
+@@@ expect exit=0
+@@@ match ok    docs/specs/SPEC-001-x.md
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+
+```
+**Status:** Completed
+# Spec: quoted in a fence
+```
+~~~
+**ID:** SPEC-001
+~~~
+<!-- # Spec: commented out -->
+<!--
+**Depends On:** None
+-->
+<!-- **Last Updated:** x -->

@@ -1,5 +1,5 @@
 @@@ expect exit=1
-@@@ match docs/decisions/archive/old.md is in a subdirectory of docs/decisions/
+@@@ match docs/decisions/area-a/archive/old.md is in a subdirectory of an area.
 @@@ file CLAUDE.md
 # P
 
@@ -8,46 +8,41 @@ Loaded every session.
 @docs/process/INDEX.md
 @docs/process/session-rhythm.md
 
-- `@docs/decisions/INDEX.md` — register
+- `@docs/decisions/index.yaml` — register
 
 ## Key Decisions
 
 Intro prose.
 
-| Area | Fences |
+| Area | Directory |
 |---|---|
-| Area A | `docs/decisions/area-a.md#fences` |
+| Area A | `docs/decisions/area-a/` |
 
 ## Out of Scope
 
 nothing
-@@@ file docs/decisions/INDEX.md
-# Register
-
-## Areas
-
-| Area | Fences | Governs |
-|---|---|---|
-| Area A | `docs/decisions/area-a.md#fences` | none |
-@@@ file docs/decisions/area-a.md
-# Area A — decisions
-
-intro
-
-## Contents
-
-- [Fences](#fences)
-- [Label](#label)
-
-## Fences
-
-- **Label** — a fence.
-
+@@@ file docs/decisions/area-a/area-a.md
+---
+type: Decision Area
+title: Area A
+governs: []
 ---
 
-### Label
+intro
+@@@ file docs/decisions/area-a/label.md
+---
+type: Decision
+title: Label
+description: a fence.
+---
 
 text
+
+## History
+
+### 2026-01-01
+
+- **Settled.**
 @@@ file docs/process/INDEX.md
 # Router
 
@@ -90,9 +85,14 @@ paths:
 Files matching these paths are governed by `docs/process/authoring-a-spec.md`.
 Read it before changing one — it is not loaded with CLAUDE.md.
 @@@ file docs/specs/SPEC-001-x.md
-# Spec
-
-**Status:** Draft
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
 @@@ file .claude/agents/reviewer.md
 ---
 name: reviewer
@@ -107,22 +107,17 @@ description: i
 model: opus
 ---
 body
-@@@ file docs/decisions/archive/old.md
-# Old — decisions
-
-intro
-
-## Contents
-
-- [Fences](#fences)
-- [Label](#label)
-
-## Fences
-
-- **Label** — a fence.
-
+@@@ file docs/decisions/area-a/archive/old.md
+---
+type: Decision
+title: Old
+description: a fence.
 ---
 
-### Label
-
 text
+
+## History
+
+### 2026-01-01
+
+- **Settled.**

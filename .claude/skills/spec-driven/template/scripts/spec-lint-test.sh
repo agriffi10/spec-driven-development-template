@@ -40,6 +40,14 @@ if ! sh -n "$ROOT/scripts/spec-lint.sh"; then
   echo "FAIL  scripts/spec-lint.sh does not parse — a syntax error can exit 0 and look green."
   exit 1
 fi
+# And the shared frontmatter reader, by RUNNING it: an empty operand is "no frontmatter", so the
+# reader must exit 0 and print an `F err` verdict. That proves the program both parses and
+# classifies; a parse alone would pass a reader whose every rule had been commented out.
+if ! LC_ALL=C awk -f "$ROOT/scripts/frontmatter.awk" /dev/null 2>/dev/null | grep -q "	F	err$"; then
+  echo "FAIL  scripts/frontmatter.awk does not run, or does not refuse an empty file — every"
+  echo "      frontmatter check reads through it."
+  exit 1
+fi
 
 pass=0; fail=0
 for case_file in "$CASES"/*.case; do
@@ -54,6 +62,7 @@ for case_file in "$CASES"/*.case; do
   # ceiling a caller can lower is a ceiling CI can be told to ignore.
   sed -e 's/^FR_CEILING=.*/FR_CEILING=3/' "$ROOT/scripts/spec-lint.sh" > "$WORK/scripts/spec-lint.sh"
   chmod +x "$WORK/scripts/spec-lint.sh"
+  cp "$ROOT/scripts/frontmatter.awk" "$WORK/scripts/frontmatter.awk"
 
   want_exit=$(sed -n 's/^@@@ expect exit=//p' "$case_file")
   awk -v work="$WORK" '
@@ -119,44 +128,54 @@ for case_file in "$CASES"/*.case; do
 done
 
 # The live template, as two cases of its own. An unfilled copy of `docs/templates/spec-template.md`
-# must pass its structure — every required section present, no banned header — and WARN on its
-# placeholders. The second case binds the placeholder regex to EACH string the template actually
-# uses: the copy is scrubbed of all but one placeholder at a time, and that one alone must still
-# warn. A single run over the whole template could not say that — any one surviving placeholder
-# keeps the WARN firing, so renaming `[Feature Name]` in the template stayed green until this was
-# split. Run under the same filter as the cases, so `sh scripts/spec-lint-test.sh template`
-# reaches both.
+# must pass its structure — every required section present, no banned header — WARN on its
+# placeholders, and FAIL on exactly one thing: its id. `SPEC-XXX` is the one placeholder that is
+# also a frontmatter defect (an id is SPEC-<number>, equal to the filename prefix), so an unfilled
+# copy cannot land; every other key in the template holds a valid value from the start. The
+# second case binds the placeholder regex to EACH string the template actually uses: the copy is
+# scrubbed of all but one placeholder at a time, and that one alone must still warn. A single run
+# over the whole template could not say that — any one surviving placeholder keeps the WARN
+# firing, so renaming `[Feature Name]` in the template stayed green until this was split. Run
+# under the same filter as the cases, so `sh scripts/spec-lint-test.sh template` reaches both.
 if [ -z "${SPEC_LINT_TEST_CASES:-}" ] && case template-unfilled in *"$FILTER"*) true ;; *) false ;; esac; then
   rm -rf "$WORK"; mkdir -p "$WORK/scripts" "$WORK/docs/specs"
   cp "$ROOT/scripts/spec-lint.sh" "$WORK/scripts/spec-lint.sh"
+  cp "$ROOT/scripts/frontmatter.awk" "$WORK/scripts/frontmatter.awk"
   cp "$ROOT/docs/templates/spec-template.md" "$WORK/docs/specs/SPEC-000-template.md"
   got=$(cd "$WORK" && sh scripts/spec-lint.sh 2>&1) && rc=0 || rc=$?
-  case "$rc:$got" in
-    0:*"WARN  docs/specs/SPEC-000-template.md: unfilled template placeholder(s)"*"ok    docs/specs/SPEC-000-template.md"*)
-      pass=$((pass + 1)); echo "ok    template-unfilled" ;;
-    *)
-      fail=$((fail + 1)); echo "FAIL  template-unfilled: exit $rc; an unfilled copy of the template must warn on its placeholders and pass its structure"
-      printf '%s\n' "$got" | sed 's/^/        /' | head -8 ;;
+  nfail=$(printf '%s\n' "$got" | grep -c '^FAIL  ' || true)
+  case "$rc:$nfail:$got" in
+    *"missing required section"*|*"banned header"*) verdict=bad ;;
+    1:1:*'FAIL  docs/specs/SPEC-000-template.md: id "SPEC-XXX" is not SPEC-<number>.'*"WARN  docs/specs/SPEC-000-template.md: unfilled template placeholder(s)"*) verdict=good ;;
+    *) verdict=bad ;;
   esac
+  if [ "$verdict" = good ]; then
+    pass=$((pass + 1)); echo "ok    template-unfilled"
+  else
+    fail=$((fail + 1)); echo "FAIL  template-unfilled: exit $rc, $nfail FAIL line(s); an unfilled copy of the template must fail on its id alone, warn on its placeholders, and pass its structure"
+    printf '%s\n' "$got" | sed 's/^/        /' | head -8
+  fi
 fi
 if [ -z "${SPEC_LINT_TEST_CASES:-}" ] && case template-placeholders in *"$FILTER"*) true ;; *) false ;; esac; then
   # Each placeholder the linter's regex names, as a sed pattern that removes it. The list is
   # kept here rather than read from the linter so that dropping an alternative from the regex
-  # is a red case, not a quieter corpus.
+  # is a red case, not a quieter corpus. `SPEC-XXX` is scrubbed to SPEC-000, the copy's own
+  # filename prefix, so a scrubbed copy has a valid id; left in, it is the one FAIL (exit 1).
   unbound=""
-  for keep in 'Feature Name' 'Requirement Name' 'SPEC-XXX' 'YYYY-MM-DD'; do
+  for keep in 'Feature Name' 'Requirement Name' 'SPEC-XXX'; do
     rm -rf "$WORK"; mkdir -p "$WORK/scripts" "$WORK/docs/specs"
     cp "$ROOT/scripts/spec-lint.sh" "$WORK/scripts/spec-lint.sh"
+    cp "$ROOT/scripts/frontmatter.awk" "$WORK/scripts/frontmatter.awk"
     # Scrub every placeholder except the one under test. Bracketed names are matched with the
     # brackets escaped; the others are plain strings.
     sed -e "$([ "$keep" = 'Feature Name' ] || printf 's/\\[Feature Name\\]/feature/g')" \
         -e "$([ "$keep" = 'Requirement Name' ] || printf 's/\\[Requirement Name\\]/requirement/g')" \
-        -e "$([ "$keep" = 'SPEC-XXX' ] || printf 's/SPEC-XXX/SPEC-001/g')" \
-        -e "$([ "$keep" = 'YYYY-MM-DD' ] || printf 's/YYYY-MM-DD/2026-01-01/g')" \
+        -e "$([ "$keep" = 'SPEC-XXX' ] || printf 's/SPEC-XXX/SPEC-000/g')" \
         "$ROOT/docs/templates/spec-template.md" > "$WORK/docs/specs/SPEC-000-template.md"
     got=$(cd "$WORK" && sh scripts/spec-lint.sh 2>&1) && rc=0 || rc=$?
+    want=0; [ "$keep" = 'SPEC-XXX' ] && want=1
     case "$rc:$got" in
-      0:*"unfilled template placeholder(s)"*) ;;
+      "$want":*"unfilled template placeholder(s)"*) ;;
       *) unbound="$unbound '$keep'" ;;
     esac
   done
@@ -173,6 +192,7 @@ fi
 if [ -z "${SPEC_LINT_TEST_CASES:-}" ] && case missing-dir in *"$FILTER"*) true ;; *) false ;; esac; then
   rm -rf "$WORK"; mkdir -p "$WORK/scripts"
   cp "$ROOT/scripts/spec-lint.sh" "$WORK/scripts/spec-lint.sh"
+  cp "$ROOT/scripts/frontmatter.awk" "$WORK/scripts/frontmatter.awk"
   got=$(cd "$WORK" && sh scripts/spec-lint.sh docs/nowhere 2>&1) && rc=0 || rc=$?
   case "$rc:$got" in
     1:*"docs/nowhere is not a directory"*) pass=$((pass + 1)); echo "ok    missing-dir" ;;
@@ -187,18 +207,19 @@ echo "spec-lint-test: $pass passed, $fail failed."
 
 # A FLOOR, NOT AN EXIT CODE. Every mechanical way to lose the corpus — a renamed directory,
 # a glob that stops matching — ends with zero cases run and `0 passed, 0 failed`, which
-# exits 0 and prints a success line. Deliberately BELOW the measurement — 26 at the commit
-# that introduced it: 23 case files plus the two template cases and the missing-directory case
-# — with headroom of about a quarter, so adding cases needs no edit here and pruning a few does
-# not either; losing the corpus, or most of it, does, and that is the point. Not applied to the
-# self-test invocation, which runs a handful of planted cases.
+# exits 0 and prints a success line. Deliberately BELOW the measurement, with headroom of about
+# a quarter, so adding cases needs no edit here and pruning a few does not either; losing the
+# corpus, or most of it, does, and that is the point. Re-derived when specs gained frontmatter:
+# 98 at that commit — 95 case files plus the two template cases and the missing-directory case,
+# up from 26 — so the old floor of 19 had stopped meaning "most of the corpus". Not applied to
+# the self-test invocation, which runs a handful of planted cases.
 # A filter typo is the same shape at a smaller scale and gets its own line: a filtered run
 # that matched nothing has proved nothing.
 if [ -n "$FILTER" ] && [ "$pass" -eq 0 ]; then
   echo "spec-lint-test: the filter '$FILTER' matched no case. Nothing ran, so nothing passed."
   exit 1
 fi
-CASES_MIN=19
+CASES_MIN=73
 if [ -z "${SPEC_LINT_TEST_CASES:-}" ] && [ -z "$FILTER" ] && [ "$pass" -lt "$CASES_MIN" ]; then
   echo "spec-lint-test: only $pass cases ran, against a floor of $CASES_MIN. The corpus has"
   echo "shrunk or gone missing — a run over nothing exits 0 and looks exactly like a healthy"
@@ -216,9 +237,14 @@ if [ -z "${SPEC_LINT_TEST_CASES:-}" ] && [ -z "$FILTER" ]; then
   SELF="$WORK.self"
   rm -rf "$SELF"; mkdir -p "$SELF"
   skeleton='@@@ file docs/specs/SPEC-001-x.md
-# Spec
-
-**Status:** Draft
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
 
 ## Overview
 ## Scope
@@ -260,4 +286,40 @@ if [ -z "${SPEC_LINT_TEST_CASES:-}" ] && [ -z "$FILTER" ]; then
     exit 1
   fi
   echo "spec-lint-test: fixture guards verified — 3 guards, $planted vacuous cases refused."
+fi
+
+# ── self-test: spec-lint's two reader guards have to fire ──────────────────────
+#
+# spec-lint trusts the shared reader only after two checks — its exit status, and exactly one
+# verdict record per file — and neither alone is enough. An awk that does not parse exits
+# non-zero and prints nothing; an awk that parses and prints nothing exits 0, which is the
+# vacuous pass the second guard exists for: every frontmatter check would iterate over nothing.
+# Each is planted against a copy, with a third plant for a reader that is not there at all.
+# Every one must stop spec-lint with exit 2 and say why; a green lint here is the defect.
+if [ -z "${SPEC_LINT_TEST_CASES:-}" ] && [ -z "$FILTER" ]; then
+  rg_fail=0
+  for plant in 'syntax:the frontmatter reader failed on' 'silent:returned 0 verdict records' 'missing:is missing'; do
+    kind=${plant%%:*}; want=${plant#*:}
+    rm -rf "$WORK"; mkdir -p "$WORK/scripts" "$WORK/docs/specs"
+    cp "$ROOT/scripts/spec-lint.sh" "$WORK/scripts/spec-lint.sh"
+    case "$kind" in
+      syntax) printf 'BEGIN {\n' > "$WORK/scripts/frontmatter.awk" ;;
+      silent) printf 'BEGIN { exit 0 }\n' > "$WORK/scripts/frontmatter.awk" ;;
+    esac
+    printf '%s\n' '---' 'type: Spec' '---' > "$WORK/docs/specs/SPEC-001-x.md"
+    got=$(cd "$WORK" && sh scripts/spec-lint.sh 2>&1) && rc=0 || rc=$?
+    case "$rc:$got" in
+      2:*"$want"*) ;;
+      *) echo "FAIL  self-test: a reader planted as '$kind' did not stop spec-lint — exit $rc, wanted 2 and \"$want\"."
+         printf '%s\n' "$got" | sed 's/^/        /' | head -4
+         rg_fail=1 ;;
+    esac
+  done
+  if [ "$rg_fail" -ne 0 ]; then
+    echo "----"
+    echo "spec-lint-test: the reader guards are not firing. A reader that fails or prints nothing"
+    echo "would leave every frontmatter check passing over nothing."
+    exit 1
+  fi
+  echo "spec-lint-test: reader guards verified — a reader that does not parse, prints nothing, or is missing stops spec-lint."
 fi

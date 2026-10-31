@@ -35,6 +35,7 @@ recursion, which is the cost this layout exists to avoid.
 | `docs/process/completion-ritual.md` | the seven steps at spec completion, and the anti-regrowth & doc-hygiene rules | at spec completion, and before any edit to a file in the table above |
 | `docs/process/operational-traps.md` | traps that pass locally and bite in CI or on deploy — project-specific, seeded as they bite | before the first CI- or deploy-dependent step of a build |
 | `docs/process/ground-rules.md` | the project's load-bearing constraints | when adding a dependency or a constraint |
+| `docs/process/knowledge-layout.md` | the frontmatter specs, decisions and rulebooks carry; the generated indexes; the decision register's rules; rulebook sources and staleness; migrating a repo that predates them | when writing frontmatter, adding a decision or an area, editing a rulebook, or when a lint names an old path |
 
 Every `*.md` in this directory other than the router is a row in one of the two tables above, and
 every row is a file — an
@@ -49,10 +50,10 @@ is deliberately small and **must not regrow**.
 | Tier | File(s) | Loaded | Authoritative for |
 |---|---|---|---|
 | Always | `CLAUDE.md` + its two imports (the table above) | every session | conventions, key decisions, the session rhythm, what loads when |
-| Status | `docs/specs/INDEX.md` + each spec header | on demand | spec **status** (one row per spec) |
+| Status | each spec's frontmatter → `docs/specs/index.yaml` (generated) | on demand | spec **status** — `spec_status`, one home |
 | The work | `docs/specs/SPEC-XXX-*.md` | the one you're building | requirements + phases |
 | Why | `docs/architecture.md` | the *section* you need | design rationale + Known Constraints |
-| Decisions | `docs/decisions/<area>.md` | the *fences* of your area, then the entry you need | settled decisions in full + reversal markers, one file per area |
+| Decisions | `docs/decisions/index.yaml` (generated) → `docs/decisions/<area>/<decision>.md` | your area's *fences* in the index, then the decision you need | settled decisions in full, one file per decision, each with its dated History |
 | Reuse | `docs/component-inventory.md` | skim for reuse | modules/services/components already built |
 | Rulebooks | `docs/best-practices/INDEX.md` → domain doc | the section(s) you need | domain coding rules (React, a11y, …) |
 | History | `docs/spec-delivery/SPEC-XXX-*.md` | when a dependency points to one | what a past spec shipped |
@@ -66,7 +67,7 @@ is deliberately small and **must not regrow**.
 
 **Path-scoped rules are a backstop, not the mechanism.** `.claude/rules/*.md` carries one pointer per
 governed tree — the process kind (specs, delivery docs, the register, this directory, the PR queue,
-the agents) and the `decisions-<area>` kind, one per decision area that declares what it governs —
+the agents, the rulebooks, the architecture doc and inventory) and the `decisions-<area>` kind, one per decision area that declares what it governs —
 each firing when a matching file is opened **with the Read tool** — not when it is read through the
 shell, so a session working in `cat` and `grep` never sees one, and only for a path under the
 session's own working directory, so a file opened in another worktree fires nothing. The instruction to pull a part

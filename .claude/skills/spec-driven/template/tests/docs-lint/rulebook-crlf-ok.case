@@ -1,0 +1,130 @@
+@@@ expect exit=0
+@@@ file CLAUDE.md
+# P
+
+Loaded every session.
+
+@docs/process/INDEX.md
+@docs/process/session-rhythm.md
+
+- `@docs/decisions/index.yaml` — register
+
+## Key Decisions
+
+Intro prose.
+
+| Area | Directory |
+|---|---|
+| Area A | `docs/decisions/area-a/` |
+
+## Out of Scope
+
+nothing
+@@@ file docs/decisions/area-a/area-a.md
+---
+type: Decision Area
+title: Area A
+governs: []
+---
+
+intro
+@@@ file docs/decisions/area-a/label.md
+---
+type: Decision
+title: Label
+description: a fence.
+---
+
+text
+
+## History
+
+### 2026-01-01
+
+- **Settled.**
+@@@ file docs/process/INDEX.md
+# Router
+
+## Loaded every session
+
+| File | Carries |
+|---|---|
+| `CLAUDE.md` | x |
+| `docs/process/INDEX.md` | x |
+| `docs/process/session-rhythm.md` | x |
+
+## One file per part
+
+| File | What it holds | When to pull it |
+|---|---|---|
+| `docs/process/authoring-a-spec.md` | x | y |
+| `docs/process/model-routing.md` | x | y |
+@@@ file docs/process/session-rhythm.md
+# Rhythm
+
+text
+@@@ file docs/process/authoring-a-spec.md
+# Authoring
+
+text
+@@@ file docs/process/model-routing.md
+# Model routing
+
+## The table
+
+| Job | Model | Agent |
+|---|---|---|
+| Review | Opus | `reviewer` |
+| Implement | Fable | `implementer`, `model: fable` |
+@@@ file .claude/rules/specs.md
+---
+paths:
+  - "docs/specs/**"
+---
+Files matching these paths are governed by `docs/process/authoring-a-spec.md`.
+Read it before changing one — it is not loaded with CLAUDE.md.
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
+@@@ file .claude/agents/reviewer.md
+---
+name: reviewer
+description: r
+model: opus
+---
+body
+@@@ file .claude/agents/implementer.md
+---
+name: implementer
+description: i
+model: opus
+---
+body
+@@@ file docs/best-practices/x/x.md
+---
+type: Rulebook
+title: X rules
+description: Rules for X.
+sources:
+  - id: a
+    resource: https://example.com/a
+    title: Source A
+  - id: b
+    resource: https://example.com/b
+    title: "Source: B"
+    author: team:x
+stale_after: 2999-12-31T00:00:00Z
+---
+# X rules
+
+- ✅ Do the thing on version 2.[^a]
+- ✅ And the other.[^b]
+
+[^a]: Source A
+[^b]: Source: B

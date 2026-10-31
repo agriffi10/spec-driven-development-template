@@ -2,10 +2,14 @@
 @@@ match ok    docs/specs/SPEC-002-a b.md
 @@@ absent missing required section
 @@@ file docs/specs/SPEC-002-a b.md
-# Spec: X
-
-**ID:** SPEC-001
-**Status:** Draft
+---
+type: Spec
+id: SPEC-002
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
 
 ## Overview
 

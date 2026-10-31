@@ -1,0 +1,117 @@
+@@@ expect exit=0
+@@@ match ok    docs/specs/SPEC-001-x.md
+@@@ match ok    docs/specs/SPEC-002-y.md
+@@@ match ok    docs/specs/SPEC-003-z.md
+@@@ match ok    docs/specs/SPEC-010-w.md
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+arc: reports
+arc_order: 1
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+
+@@@ file docs/specs/SPEC-002-y.md
+---
+type: Spec
+id: SPEC-002
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: [SPEC-001]
+arc: reports
+arc_order: 2
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+
+@@@ file docs/specs/SPEC-003-z.md
+---
+type: Spec
+id: SPEC-003
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+arc: audit
+arc_order: 1
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+
+@@@ file docs/specs/SPEC-010-w.md
+---
+type: Spec
+id: SPEC-010
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: [SPEC-001, SPEC-003]
+arc: reports
+arc_order: 10
+---
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

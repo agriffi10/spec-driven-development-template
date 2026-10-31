@@ -1,0 +1,32 @@
+@@@ expect exit=1
+@@@ match FAIL  docs/specs/SPEC-001-x.md: line 10 is a bold header line (**Status:** Draft) — if this spec predates frontmatter, see docs/process/knowledge-layout.md, Migrating.
+@@@ match Its field lives in the frontmatter now; delete the line.
+@@@ absent ok    docs/specs/SPEC-001-x.md
+@@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
+
+**Status:** Draft
+
+## Overview
+
+prose
+
+## Scope
+
+prose
+
+## Functional Requirements
+
+prose
+
+## Implementation Phases
+
+prose
+

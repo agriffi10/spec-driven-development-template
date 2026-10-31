@@ -2,13 +2,17 @@
 @@@ match WARN  docs/specs/SPEC-001-x.md: 4 FRs (over the 3 ceiling)
 @@@ match 0 file(s) failed, 1 warning(s)
 @@@ file docs/specs/SPEC-001-x.md
+---
+type: Spec
+id: SPEC-001
+title: X
+description: A spec.
+spec_status: Draft
+depends_on: []
+---
 <!--
 ```
 -->
-# Spec: X
-
-**ID:** SPEC-001
-**Status:** Draft
 
 ## Overview
 

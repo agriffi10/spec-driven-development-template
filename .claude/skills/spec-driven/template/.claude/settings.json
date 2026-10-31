@@ -8,6 +8,8 @@
       "Bash(sh scripts/docs-lint.sh)",
       "Bash(sh scripts/docs-lint-test.sh *)",
       "Bash(sh scripts/docs-lint-test.sh)",
+      "Bash(sh scripts/gen-index.sh *)",
+      "Bash(sh scripts/gen-index.sh)",
       "Bash(sh scripts/pr-queue-test.sh *)",
       "Bash(sh scripts/pr-queue-test.sh)",
       "Bash(sh scripts/pr-queue/install-test.sh)",
