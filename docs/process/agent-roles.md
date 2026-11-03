@@ -31,13 +31,16 @@ another by its brief, its tools and its isolation, never by its model.
 
 - **Write `model: inherit`, never omit it.** An omitted `model` falls back to
   `CLAUDE_CODE_SUBAGENT_MODEL` when that is set; `inherit` selects the main conversation's model
-  ahead of it.
+  ahead of it. That order holds from Claude Code v2.1.251; before it the variable came first and
+  overrode `inherit` too.
 - **Pass no `model` on an Agent tool call.** A per-invocation `model` overrides the role's
   `inherit`.
-- **Never set `CLAUDE_CODE_SUBAGENT_MODEL_FORCE`** in this repo's settings: it makes every agent
-  ignore its `model`, `inherit` included.
-- **Sweep with `scout`, not the built-in Explore.** Explore does not always run on the main model —
-  under a Fable session on some accounts it runs on Opus — while `scout` inherits.
+- **Never set `CLAUDE_CODE_SUBAGENT_MODEL`**, with or without `CLAUDE_CODE_SUBAGENT_MODEL_FORCE`,
+  in settings or the environment. Forced, it makes every agent ignore its `model`, `inherit`
+  included, and run on the model the variable names.
+- **Delegate only to the roles above, never to a built-in agent.** The built-ins do not all run
+  on the main model: Explore runs on Opus under a Fable session on some accounts, general-purpose
+  follows `CLAUDE_CODE_SUBAGENT_MODEL`, and claude-code-guide runs on Haiku. Sweep with `scout`.
 - `scripts/docs-lint.sh` holds the agent files to their shape: frontmatter at byte 0, `name` equal
   to the file stem, `model: inherit` and nothing else, and every agent this table names exists as a
   file and every file is named here.
