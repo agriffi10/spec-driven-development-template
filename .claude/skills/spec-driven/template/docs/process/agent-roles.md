@@ -41,6 +41,10 @@ another by its brief, its tools and its isolation, never by its model.
 - **Delegate only to the roles above, never to a built-in agent.** The built-ins do not all run
   on the main model: Explore runs on Opus under a Fable session on some accounts, general-purpose
   follows `CLAUDE_CODE_SUBAGENT_MODEL`, and claude-code-guide runs on Haiku. Sweep with `scout`.
+- **A reviewer started as a new session, not a subagent, is started on the model of the session that
+  asked for it.** `inherit` reaches only subagents.
 - `scripts/docs-lint.sh` holds the agent files to their shape: frontmatter at byte 0, `name` equal
   to the file stem, `model: inherit` and nothing else, and every agent this table names exists as a
-  file and every file is named here.
+  file and every file is named here. It also holds this table to exactly `| Job | Agent |`, fails a
+  leftover `model-routing.md`, and fails a `.claude/settings.json` that sets
+  `CLAUDE_CODE_SUBAGENT_MODEL`.

@@ -88,6 +88,16 @@ migration, not a copy: the new `spec-lint.sh` fails every old spec in CI the mom
 branch, ending by reading the migration diff against the pre-migration commit — a diff for a person to
 read, since nothing in it proves the migration lossless mechanically.
 
+**Updating a repo scaffolded while the template routed jobs to models** is also by hand, because
+`cp -R` deletes nothing. Delete `docs/process/model-routing.md` and copy in `agent-roles.md`; set every
+`.claude/agents/*.md` to `model: inherit`; take the new `CLAUDE.md` delegation paragraph, the router
+row, the `.claude/rules/agents.md` pointer and the PR template (its "Implementer model" line is gone);
+remove any `CLAUDE_CODE_SUBAGENT_MODEL` from `.claude/settings.json`; and delete the six fixtures
+the change renamed — `agent-model-inherit`, `agent-not-in-routing-table`,
+`agents-without-routing-table`, `routed-agent-no-file`, `routed-agents-all-missing` and
+`routing-table-heading-renamed` (`.case` each, in `tests/docs-lint/`). `docs-lint.sh` names the
+leftover routing doc, an old three-column roles table, a pinned model and the settings variable.
+
 Keep the always-loaded tier (`CLAUDE.md`) lean — it must not regrow into a wall of prose. `docs-lint.sh`
 now enforces that rather than asking you to remember it. In a project that ran this template the
 always-loaded file grew more than tenfold: first under a rule too weak to bind, then — once the
@@ -219,7 +229,9 @@ a part with no router row or a row with no file; a `.claude/rules/` file without
 byte 0, with an inline or missing `paths:`, an extra key, a glob outside the five allowed forms (`dir/**`, `dir/prefix-*/**`, `dir/**/*.ext`, `dir/*.ext`, an exact path) or
 matching nothing, a body that is not the two-line template, or a pointer to an unrouted part; a
 `.claude/agents/` file without frontmatter, a `name` not equal to its stem, a `model` other
-than `inherit`, or one the roles table does not name (and the reverse); a part, rule,
+than `inherit`, or one the roles table does not name (and the reverse); a roles table headed
+anything but `| Job | Agent |`, a leftover `docs/process/model-routing.md`, or a
+`.claude/settings.json` that sets `CLAUDE_CODE_SUBAGENT_MODEL`; a part, rule,
 agent or decision file in a subdirectory of its tree (dotfiles there are checked like any other file);
 and, in any standing doc, script or workflow file, a dated measurement — `measured` or `as of`
 beside an ISO date — with no short commit SHA in the same paragraph, bullet or comment block

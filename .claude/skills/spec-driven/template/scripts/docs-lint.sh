@@ -123,6 +123,8 @@ DELIVERY_DIR="docs/spec-delivery"
 PROCESS_DIR="docs/process"
 ROUTER="$PROCESS_DIR/INDEX.md"
 ROLES="$PROCESS_DIR/agent-roles.md"
+OLD_ROUTING="$PROCESS_DIR/model-routing.md"
+SETTINGS=".claude/settings.json"
 OLD_PROCESS="docs/process.md"
 RULES_DIR=".claude/rules"
 AGENTS_DIR=".claude/agents"
@@ -713,6 +715,8 @@ check_pointers "$CLAUDE"
 #   13a an agent with no frontmatter                13b name not equal to the file stem
 #   13c a model other than inherit                  13d a rostered agent with no file
 #   13e an agent file the roles table omits         13f agents present with no roles table
+#   13h a roles table header other than Job|Agent   13i the old model-routing.md still present
+#   13j settings.json sets CLAUDE_CODE_SUBAGENT_MODEL
 #   12c also covers a trailing-slash glob; CRLF rule files are normalised before comparing (crlf -ok case)
 if [ -d "$PROCESS_DIR" ]; then
   # 11 — no stub. A file at the old path is where a stale pointer lands softly and a new
@@ -824,6 +828,7 @@ if [ -d "$PROCESS_DIR" ]; then
     list_flat_md "$PROCESS_DIR" | while IFS= read -r f; do
       [ -f "$f" ] || continue
       [ "$f" = "$ROUTER" ] && continue
+      [ "$f" = "$OLD_ROUTING" ] && continue   # 13i names it, with the remedy that fits: delete it
       grep -qxF "$f" "$LOADED" && continue   # always-loaded parts are routed by the OTHER table
       [ "$have_parts" -eq 1 ] && [ "$have_loaded" -eq 1 ] || continue   # a missing table is reported once above, not once per part
       grep -qxF "$f" "$PARTS" || note "$f is not a row in the router One-file-per-part table. An unrouted part is where
@@ -986,7 +991,26 @@ if [ -d "$PROCESS_DIR" ]; then
     ROSTER="${TMPDIR:-/tmp}/docs-lint-roster.$$"
     : > "$ROSTER"
     have_roles_table=1
+    # 13i — the file this one replaced. Left behind by a `cp -R` upgrade, it would otherwise reach
+    # 10a, whose remedy (add a router row) is the opposite of the right one.
+    [ ! -e "$OLD_ROUTING" ] || note "$OLD_ROUTING is the per-job model routing that $ROLES replaced. Delete it:
+      every role now declares \`model: inherit\` and runs on the model that started the task."
+    # 13j — the one setting that moves every subagent off the parent's model at once.
+    if [ -f "$SETTINGS" ] && grep -q 'CLAUDE_CODE_SUBAGENT_MODEL' "$SETTINGS"; then
+      note "$SETTINGS sets CLAUDE_CODE_SUBAGENT_MODEL. Remove it: it puts subagents on the model it names
+      instead of the one that started the task, and with _FORCE it overrides \`model: inherit\` too."
+    fi
     if [ -f "$ROLES" ]; then
+      # 13h — the roster is read by column position, so the header is held to the exact shape. A
+      # third column (the old Model column) would shift the Agent column and empty the roster,
+      # and 13f would then report a missing table that is plainly there.
+      header=$(tr -d '\r' < "$ROLES" | awk 'index($0, "## The table") == 1 { t = 1; next } t && /^## / { exit } t && /^\|/ { print; exit }')
+      if [ -n "$header" ] && [ "$(printf '%s' "$header" | tr -d ' \t')" != "|Job|Agent|" ]; then
+        have_roles_table=0
+        note "$ROLES has a table headed \"$header\". It must be exactly | Job | Agent |: the Agent
+      column is read by position, and a Model column is gone because every role runs on the
+      model that started the task."
+      fi
       awk -F'|' '
         index($0, "## The table") == 1 { t = 1; next }
         t && /^## / { t = 0 }
@@ -999,12 +1023,13 @@ if [ -d "$PROCESS_DIR" ]; then
       # router. Renaming it yields an empty roster, and an empty roster makes 13e report one
       # confident falsehood per agent file — "not named in the roles table" for a table that
       # names them all. Assert the anchor and skip what depends on it.
-      if [ ! -s "$ROSTER" ]; then
+      if [ "$have_roles_table" -eq 1 ] && [ ! -s "$ROSTER" ]; then
         have_roles_table=0
         note "$ROLES has no \`## The table\` section with backticked agent names in its Agent column.
       The heading is a parse anchor: with no roster, every check that depends on it reports a
       falsehood — one \"not named in the roles table\" per role — instead of naming this."
       fi
+      [ "$have_roles_table" -eq 1 ] || : > "$ROSTER"   # a wrong header is reported once, not as ghost agents
       while IFS= read -r n; do
         [ -n "$n" ] || continue
         [ -f "$AGENTS_DIR/$n.md" ] || note "$ROLES names agent \`$n\`, but $AGENTS_DIR/$n.md does not exist."
@@ -1031,7 +1056,7 @@ if [ -d "$PROCESS_DIR" ]; then
       roles table cannot bind to it."; continue
           fi
           name=$(tr -d '\r' < "$a" | awk 'NR == 1 { next } /^---$/ { exit } /^name:/ { sub(/^name:[ \t]*/, ""); print }')
-          model=$(tr -d '\r' < "$a" | awk 'NR == 1 { next } /^---$/ { exit } /^model:/ { sub(/^model:[ \t]*/, ""); print }')
+          model=$(tr -d '\r' < "$a" | awk 'NR == 1 { next } /^---$/ { exit } /^model:/ { sub(/^model:[ \t]*/, ""); sub(/[ \t]+#.*$/, ""); sub(/[ \t]+$/, ""); if ($0 ~ /^".*"$/ || $0 ~ /^\047.*\047$/) $0 = substr($0, 2, length($0) - 2); print }')
           [ "$name" = "$stem" ] || note "$a declares name \"$name\" but is named $stem.md. The roles table names
       agents by file stem; a mismatch binds to nothing."
           [ "$model" = "inherit" ] || note "$a declares model \"$model\". Allowed: inherit. Every subagent runs on
