@@ -161,6 +161,13 @@ So the loop rotates the frame instead of adding rounds:
   against documents that happened to pass. Reviewers found most; the author found two mid-build; and
   the fixture corpus found two the moment it existed, which is the argument for it. Nothing reached
   `main`, because the branch happened not to merge in between.
+- **The failure text a case asserts must be the gate's own.** A gate that quotes a tool it calls — a
+  generator's refusal, a shared reader's error — prints that tool's words as well as its own, and a case
+  matching only the quoted words still passes after the gate's own check is deleted. Every case that
+  expects a failure must match at least one phrase that only the check under test prints; matching the quoted words as well
+  is how a case tests the quote. Here the quote is in `check_index` in `docs-lint.sh`, which prints the
+  index generator's refusal beside its own FAIL, so a case that tests only the quote is named
+  `generator-refuses*`.
 - **One fixture per guard is not enough when the guard has more than one exit.** A check with two
   terminating conditions is satisfied by a fixture exercising either, so the mutant that breaks the
   other survives with the suite green. Count the ways a check can stop, and write that many cases.
