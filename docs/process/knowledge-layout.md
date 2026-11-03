@@ -251,10 +251,28 @@ Let `OLD` be the commit before the migration branch.
      with its `**Label** — ` prefix removed, its continuation lines joined with single spaces and
      trailing spaces dropped, **always double-quoted**, escaping `\` as `\\` and `"` as `\"` (the label in
      `title` the same way) — and as the body **everything under
-     the entry's heading, unchanged**, followed by `## History` with one `### YYYY-MM-DD` entry: the
-     date the entry records, else the day it entered the register
-     (`git log --format=%as -S'### Label' "$OLD" | tail -1`), plus one dated entry per reversal the
-     entry records.
+     the entry's heading, unchanged**, followed by `## History` with one `### YYYY-MM-DD` entry for the
+     day the decision settled: the date the entry records; else, where the heading or entry names the
+     spec that settled it, the day that spec was completed
+     (`git log --format=%as -S'**Status:** Completed' "$OLD" -- ':/docs/specs/SPEC-<number>-*' | tail -1`,
+     which prints nothing for a spec that never completed); else the day the heading entered the
+     register (`git log --format=%as -S'### Label' "$OLD" -- ':/docs/decisions/' | tail -1`) — plus one
+     dated entry per reversal the entry records. That last fallback finds when the heading first
+     appeared in the register, which in a register assembled by moving older docs is the day of the
+     move, not the day the decision settled. Where it gives the day the old area file was created
+     (`git log --format=%as --diff-filter=A "$OLD" -- ':/docs/decisions/<slug>.md' | tail -1`) and the
+     entry gives no better date, keep it, and say in that History entry that it is the day the entry
+     entered the register.
+   - **Where a Fences bullet does not match one entry, write the fence rather than copy it.** A Fences
+     section curated as a digest can hold bullets that cover several entries, bullets with no entry,
+     and entries with no bullet. Only those change; a bullet that is one entry's fence is copied as
+     above. A bullet copied whole onto one of its entries gives that decision a fence that opens with
+     another decision's constraint, and step 6's diff cannot show it, because the text does come back,
+     under the wrong title. So split a bullet that covers several entries, giving each decision a fence
+     from its own entry with its own constraint first; write a fence for an entry that had none; and for
+     a bullet with no entry, write the body from it, say so in that decision's History, and date it by
+     the day the bullet entered the register
+     (`git log --format=%as -S'**Label**' "$OLD" -- ':/docs/decisions/' | tail -1`), with the same caveat.
    - Rewrite each `.claude/rules/decisions-<slug>.md` body to the area template: `Files matching these
      paths are governed by the **<Area>** decisions in` `` `docs/decisions/<slug>/` ``. then `Read the
      area's fences in` `` `docs/decisions/index.yaml` `` `first — they are not loaded with CLAUDE.md.`
@@ -323,4 +341,21 @@ Let `OLD` be the commit before the migration branch.
    entry shows as removed in one place and added in another. **A loss is a removed passage that comes
    back nowhere** in that area's additions — a line of an entry, a line of a code block, a
    `Rejected:` or `Do NOT build:` line, a fence whose text no `description:` repeats. An area file
-   whose directory does not exist shows as wholly removed.
+   whose directory does not exist shows as wholly removed. **Accounted for, not lost:** a fence step 3
+   wrote rather than copied shows as a removed bullet and a `description:` that differs from it; each
+   part of the removed bullet must come back in the fence or entry of a decision it covered. **A fence
+   on the wrong decision is not a loss**, so this diff passes it: its text comes back, under another
+   title. Read each `description:` against its own `title:` and entry.
+
+   **What the move made untrue — after the diff is read, in a commit of its own.** A decision can
+   describe the layout this migration retires: a check keyed on the old header lines, a pointer to an
+   `INDEX.md`, the `## Fences` digest, a flat area file. Each one is now a reversal, recorded as one
+   (*A decision's file is its whole thread*, above). Make them after reading the diff above and commit
+   them apart, so that diff shows only the move. To find them, from anywhere inside the repo:
+
+   ```sh
+   git grep --untracked -nE '\*\*(ID|Status|Depends On):\*\*|Last Updated|# Spec:|INDEX\.md|## Fences|\| Area \| Fences \||docs/decisions/[a-z0-9-]+\.md' -- ':/docs/decisions/*.md'
+   ```
+
+   A hit is a file to read, not one to change: a History entry recording the old layout is right as it
+   stands, and a hit in an area concept, which has no History, is simply edited.
