@@ -8,7 +8,7 @@ pulled **on demand**, when the router's table says:
 @docs/process/session-rhythm.md
 
 - `@docs/process/reviewer-contract.md` — the review gate in full (pull before briefing any reviewer)
-- `@docs/process/model-routing.md` — which model does which job (pull before delegating anything)
+- `@docs/process/agent-roles.md` — which agent does which job (pull before delegating anything)
 - `@docs/process/completion-ritual.md` — the seven steps at spec completion + the doc-hygiene rules
 - `@docs/architecture.md` — system design decisions + Known Constraints (read the section you need)
 - `@docs/decisions/index.yaml` — the Key Decisions register, generated: every area's fences (one file per decision under `docs/decisions/<area>/`)
@@ -18,7 +18,7 @@ pulled **on demand**, when the router's table says:
 - `@docs/spec-delivery/SPEC-XXX-*.md` — what a past spec delivered (pull only when a dependency points to one)
 - `@docs/best-practices/INDEX.md` — domain coding rulebooks (React, accessibility, …); route here, then load only the section(s) you need
 - `.claude/rules/` — one path-scoped pointer per governed tree; fires when a matching file is opened with Read (a backstop, not the mechanism)
-- `.claude/agents/` — the subagent roles the routing table names, each carrying its default model
+- `.claude/agents/` — the subagent roles the roles table names, each inheriting the parent's model
 
 ---
 
@@ -86,7 +86,7 @@ refuses anything in this section but this prose and the table.
 
 **Start:** the session rhythm (`@docs/process/session-rhythm.md`) is loaded with this file — follow it literally: read the spec you're building in full, confirm CI is green on `main`, branch off freshly fetched `origin/main` (in a multi-agent run, in your **own worktree**, never the shared checkout), set the spec `In Progress` in that first commit, plan, and put the plan and the PR grouping through the reviewer gate before the first line of code. A decision only the human can make is asked with the **question tool** — options as selections, the recommended one first — and the build continues on the answer; a summary or a list of options that ends the turn is a stop, whatever it says. If this file and the rhythm disagree, this file wins — fix the drift there in the same session.
 
-**Delegate, and pick the model by the job:** the main session orchestrates. Each artifact — spec, plan, code, every review, every sweep — goes to a subagent from `.claude/agents/` on the model `@docs/process/model-routing.md` names for that job (Sonnet writes specs and docs; Opus reviews, and Fable builds-and-reviews what Fable wrote; Opus implements, Fable when the complexity rule triggers; Haiku enumerates). When unsure, one tier up, never down.
+**Delegate by the job:** the main session orchestrates. Each artifact — spec, plan, code, every review, every sweep — goes to the subagent role `@docs/process/agent-roles.md` names for that job, and every subagent runs on the model that started the task.
 
 **Review — three artifacts, one blocking gate:** one fresh-context review on the spec, one on the plan (plus the narrow pass on the PR grouping), **two frames** on the diff, all **before the push** — a branch does not reach the remote until every finding is **fixed or flagged** out loud, because green CI is not a review. Counts, frames, briefing lines and exit rules: `@docs/process/reviewer-contract.md`.
 

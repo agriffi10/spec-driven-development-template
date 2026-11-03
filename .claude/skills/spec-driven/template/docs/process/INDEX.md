@@ -30,7 +30,7 @@ recursion, which is the cost this layout exists to avoid.
 | `docs/process/spec-lifecycle.md` | Draft → In Progress → Completed, one spec in flight, arcs and build order | when changing a spec's status, or grouping specs into an arc |
 | `docs/process/authoring-a-spec.md` | what makes a spec buildable: scope, FRs with binary criteria, size, no Open Questions, the spec's one review | when writing or revising a spec |
 | `docs/process/reviewer-contract.md` | the review gate in full: counts and frames, rotating the frame, briefing the reviewer, the build frame, the exit rule, adjudicating two FRs that cannot both hold, the evidence | before briefing any reviewer, when a round's findings decide the next frame, and when a build hits two FRs that cannot both hold |
-| `docs/process/model-routing.md` | which model does which job, the complexity rule for Fable, the step-up rule, the agent roles | before delegating any artifact to a subagent |
+| `docs/process/agent-roles.md` | which agent does which job, and the rule that every agent runs on the model that started the task | before delegating any artifact to a subagent |
 | `docs/process/several-agents.md` | running N sessions on one repo: the PR queue, what the lock covers, briefing each session | when more than one session shares this repo |
 | `docs/process/completion-ritual.md` | the seven steps at spec completion, and the anti-regrowth & doc-hygiene rules | at spec completion, and before any edit to a file in the table above |
 | `docs/process/operational-traps.md` | traps that pass locally and bite in CI or on deploy — project-specific, seeded as they bite | before the first CI- or deploy-dependent step of a build |

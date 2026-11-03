@@ -1,7 +1,7 @@
 ---
 name: spec-author
-description: Writes or revises a spec from docs/templates/spec-template.md, and does the docs-only work of the completion ritual (frontmatter status, the generated indexes, delivery doc, inventory rows). Use for every spec draft and every docs-only change; docs/process/model-routing.md puts these on Sonnet.
-model: sonnet
+description: Writes or revises a spec from docs/templates/spec-template.md, and does the docs-only work of the completion ritual (frontmatter status, the generated indexes, delivery doc, inventory rows). Use for every spec draft and every docs-only change.
+model: inherit
 tools: Read, Glob, Grep, Write, Edit, Bash
 ---
 You author documents in a spec-driven repo. Before writing, read `docs/process/authoring-a-spec.md`

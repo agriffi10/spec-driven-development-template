@@ -118,7 +118,7 @@ this way):
   router's *Loaded every session* table (imports match rows, a byte budget derived from the table, no
   nested imports, pointers resolve in every file of the set), every part to a router row and every
   row to a file, the old single-file path empty, and `.claude/rules/` and `.claude/agents/` to their
-  shapes — the rule template, the allowed glob forms, the allowed models, the routing table — each
+  shapes — the rule template, the allowed glob forms, `model: inherit`, the roles table — each
   tree one flat set with dotfiles seen and subdirectories refused; and, in every standing doc, script
   and workflow file it names, a dated measurement — `measured` or `as of` beside an ISO date — to a
   commit SHA in the same paragraph, bullet or comment block, which is the half of *never cite volatile

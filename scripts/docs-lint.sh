@@ -122,7 +122,7 @@ SPEC_DIR="docs/specs"
 DELIVERY_DIR="docs/spec-delivery"
 PROCESS_DIR="docs/process"
 ROUTER="$PROCESS_DIR/INDEX.md"
-ROUTING="$PROCESS_DIR/model-routing.md"
+ROLES="$PROCESS_DIR/agent-roles.md"
 OLD_PROCESS="docs/process.md"
 RULES_DIR=".claude/rules"
 AGENTS_DIR=".claude/agents"
@@ -711,8 +711,8 @@ check_pointers "$CLAUDE"
 #   12i an area body that is not template B           12j area rule naming a non-row area
 #   12k area rule not named <slug>.md
 #   13a an agent with no frontmatter                13b name not equal to the file stem
-#   13c a model outside the allowed set             13d a routed agent with no file
-#   13e an agent file the routing table omits       13f agents present with no routing table
+#   13c a model other than inherit                  13d a rostered agent with no file
+#   13e an agent file the roles table omits         13f agents present with no roles table
 #   12c also covers a trailing-slash glob; CRLF rule files are normalised before comparing (crlf -ok case)
 if [ -d "$PROCESS_DIR" ]; then
   # 11 — no stub. A file at the old path is where a stale pointer lands softly and a new
@@ -980,72 +980,70 @@ if [ -d "$PROCESS_DIR" ]; then
       rm -f "$FILES"
     fi
 
-    # 13 — agents: the roles the routing table names, each carrying an allowed model.
+    # 13 — agents: the roles the roles table names, each declaring `model: inherit`.
     # 13d runs whenever the TABLE exists, whether or not any agent file does: with the
-    # roles directory gone entirely, a table routing to four ghosts must still fail.
-    ROUTED="${TMPDIR:-/tmp}/docs-lint-routed.$$"
-    : > "$ROUTED"
-    have_routing_table=1
-    if [ -f "$ROUTING" ]; then
+    # roles directory gone entirely, a table naming four ghosts must still fail.
+    ROSTER="${TMPDIR:-/tmp}/docs-lint-roster.$$"
+    : > "$ROSTER"
+    have_roles_table=1
+    if [ -f "$ROLES" ]; then
       awk -F'|' '
         index($0, "## The table") == 1 { t = 1; next }
         t && /^## / { t = 0 }
         t && NF >= 4 {
-          c = $4
+          c = $3
           while (match(c, /`[a-z][a-z0-9-]*`/)) { print substr(c, RSTART + 1, RLENGTH - 2); c = substr(c, RSTART + RLENGTH) }
         }
-      ' "$ROUTING" | sort -u > "$ROUTED"
+      ' "$ROLES" | sort -u > "$ROSTER"
       # 13f — the heading is a PARSE ANCHOR (exact text, exact case), like the two in the
       # router. Renaming it yields an empty roster, and an empty roster makes 13e report one
-      # confident falsehood per agent file — "not named in the routing table" for a table that
+      # confident falsehood per agent file — "not named in the roles table" for a table that
       # names them all. Assert the anchor and skip what depends on it.
-      if [ ! -s "$ROUTED" ]; then
-        have_routing_table=0
-        note "$ROUTING has no \`## The table\` section with backticked agent names in its Agent column.
+      if [ ! -s "$ROSTER" ]; then
+        have_roles_table=0
+        note "$ROLES has no \`## The table\` section with backticked agent names in its Agent column.
       The heading is a parse anchor: with no roster, every check that depends on it reports a
-      falsehood — one \"not named in the routing table\" per role — instead of naming this."
+      falsehood — one \"not named in the roles table\" per role — instead of naming this."
       fi
       while IFS= read -r n; do
         [ -n "$n" ] || continue
-        [ -f "$AGENTS_DIR/$n.md" ] || note "$ROUTING routes to agent \`$n\`, but $AGENTS_DIR/$n.md does not exist."
-      done < "$ROUTED"
+        [ -f "$AGENTS_DIR/$n.md" ] || note "$ROLES names agent \`$n\`, but $AGENTS_DIR/$n.md does not exist."
+      done < "$ROSTER"
     fi
     # 13g — one flat set, the same guard the other three trees carry. Claude Code scans this
     # directory RECURSIVELY, so a file one level down is loaded into a session while every
-    # check below — allowed model, name equals stem, named by the routing table — would
+    # check below — model: inherit, name equals stem, named by the roles table — would
     # never see it; a dotfile role escaped the same way until this used list_flat_md.
     if [ -d "$AGENTS_DIR" ]; then
-      refuse_deep_md "$AGENTS_DIR" "Roles are one flat set, one per row of the routing table:
+      refuse_deep_md "$AGENTS_DIR" "Roles are one flat set, one per row of the roles table:
       Claude Code loads a role a level down, and the checks here would not see it, so the file would
       be live and unchecked at the same time."
     fi
     if [ -d "$AGENTS_DIR" ] && [ -n "$(list_flat_md "$AGENTS_DIR")" ]; then
-      if [ ! -f "$ROUTING" ]; then
-        note "$AGENTS_DIR/ has agent files but $ROUTING does not exist. The routing table is what says
-      which job each agent and model is for; agents without it are habit, not routing."
+      if [ ! -f "$ROLES" ]; then
+        note "$AGENTS_DIR/ has agent files but $ROLES does not exist. The roles table is what says
+      which job each agent is for; agents without it are habit, not roles."
       else
         list_flat_md "$AGENTS_DIR" | while IFS= read -r a; do
           stem=$(basename "$a" .md)
           if [ "$(sed -n '1p' "$a" | tr -d '\r')" != "---" ]; then
             note "$a has no frontmatter at byte 0, so it declares no name and no model — the
-      routing table cannot bind to it."; continue
+      roles table cannot bind to it."; continue
           fi
           name=$(tr -d '\r' < "$a" | awk 'NR == 1 { next } /^---$/ { exit } /^name:/ { sub(/^name:[ \t]*/, ""); print }')
           model=$(tr -d '\r' < "$a" | awk 'NR == 1 { next } /^---$/ { exit } /^model:/ { sub(/^model:[ \t]*/, ""); print }')
-          [ "$name" = "$stem" ] || note "$a declares name \"$name\" but is named $stem.md. The routing table names
-      agents by file stem; a mismatch routes to nothing."
-          case "$model" in
-            sonnet|opus|haiku|fable) ;;
-            *) note "$a declares model \"$model\". Allowed: sonnet, opus, haiku, fable. \`inherit\` and an empty
-      model both take whatever the parent runs on, which is exactly what routing by job exists to stop." ;;
-          esac
-          [ "$have_routing_table" -eq 1 ] || continue   # a missing anchor is reported once above, not once per agent
-          grep -qxF "$stem" "$ROUTED" || note "$a is not named in $ROUTING (## The table, Agent column). An agent the table
-      does not route to is a role nobody is told to use."
+          [ "$name" = "$stem" ] || note "$a declares name \"$name\" but is named $stem.md. The roles table names
+      agents by file stem; a mismatch binds to nothing."
+          [ "$model" = "inherit" ] || note "$a declares model \"$model\". Allowed: inherit. Every subagent runs on
+      the model that started the task; a named model pins the role to another one, and an empty
+      model falls back to CLAUDE_CODE_SUBAGENT_MODEL when that is set."
+          [ "$have_roles_table" -eq 1 ] || continue   # a missing anchor is reported once above, not once per agent
+          grep -qxF "$stem" "$ROSTER" || note "$a is not named in $ROLES (## The table, Agent column). An agent the table
+      does not name is a role nobody is told to use."
         done
       fi
     fi
-    rm -f "$ROUTED"
+    rm -f "$ROSTER"
     rm -f "$LOADED" "$PARTS" "$IMPORTS"
   fi
 fi

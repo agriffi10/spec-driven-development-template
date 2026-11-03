@@ -12,7 +12,7 @@ description: >-
   always-loaded tier stays lean (budget + a register of one file per decision, its fences in a generated index).
   Triggers on phrases like "set up
   spec-driven", "scaffold the docs structure", "write a spec", "start SPEC-XXX", "build this spec",
-  "complete the spec / run the completion ritual", "run several agents at once", "which model
+  "complete the spec / run the completion ritual", "run several agents at once", "which agent
   should review this".
 ---
 
@@ -27,7 +27,7 @@ behind the router `INDEX.md`. In a repo that has already been scaffolded, that r
 `CLAUDE.md` **imports** its `docs/process/INDEX.md` and `docs/process/session-rhythm.md`, so both are
 in context at launch; pull the other parts when the router's table says, and never a single
 `docs/process.md` — that layout predates the router, and `docs-lint.sh` fails a repo that still has
-one. `operational-traps.md` and `ground-rules.md` are filled in per project and exist nowhere else. **Every artifact is delegated to a subagent on the model the job calls for** — see §6 below.
+one. `operational-traps.md` and `ground-rules.md` are filled in per project and exist nowhere else. **Every artifact is delegated to a subagent role, and every subagent runs on the model that started the task** — see §6 below.
 The jobs below are the operating modes.
 
 ## 0. Scaffold a repo (bootstrap)
@@ -36,7 +36,7 @@ When a repo has no spec-driven docs yet:
 
 1. Copy **everything** under this skill's `template/` into the repo root — `CLAUDE.md`, `docs/`,
    `scripts/`, `tests/`, `.github/`, and `.claude/rules/` + `.claude/agents/` + `.claude/settings.json`
-   (the path-scoped pointers, the model-routed subagent roles, and the permission allow-list that lets
+   (the path-scoped pointers, the subagent roles, and the permission allow-list that lets
    a session run the gates and land its PR without a prompt — **merge** it into an existing
    `.claude/settings.json` rather than overwrite one, and show the user the list: it grants `git push`
    and `gh pr merge`, which is what an autonomous build needs and what a shared checkout should see
@@ -109,7 +109,7 @@ site was found only after three review frames. A pointer cannot drift from what 
 | Watch PRs, watch `main` | `docs/process/session-rhythm.md` → *Landing the spec* |
 | Finish a spec | `docs/process/completion-ritual.md` |
 | Several sessions on one repo | `docs/process/several-agents.md`, then `scripts/pr-queue/PROTOCOL.md` |
-| Which model does which job | `docs/process/model-routing.md` |
+| Which agent does which job | `docs/process/agent-roles.md` |
 | What a spec's status means | `docs/process/spec-lifecycle.md` |
 
 In a scaffolded repo those files are present and its `CLAUDE.md` already imports the router and the
@@ -171,11 +171,11 @@ message says how to upgrade it instead), the hooks directory could not be writte
 would push unenforced; the message gives the absolute-path remedy). Exit **1** is
 a refusal before anything was copied: a blank or uncompilable pattern, or a lock held on the queue.
 
-## 6. Delegate by model
+## 6. Delegate by role
 
-`model-routing.md` is the authority: each artifact goes to a subagent from `.claude/agents/` on the
-model that table names, the agent files carry those defaults so a plain `@agent-reviewer` gets the
-right one, and when unsure it is one tier up, never down.
+`agent-roles.md` is the authority: each artifact goes to the subagent role from `.claude/agents/`
+that table names. Every role declares `model: inherit`, so every subagent runs on the model that
+started the task; pass no `model` on an Agent call.
 
 ## spec-lint reference
 
@@ -218,8 +218,8 @@ table) over `ALWAYS_LOADED_MAX_BYTES`; a bare `@` import in any always-loaded fi
 a part with no router row or a row with no file; a `.claude/rules/` file without frontmatter at
 byte 0, with an inline or missing `paths:`, an extra key, a glob outside the five allowed forms (`dir/**`, `dir/prefix-*/**`, `dir/**/*.ext`, `dir/*.ext`, an exact path) or
 matching nothing, a body that is not the two-line template, or a pointer to an unrouted part; a
-`.claude/agents/` file without frontmatter, a `name` not equal to its stem, a `model` outside
-`sonnet|opus|haiku|fable`, or one the routing table does not name (and the reverse); a part, rule,
+`.claude/agents/` file without frontmatter, a `name` not equal to its stem, a `model` other
+than `inherit`, or one the roles table does not name (and the reverse); a part, rule,
 agent or decision file in a subdirectory of its tree (dotfiles there are checked like any other file);
 and, in any standing doc, script or workflow file, a dated measurement — `measured` or `as of`
 beside an ISO date — with no short commit SHA in the same paragraph, bullet or comment block
