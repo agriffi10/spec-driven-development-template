@@ -120,6 +120,15 @@ for case_file in "$CASES"/*.case; do
     fail=$((fail + 1)); echo "FAIL  $name: an '@@@' line is not one of file/expect exit=/match/absent/no-index."
     continue
   fi
+  # A case named for CRLF must carry a CR. A mechanical rewrite of the corpus (#27, `23c2065`)
+  # stripped every CR from the three it had then, and they stayed green: silence over LF-only input is what they assert, so
+  # the normalisation they guard went unguarded with nothing to show for it.
+  case "$name" in
+    *crlf*) if ! grep -q "$(printf '\r')" "$case_file"; then
+      fail=$((fail + 1)); echo "FAIL  $name: is named for CRLF but carries no CR, so it tests LF input."
+      continue
+    fi ;;
+  esac
 
   # The indexes: generated over the case, a declared one restored on top, a `no-index` one deleted.
   rm -rf "$WORK.idx"; mkdir -p "$WORK.idx"
@@ -195,7 +204,12 @@ fi
 # generated indexes — so losing any whole family fires and pruning a case or two does not.
 # Measured by deleting that family from a copy: the run reds on the floor. A family smaller
 # than three is not protected by a floor at all; that is what its own case is for.
-CASES_MIN=206
+# Re-derived again when the check-13 follow-up to #27 added its cases: at `23c2065` it sat 34
+# below the corpus, stale by the same mechanism. The count as it stands is not restated here — it
+# moves with every case added — and `tests/docs-lint/` counted against this number says what the
+# headroom is today. Adding cases never fails here, which is why the floor goes stale: a change
+# that adds a family re-derives it, to two below the count.
+CASES_MIN=255
 if { [ -z "${DOCS_LINT_TEST_CASES:-}" ] || [ -n "${DOCS_LINT_TEST_FLOOR:-}" ]; } && [ -z "$FILTER" ] && [ "$pass" -lt "$CASES_MIN" ]; then
   echo "docs-lint-test: only $pass cases ran, against a floor of $CASES_MIN. The corpus has"
   echo "shrunk or gone missing — a run over nothing exits 0 and looks exactly like a healthy"
@@ -203,7 +217,7 @@ if { [ -z "${DOCS_LINT_TEST_CASES:-}" ] || [ -n "${DOCS_LINT_TEST_FLOOR:-}" ]; }
   exit 1
 fi
 
-# ── self-test: the three guards above have to fire ─────────────────────────────
+# ── self-test: the fixture guards above have to fire ───────────────────────────
 #
 # The guards exist because a case whose fixture never reached disk reported `ok` — a
 # silence case passing for the wrong reason, in the one file whose entire job is to make
@@ -219,7 +233,7 @@ fi
 # So the guards get a corpus of their own, run here against a temp directory and asserting
 # the FAIL TEXT rather than the exit code — each guard has a distinct message, and a guard
 # that fires for the wrong reason is one that gets fixed in the wrong place. Removing any
-# one of these three guards turns its case green, which is the whole claim.
+# one of these guards turns its case green, which is the whole claim.
 if [ -z "${DOCS_LINT_TEST_CASES:-}" ] && [ -z "$FILTER" ]; then
   SELF="$WORK.self"
   rm -rf "$SELF"; mkdir -p "$SELF"
@@ -275,6 +289,9 @@ Reasoning.
   #    must fail the case. Without this, a harness that stopped reading `absent` would let every
   #    suppression case pass whatever the linter printed.
   printf '@@@ expect exit=1\n@@@ absent docs-lint:\n@@@ file CLAUDE.md\n# P\n' > "$SELF/absent-fires.case"
+  # 5. A case named for CRLF whose fixture is LF-only, the shape a line-ending-normalising rewrite
+  #    leaves behind.
+  printf '@@@ expect exit=0\n%s\n' "$skeleton" > "$SELF/stripped-crlf-ok.case"
 
   # Counted from disk, never asserted as a literal: the count that was hand-written here
   # was wrong the moment two planted names collided, in a change whose whole subject is
@@ -287,7 +304,8 @@ Reasoning.
     "no-file-ok: declares no '@@@ file' directive" \
     "unwritten-ok: declared file(s) never written" \
     "an '@@@' line is not one of file/expect exit=/match/absent/no-index" \
-    "absent-fires: output carried: docs-lint:"
+    "absent-fires: output carried: docs-lint:" \
+    "stripped-crlf-ok: is named for CRLF but carries no CR"
   do
     case "$self_out" in
       *"$want"*) ;;
@@ -303,7 +321,7 @@ Reasoning.
     echo "disk would pass silently, which is how this harness went green over nothing."
     exit 1
   fi
-  echo "docs-lint-test: fixture guards verified — 4 guards, $planted vacuous cases refused."
+  echo "docs-lint-test: fixture guards verified — 5 guards, $planted vacuous cases refused."
 
   # The FLOOR has to fire too, and nothing above proves it: the self-test invocation sets
   # DOCS_LINT_TEST_CASES, which disables the floor so a handful of planted cases can run.

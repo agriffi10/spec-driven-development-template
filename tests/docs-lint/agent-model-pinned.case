@@ -1,5 +1,6 @@
 @@@ expect exit=1
 @@@ match declares model "opus". Allowed: inherit
+@@@ absent names a model or the old routing doc
 @@@ file CLAUDE.md
 # P
 

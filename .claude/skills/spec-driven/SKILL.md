@@ -88,15 +88,54 @@ migration, not a copy: the new `spec-lint.sh` fails every old spec in CI the mom
 branch, ending by reading the migration diff against the pre-migration commit — a diff for a person to
 read, since nothing in it proves the migration lossless mechanically.
 
-**Updating a repo scaffolded while the template routed jobs to models** is also by hand, because
-`cp -R` deletes nothing. Delete `docs/process/model-routing.md` and copy in `agent-roles.md`; set every
-`.claude/agents/*.md` to `model: inherit`; take the new `CLAUDE.md` delegation paragraph, the router
-row, the `.claude/rules/agents.md` pointer and the PR template (its "Implementer model" line is gone);
-remove any `CLAUDE_CODE_SUBAGENT_MODEL` from `.claude/settings.json`; and delete the six fixtures
-the change renamed — `agent-model-inherit`, `agent-not-in-routing-table`,
+**Updating a repo scaffolded while the template routed jobs to models** is done by applying the
+template's own diff, not by copying files. `cp -R` deletes nothing and overwrites everything: it
+leaves the old routing doc and six renamed fixtures behind, and it puts the template's defaults over
+the budgets this repo re-ratcheted in `scripts/docs-lint.sh` while the run stays green. The change is
+two template commits, #27 (`23c2065`) and its follow-up, which widened check 13 and restored the
+CRs its rewrite stripped from the CRLF fixtures. From this repo's root, with the template cloned at
+`<template>`:
+
+```bash
+(
+  git -C <template> fetch -q origin
+  f=$(git -C <template> log --reverse --format=%h -S'two template commits, #27' origin/main -- .claude/skills/spec-driven/SKILL.md | head -1)
+  [ -n "$f" ] || { echo "the follow-up is not on the template's origin/main: stop"; exit 1; }
+  todo="23c2065 $f"   # a repo that already took #27: todo=$f
+  for c in $todo; do
+    git -C <template> diff --binary --no-renames "$c^" "$c" |
+      git apply --index --reject --whitespace=nowarn --exclude=CLAUDE.md --exclude=README.md ||
+      { echo "apply of $c failed: merge its .rej files, settle each 'already exists' or 'does not exist', then apply what is left"; exit 1; }
+  done
+)
+```
+
+That takes the deletions, the new files, the agent files whole (their descriptions changed as well
+as their `model:` line), `completion-ritual.md`, the router row, the rule, the PR template, the
+linter and its corpus in one step. `--no-renames` is load-bearing: with rename detection on, git
+pairs a renamed fixture with its identical twin in the skill payload, and a repo that does not
+vendor the skill fails the apply. `--whitespace=nowarn` keeps a configured `apply.whitespace=fix`
+from stripping the CRs the CRLF fixtures exist to carry. Add `--exclude='.claude/skills/*'` if this
+repo does not vendor the skill; if it does, the same diff updates the vendored copy. The budget
+constants in `scripts/docs-lint.sh` sit outside every hunk and are left alone; `CASES_MIN` in
+`scripts/docs-lint-test.sh` sits inside one, so a repo that re-derived its own floor gets a `.rej`
+there, and re-derives the floor again to two below the corpus the apply leaves. A hunk that
+conflicts with this repo's own edits lands as a `.rej` beside its file and stops the loop. A file
+the commit adds that this repo already has (a case taken in an earlier port, say) is refused with
+`already exists in index` and writes no `.rej`, while the rest of the commit lands in the working
+tree, unstaged: take the template's copy by hand, `git -C <template> show "${c}:<path>" > <path>`,
+then `git add -A`, and run the loop again with `todo` set to whatever commits remain. Then make `CLAUDE.md`'s three edits by hand:
+the *Delegate by the job* paragraph, the `@docs/process/agent-roles.md` pointer line in place of
+the `model-routing.md` one, and the `.claude/agents/` pointer line. Remove any
+`CLAUDE_CODE_SUBAGENT_MODEL` from `.claude/settings.json`. Run both doc-linter corpora and compare
+their case names, collected from the runner, against the pre-upgrade ref: the only names that may
+disappear are the six #27 renamed (`agent-model-inherit`, `agent-not-in-routing-table`,
 `agents-without-routing-table`, `routed-agent-no-file`, `routed-agents-all-missing` and
-`routing-table-heading-renamed` (`.case` each, in `tests/docs-lint/`). `docs-lint.sh` names the
-leftover routing doc, an old three-column roles table, a pinned model and the settings variable.
+`routing-table-heading-renamed`), and every other difference is an addition. `docs-lint.sh` then
+names most of what is left (`docs/process/agent-roles.md` → *Fences* says what it checks), but it
+does not read the prose of `completion-ritual.md`, the PR template or `CLAUDE.md`, so finish with
+`git grep -n -i -e model-routing -e 'routing table' -e 'default model'` and read every hit outside
+the linter and its fixtures.
 
 Keep the always-loaded tier (`CLAUDE.md`) lean — it must not regrow into a wall of prose. `docs-lint.sh`
 now enforces that rather than asking you to remember it. In a project that ran this template the
@@ -229,8 +268,10 @@ a part with no router row or a row with no file; a `.claude/rules/` file without
 byte 0, with an inline or missing `paths:`, an extra key, a glob outside the five allowed forms (`dir/**`, `dir/prefix-*/**`, `dir/**/*.ext`, `dir/*.ext`, an exact path) or
 matching nothing, a body that is not the two-line template, or a pointer to an unrouted part; a
 `.claude/agents/` file without frontmatter, a `name` not equal to its stem, a `model` other
-than `inherit`, or one the roles table does not name (and the reverse); a roles table headed
-anything but `| Job | Agent |`, a leftover `docs/process/model-routing.md`, or a
+than `inherit`, a description naming a model, or one the roles table does not name (and the
+reverse); a roles table headed anything but `| Job | Agent |`, with any row of other than two
+cells, a second table or a row whose Agent cell names a model, a leftover
+`docs/process/model-routing.md` or a part or agent file that still names it, or a
 `.claude/settings.json` that sets `CLAUDE_CODE_SUBAGENT_MODEL`; a part, rule,
 agent or decision file in a subdirectory of its tree (dotfiles there are checked like any other file);
 and, in any standing doc, script or workflow file, a dated measurement — `measured` or `as of`

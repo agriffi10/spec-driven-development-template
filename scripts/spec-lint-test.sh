@@ -96,6 +96,14 @@ for case_file in "$CASES"/*.case; do
     fail=$((fail + 1)); echo "FAIL  $name: an '@@@' line is not one of file/expect exit=/match/absent."
     continue
   fi
+  # A case named for CRLF must carry a CR — the guard docs-lint-test.sh carries, for the same
+  # reason: a mechanical rewrite stripped the CRs from that corpus's three, and they stayed green.
+  case "$name" in
+    *crlf*) if ! grep -q "$(printf '\r')" "$case_file"; then
+      fail=$((fail + 1)); echo "FAIL  $name: is named for CRLF but carries no CR, so it tests LF input."
+      continue
+    fi ;;
+  esac
 
   got=$(cd "$WORK" && sh scripts/spec-lint.sh 2>&1) && rc=0 || rc=$?
   ok=1; why=""
@@ -227,12 +235,12 @@ if [ -z "${SPEC_LINT_TEST_CASES:-}" ] && [ -z "$FILTER" ] && [ "$pass" -lt "$CAS
   exit 1
 fi
 
-# ── self-test: the three fixture guards above have to fire ─────────────────────
+# ── self-test: the four fixture guards above have to fire ──────────────────────
 #
 # A case that trips a guard is by construction a FAILING case, so none can live in
 # tests/spec-lint without leaving the corpus red. They get a corpus of their own, run
 # here against a temp directory and asserting the FAIL TEXT rather than the exit code.
-# Removing any one of the three guards turns its planted case green, which is the claim.
+# Removing any one of the four guards turns its planted case green, which is the claim.
 if [ -z "${SPEC_LINT_TEST_CASES:-}" ] && [ -z "$FILTER" ]; then
   SELF="$WORK.self"
   rm -rf "$SELF"; mkdir -p "$SELF"
@@ -262,6 +270,8 @@ depends_on: []
     n=${pair%%:*}; typo=${pair#*:}
     printf '@@@ expect exit=0\n%s docs/typo.md\ncontent\n%s\n' "$typo" "$skeleton" > "$SELF/typo-$n-ok.case"
   done
+  # 4. A case named for CRLF whose fixture is LF-only.
+  printf '@@@ expect exit=0\n%s\n' "$skeleton" > "$SELF/stripped-crlf-ok.case"
 
   planted=$(ls "$SELF" | wc -l | tr -d ' ')
   self_out=$(SPEC_LINT_TEST_CASES="$SELF" sh "$0" 2>&1) && self_rc=0 || self_rc=$?
@@ -270,7 +280,8 @@ depends_on: []
   for want in \
     "no-file-ok: declares no '@@@ file' directive" \
     "unwritten-ok: declared file(s) never written" \
-    "an '@@@' line is not one of file/expect exit=/match/absent"
+    "an '@@@' line is not one of file/expect exit=/match/absent" \
+    "stripped-crlf-ok: is named for CRLF but carries no CR"
   do
     case "$self_out" in
       *"$want"*) ;;
@@ -285,7 +296,7 @@ depends_on: []
     echo "disk would pass silently, which is how a harness goes green over nothing."
     exit 1
   fi
-  echo "spec-lint-test: fixture guards verified — 3 guards, $planted vacuous cases refused."
+  echo "spec-lint-test: fixture guards verified — 4 guards, $planted vacuous cases refused."
 fi
 
 # ── self-test: spec-lint's two reader guards have to fire ──────────────────────
