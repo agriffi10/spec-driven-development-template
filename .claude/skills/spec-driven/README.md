@@ -1,7 +1,8 @@
 # spec-driven (skill)
 
-The **behavior** layer of the [spec-driven-development-template](../../../README.md): the workflow
-Claude follows to author specs, run plan-gated builds, put spec/plan/diff through a blocking
+The **behavior** layer of the
+[spec-driven-development-template](https://github.com/agriffi10/spec-driven-development-template):
+the workflow Claude follows to author specs, run plan-gated builds, put spec/plan/diff through a blocking
 fresh-context review gate, watch PRs/main, and run the completion ritual. The full method and rationale live in the top-level `README.md` and in
 `docs/process/` (one file per part, behind the router `docs/process/INDEX.md`).
 
@@ -24,7 +25,8 @@ fresh-context review gate, watch PRs/main, and run the completion ritual. The fu
   `/plugin install spec-driven@agriffi10-spec-driven` at user scope; take later commits on `main`
   with `claude plugin update spec-driven@agriffi10-spec-driven` (or `/plugin` → Installed → Update
   now) or the marketplace's auto-update. It is invoked as `/spec-driven:spec-driven`. The plugin's
-  root is this folder, so it carries `SKILL.md` and `template/` and nothing else from the repository.
+  root is this folder, so it carries `SKILL.md`, this README and `template/`, and nothing else from
+  the repository; the relative links and maintenance scripts named here exist only in a clone.
 - **Claude Code, committed:** a repository that contains this folder gets it automatically. Invoke
   explicitly with `/spec-driven`, or just describe the task ("draft a spec for X", "build SPEC-007",
   "run the completion ritual") and it triggers.
