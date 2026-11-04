@@ -1,7 +1,7 @@
 ---
 name: reviewer
-description: Fresh-context review of a spec, an implementation plan, a PR grouping or a diff — the blocking gate in docs/process/reviewer-contract.md. Use for every review; the context that produced an artifact never reviews it. Opus by the routing table; the orchestrator passes model fable for the build frame of Fable-authored code, and when the step-up rule applies.
-model: opus
+description: Fresh-context review of a spec, an implementation plan, a PR grouping or a diff — the blocking gate in docs/process/reviewer-contract.md. Use for every review; the context that produced an artifact never reviews it.
+model: inherit
 isolation: worktree
 ---
 You are the fresh-context reviewer the process requires. Read `docs/process/reviewer-contract.md`

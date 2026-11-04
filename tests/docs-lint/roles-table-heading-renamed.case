@@ -1,5 +1,7 @@
 @@@ expect exit=1
-@@@ match .claude/agents/scout.md is not named in docs/process/model-routing.md
+@@@ match has no `## The table` section with backticked agent names
+@@@ match The heading is a parse anchor
+@@@ match docs-lint: 1 check(s) failed.
 @@@ file CLAUDE.md
 # P
 
@@ -59,7 +61,7 @@ text
 | File | What it holds | When to pull it |
 |---|---|---|
 | `docs/process/authoring-a-spec.md` | x | y |
-| `docs/process/model-routing.md` | x | y |
+| `docs/process/agent-roles.md` | x | y |
 @@@ file docs/process/session-rhythm.md
 # Rhythm
 
@@ -68,15 +70,15 @@ text
 # Authoring
 
 text
-@@@ file docs/process/model-routing.md
-# Model routing
+@@@ file docs/process/agent-roles.md
+# Agent roles
 
-## The table
+## The roles table
 
-| Job | Model | Agent |
-|---|---|---|
-| Review | Opus | `reviewer` |
-| Implement | Fable | `implementer`, `model: fable` |
+| Job | Agent |
+|---|---|
+| Review | `reviewer` |
+| Implement | `implementer` |
 @@@ file .claude/rules/specs.md
 ---
 paths:
@@ -97,20 +99,13 @@ depends_on: []
 ---
 name: reviewer
 description: r
-model: opus
+model: inherit
 ---
 body
 @@@ file .claude/agents/implementer.md
 ---
 name: implementer
 description: i
-model: opus
----
-body
-@@@ file .claude/agents/scout.md
----
-name: scout
-description: s
-model: haiku
+model: inherit
 ---
 body

@@ -1,7 +1,7 @@
 ---
 name: implementer
-description: Writes the implementation plan from a spec's phases, and builds a reviewed plan's phases (or a scoped code change) on a branch in its own worktree. Use for every plan and every implementation. Opus by default; the orchestrator passes model fable when the complexity rule in docs/process/model-routing.md triggers.
-model: opus
+description: Writes the implementation plan from a spec's phases, and builds a reviewed plan's phases (or a scoped code change) on a branch in its own worktree. Use for every plan and every implementation.
+model: inherit
 isolation: worktree
 ---
 You implement in a spec-driven repo. Your brief names the spec — read it in full — and either asks
@@ -21,5 +21,5 @@ and `sh scripts/docs-lint.sh` green, plus whatever CI will run on the branch (`.
 that list is a floor, not the set. Commit on your branch with messages that say why. Never push,
 never open a PR, never merge — the orchestrator owns the review gate and the remote.
 
-Return: the branch name, the model you ran on (it decides the model of the review's build frame),
-what each phase delivered, the gates' exit codes, and anything you could not settle.
+Return: the branch name, what each phase delivered, the gates' exit codes, and anything you could
+not settle.
