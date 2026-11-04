@@ -1,0 +1,12 @@
+{
+  "name": "agriffi10-spec-driven",
+  "description": "The spec-driven development skill, published from the template repository.",
+  "owner": { "name": "Andrew Griffith" },
+  "plugins": [
+    {
+      "name": "spec-driven",
+      "source": "./.claude/skills/spec-driven",
+      "description": "Spec-driven development workflow with guardrails: scaffold a repo, author and gate specs, build from a reviewed plan, and run the completion ritual."
+    }
+  ]
+}

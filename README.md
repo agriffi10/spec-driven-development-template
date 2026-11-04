@@ -103,7 +103,9 @@ mechanism that keeps context cheap.
 
 **Skill.** A folder containing a `SKILL.md` file: a written procedure Claude follows when a matching
 request comes in. Claude Code discovers skills committed at `.claude/skills/<name>/SKILL.md`
-automatically, with nothing to install. This repository's skill is `spec-driven`.
+automatically, with nothing to install. This repository's skill is `spec-driven`, and the repository
+also publishes it as a Claude Code **plugin**, so you can install it once and keep it current across
+every project instead of copying it.
 
 If the scaffold is the set of forms and the filing cabinet, the skill is the assistant who knows how
 to fill them in and where they go.
@@ -236,11 +238,14 @@ the router's table says.
    which is why the shipped copy is inert. Until you do this, "green CI" in your project means only
    that spec-lint passed — and spec-lint knows nothing about your code. (`docs-lint` runs locally
    before a push, not in CI.)
-5. **Delete the mirror machinery.** Remove `scripts/check-mirror.sh`, `scripts/sync-from-skill.sh`
-   and `.github/workflows/check-mirror.yml`. They keep *this* template's two copies of the scaffold
-   in step, and in your project they will fail: the check compares the root files against the copy
-   inside the skill, so it goes red the moment you customize `CLAUDE.md` in step 2. Keep
-   `.claude/skills/spec-driven/` itself — that's the skill Claude uses.
+5. **Delete the mirror machinery.** Remove `scripts/check-mirror.sh`, `scripts/sync-from-skill.sh`,
+   `.github/workflows/check-mirror.yml` and `.claude-plugin/`. The first three keep *this* template's
+   two copies of the scaffold in step, and in your project they will fail: the check compares the
+   root files against the copy inside the skill, so it goes red the moment you customize `CLAUDE.md`
+   in step 2. `.claude-plugin/` publishes this template's skill, which your project does not do. If
+   you use the plugin (see *Making the skill available*), delete `.claude/skills/spec-driven/` too,
+   so the project does not carry a second copy that goes stale; otherwise keep it — that's the
+   skill Claude uses.
 6. Trim `docs/best-practices/` to the domains you actually use — a Python library doesn't need the
    React rulebook — and update `docs/best-practices/INDEX.md` to match.
 7. **Protect `main`.** In Settings → Rules, require pull requests (no direct pushes) and add
@@ -268,9 +273,39 @@ what your CI needs, and wires spec-lint in.
 
 ### Making the skill available
 
-**In Claude Code**, nothing to do. The skill is committed at `.claude/skills/spec-driven/SKILL.md`
-and Claude Code discovers it there automatically. You can also invoke it explicitly with
-`/spec-driven`.
+**In Claude Code, install the plugin once per machine.** This repository is a plugin marketplace
+(`.claude-plugin/marketplace.json`) with one plugin, `spec-driven`, which carries the skill and its
+scaffold. In a Claude Code session:
+
+```text
+/plugin marketplace add agriffi10/spec-driven-development-template
+```
+
+```text
+/plugin install spec-driven@agriffi10-spec-driven
+```
+
+When the install asks for a scope, choose **user scope** (install for you): that is what makes the
+skill available in every project. From a shell, `claude plugin install spec-driven@agriffi10-spec-driven`
+installs at user scope by default. The skill is then invoked as `/spec-driven:spec-driven`, or by
+describing the task.
+
+**Updating.** The plugin carries no `version`, so every commit on `main` is a new version. Take the
+latest from `/plugin` → Installed → **Update now**, or from a shell with
+`claude plugin update spec-driven@agriffi10-spec-driven`, then restart the session. Refreshing only
+the marketplace listing (`/plugin marketplace update`) does not update an installed plugin. To stop
+doing this by hand, turn on auto-update for the marketplace under `/plugin` → Marketplaces; it is
+off by default for marketplaces that are not Anthropic's.
+
+**Remove any copied skill once the plugin is in.** A copy in `~/.claude/skills/spec-driven/`, or one
+committed at `.claude/skills/spec-driven/` in a project you made earlier, keeps the bare
+`/spec-driven` name and carries the same description as the plugin's skill, so both load and Claude
+can pick the stale copy when a request matches. Delete the copy; the plugin is then the only one.
+
+**Without the plugin**, a repository that commits the skill at `.claude/skills/spec-driven/SKILL.md`
+gets it automatically, as `/spec-driven`. That is how this repository uses its own skill, and how a
+project made from the template works if you keep the folder in step 5 — but that copy only changes
+when you copy it again.
 
 **In Cowork**, skills are installed once into Settings → Capabilities and are then available across
 all your repositories. Zip the `.claude/skills/spec-driven/` folder with a **`.skill`** extension and
@@ -278,7 +313,7 @@ use the install button, or add it through settings. Cowork also reads a reposito
 project instructions.
 
 A skill installed in Cowork is not automatically available in Claude Code, and the reverse is also
-true. The committed copy covers Claude Code; the Cowork install covers Cowork.
+true. The plugin or the committed copy covers Claude Code; the Cowork install covers Cowork.
 
 ## Your first feature, end to end
 
@@ -484,6 +519,7 @@ from the template don't need them.
 | `.claude/skills/spec-driven/README.md` | Human-facing note on what the skill folder contains and how to install it. | You |
 | `.claude/skills/spec-driven/template/` | The **canonical copy** of the whole scaffold (see below). | The skill |
 | `.gitignore` | OS and editor cruft, plus common Node and Python build artifacts. | Git |
+| `.claude-plugin/marketplace.json` | Publishes this repository as a Claude Code **plugin marketplace** with one plugin, `spec-driven`: the skill at `.claude/skills/spec-driven/`, with its `source` set to that directory, so the plugin root holds only `SKILL.md`, `README.md` and the `template/` payload the skill scaffolds from. Rooting it there rather than at the repository root is load-bearing: `.claude/skills/` is not a directory a plugin scans, so a plugin rooted at the repository with no `skills` list loads no skill at all, and `claude plugin validate` still passes. It also keeps the plugin small, because a plugin loads `commands/`, `agents/`, `hooks/hooks.json`, `.mcp.json`, `bin/` and similar directories from its root, so a repository-rooted plugin would ship anything later added at the top of this repo to everyone who installed it. **This template repo only** — delete it in a derived project. | Claude Code (plugin install) |
 
 ## Why the scaffold exists in two places
 
@@ -506,9 +542,10 @@ situation, editing the root copy and copying it back into the skill is fine. Wha
 two end up identical and both are committed.)
 
 **Never hand-edit the root `docs/`, `CLAUDE.md`, or `.github/` in this repository** — they are
-generated. The next sync silently discards your change and then reports success. Five files at the
-root are *not* mirrored, because they can't be: `README.md`, `.gitignore`, the two maintenance
-scripts, and `.github/workflows/check-mirror.yml`. Those you edit directly.
+generated. The next sync silently discards your change and then reports success. Six files at the
+root are *not* mirrored, because they can't be: `README.md`, `.gitignore`,
+`.claude-plugin/marketplace.json`, the two maintenance scripts, and
+`.github/workflows/check-mirror.yml`. Those you edit directly.
 
 **CI checks the mirror**, in both directions, because the two failures are different:
 
@@ -598,7 +635,8 @@ grouped by area rather than kept as a per-spec changelog.
 
 **Claude isn't following the workflow.** Check that `CLAUDE.md` exists at the repository root and that
 you started the session in the repository directory. In Claude Code you can invoke the skill directly
-with `/spec-driven`. In Cowork, confirm the skill is installed under Settings → Capabilities — a
+with `/spec-driven` (or `/spec-driven:spec-driven` from the plugin); if neither exists, check
+`/plugin` → Installed shows `spec-driven` enabled, and the Errors tab for why it did not load. In Cowork, confirm the skill is installed under Settings → Capabilities — a
 Claude Code install doesn't carry over.
 
 **spec-lint fails on a spec.** It reports the file and the reason. A frontmatter failure names the
@@ -635,7 +673,8 @@ script's `ROOT_ONLY` list names a file that no longer exists, so drop that entry
 delete it. That check exists to keep the template's own two copies of the scaffold identical; your
 project has one scaffold, and customizing `CLAUDE.md` or `docs/` makes the root differ from the copy
 bundled in the skill. Remove `scripts/check-mirror.sh`, `scripts/sync-from-skill.sh` and
-`.github/workflows/check-mirror.yml`, and keep the rest of `.claude/skills/spec-driven/`.
+`.github/workflows/check-mirror.yml`, and keep the rest of `.claude/skills/spec-driven/` unless you
+use the plugin.
 
 **My edits to `docs/` keep disappearing.** In *this* template repository, the root `docs/`,
 `CLAUDE.md` and `.github/` are generated from the skill's payload, and the sync overwrites them. Edit
