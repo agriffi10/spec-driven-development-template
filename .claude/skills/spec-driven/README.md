@@ -21,9 +21,10 @@ fresh-context review gate, watch PRs/main, and run the completion ritual. The fu
 - **Claude Code, as a plugin:** this repository publishes the skill through
   `.claude-plugin/marketplace.json`. Install once per machine with
   `/plugin marketplace add agriffi10/spec-driven-development-template` and
-  `/plugin install spec-driven@spec-driven-template`; take later commits on `main` with
-  `/plugin marketplace update spec-driven-template` or the marketplace's auto-update. It is invoked as
-  `/spec-driven:spec-driven`.
+  `/plugin install spec-driven@agriffi10-spec-driven` at user scope; take later commits on `main`
+  with `claude plugin update spec-driven@agriffi10-spec-driven` (or `/plugin` → Installed → Update
+  now) or the marketplace's auto-update. It is invoked as `/spec-driven:spec-driven`. The plugin's
+  root is this folder, so it carries `SKILL.md` and `template/` and nothing else from the repository.
 - **Claude Code, committed:** a repository that contains this folder gets it automatically. Invoke
   explicitly with `/spec-driven`, or just describe the task ("draft a spec for X", "build SPEC-007",
   "run the completion ritual") and it triggers.
