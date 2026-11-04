@@ -41,7 +41,8 @@ PAYLOAD_PREFIX='.claude/skills/spec-driven/template'
 SKILL_TEMPLATE="$ROOT/$PAYLOAD_PREFIX"
 
 # Root files that are deliberately NOT mirrored, because they cannot be: the
-# first two describe this repo rather than the scaffold, and the last three are
+# first two describe this repo rather than the scaffold, the third publishes this
+# repo's skill as a Claude Code plugin, and the last three are
 # the mirror machinery itself, which by definition is not part of what it
 # mirrors (a scaffolded repo has no payload, so it needs none of them). Every
 # entry is checked to exist below, so this list cannot rot into a set of
@@ -52,6 +53,7 @@ SKILL_TEMPLATE="$ROOT/$PAYLOAD_PREFIX"
 # better than deletions passing silently.
 ROOT_ONLY='README.md
 .gitignore
+.claude-plugin/marketplace.json
 scripts/sync-from-skill.sh
 scripts/check-mirror.sh
 .github/workflows/check-mirror.yml'

@@ -18,8 +18,15 @@ fresh-context review gate, watch PRs/main, and run the completion ritual. The fu
 
 ## Using it
 
-- **Claude Code:** available automatically. Invoke explicitly with `/spec-driven`, or just describe the
-  task ("draft a spec for X", "build SPEC-007", "run the completion ritual") and it triggers.
+- **Claude Code, as a plugin:** this repository publishes the skill through
+  `.claude-plugin/marketplace.json`. Install once per machine with
+  `/plugin marketplace add agriffi10/spec-driven-development-template` and
+  `/plugin install spec-driven@spec-driven-template`; take later commits on `main` with
+  `/plugin marketplace update spec-driven-template` or the marketplace's auto-update. It is invoked as
+  `/spec-driven:spec-driven`.
+- **Claude Code, committed:** a repository that contains this folder gets it automatically. Invoke
+  explicitly with `/spec-driven`, or just describe the task ("draft a spec for X", "build SPEC-007",
+  "run the completion ritual") and it triggers.
 - **Cowork:** install once into Settings → Capabilities (global across repos). Zip this `spec-driven/`
   folder with a `.skill` extension and use the install button, or add it via settings. A Cowork install
   is separate from Claude Code's auto-discovery.
