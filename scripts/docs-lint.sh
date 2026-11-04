@@ -125,6 +125,9 @@ ROUTER="$PROCESS_DIR/INDEX.md"
 ROLES="$PROCESS_DIR/agent-roles.md"
 OLD_ROUTING="$PROCESS_DIR/model-routing.md"
 SETTINGS=".claude/settings.json"
+# The model names check 13l refuses in a roles row's Agent cell or an agent description, as an awk
+# regex over lowercased text: a word, not a substring, so `fableist` does not match.
+MODEL_WORDS='(^|[^a-z])(opus|sonnet|haiku|fable)([^a-z]|$)'
 OLD_PROCESS="docs/process.md"
 RULES_DIR=".claude/rules"
 AGENTS_DIR=".claude/agents"
@@ -229,6 +232,17 @@ refuse_deep_md() {
   find "$1" -mindepth 2 -name '*.md' | sort | while IFS= read -r deep; do
     note "$deep is in a subdirectory of $1/. $2"
   done
+}
+
+# One scalar key from an agent file's frontmatter, read the way YAML reads it: CRs dropped,
+# a trailing comment and trailing space cut, one pair of matching quotes taken off. `name`
+# and `model` go through this one reader because they drifted apart once — `model` learned
+# to unquote and `name` did not, so `name: "reviewer"` failed to bind to its own file stem.
+agent_key() {   # agent_key <file> <key>
+  tr -d '\r' < "$1" | awk -v k="$2:" 'NR == 1 { next } /^---$/ { exit } index($0, k) == 1 {
+    $0 = substr($0, length(k) + 1); sub(/^[ \t]*/, ""); sub(/[ \t]+#.*$/, ""); sub(/[ \t]+$/, "")
+    if ($0 ~ /^".*"$/ || $0 ~ /^\047.*\047$/) $0 = substr($0, 2, length($0) - 2)
+    print }'
 }
 
 # ── 0. The always-loaded file exists ───────────────────────────────────────────
@@ -716,7 +730,9 @@ check_pointers "$CLAUDE"
 #   13c a model other than inherit                  13d a rostered agent with no file
 #   13e an agent file the roles table omits         13f agents present with no roles table
 #   13h a roles table header other than Job|Agent   13i the old model-routing.md still present
-#   13j settings.json sets CLAUDE_CODE_SUBAGENT_MODEL
+#   13j settings.json sets CLAUDE_CODE_SUBAGENT_MODEL   13k a roles row not two cells, or a second table
+#   13l a part naming model-routing.md, an agent naming it anywhere, an agent description naming
+#       a model, or a roles row's Agent cell naming one beside its agent names (four exits)
 #   12c also covers a trailing-slash glob; CRLF rule files are normalised before comparing (crlf -ok case)
 if [ -d "$PROCESS_DIR" ]; then
   # 11 — no stub. A file at the old path is where a stale pointer lands softly and a new
@@ -995,8 +1011,21 @@ if [ -d "$PROCESS_DIR" ]; then
     # 10a, whose remedy (add a router row) is the opposite of the right one.
     [ ! -e "$OLD_ROUTING" ] || note "$OLD_ROUTING is the per-job model routing that $ROLES replaced. Delete it:
       every role now declares \`model: inherit\` and runs on the model that started the task."
-    # 13j — the one setting that moves every subagent off the parent's model at once.
-    if [ -f "$SETTINGS" ] && grep -q 'CLAUDE_CODE_SUBAGENT_MODEL' "$SETTINGS"; then
+    # 13l — the text that pointed at it. An upgrade that deletes the file and leaves a part naming
+    # it as plain prose is green on every pointer check, which reads only links and `@` imports.
+    # The roles doc is exempt: it names the file to say this script fails a leftover one.
+    list_flat_md "$PROCESS_DIR" | while IFS= read -r f; do
+      [ "$f" = "$ROLES" ] && continue
+      if grep -q 'model-routing\.md' "$f"; then
+        note "$f still names model-routing.md, which $ROLES replaced. Point at $ROLES, or drop
+      the sentence: no job is routed to a model any more."
+      fi
+    done
+    # 13j — the one setting that moves every subagent off the parent's model at once. Matched
+    # as a JSON KEY, so the file may still name the variable elsewhere — a deny rule against
+    # exporting it, say. The environment variable itself is out of this script's reach; the
+    # fence in $ROLES covers it.
+    if [ -f "$SETTINGS" ] && grep -qE '"CLAUDE_CODE_SUBAGENT_MODEL(_FORCE)?"[[:space:]]*:' "$SETTINGS"; then
       note "$SETTINGS sets CLAUDE_CODE_SUBAGENT_MODEL. Remove it: it puts subagents on the model it names
       instead of the one that started the task, and with _FORCE it overrides \`model: inherit\` too."
     fi
@@ -1005,11 +1034,39 @@ if [ -d "$PROCESS_DIR" ]; then
       # third column (the old Model column) would shift the Agent column and empty the roster,
       # and 13f would then report a missing table that is plainly there.
       header=$(tr -d '\r' < "$ROLES" | awk 'index($0, "## The table") == 1 { t = 1; next } t && /^## / { exit } t && /^\|/ { print; exit }')
+      # 13k — the header is one row of many. Every row in the section is held to the same two
+      # cells, and the section to one table, so a model cannot come back as a third cell on one
+      # row or as a second table under a well-formed first one. 13l — nor inside a two-cell row:
+      # the old Agent cell read "`reviewer`, `model: fable` per invocation", and deleting the
+      # Model column leaves that standing. Only the Agent cell is read for it, with the agent
+      # names taken out: a Job may be about a haiku, and a role may be named `haiku-writer`,
+      # and 13e requires that name in the table. The first offending row is reported, with its kind.
+      odd=$(tr -d '\r' < "$ROLES" | awk -F'|' -v re="$MODEL_WORDS" 'index($0, "## The table") == 1 { t = 1; next } t && /^## / { exit }
+        t && /^\|/ {
+          if (NF != 4) { print "cells\t" $0; exit }
+          if ($0 ~ /^[| \t:-]+$/ && seps++) { print "table\t" prev; exit }
+          c = tolower($3); gsub(/`[a-z][a-z0-9-]*`/, "", c)
+          if (c ~ re) { print "model\t" $0; exit }
+        }
+        { prev = $0 }')
+      odd_kind=${odd%%	*}; odd_row=${odd#*	}
       if [ -n "$header" ] && [ "$(printf '%s' "$header" | tr -d ' \t')" != "|Job|Agent|" ]; then
         have_roles_table=0
         note "$ROLES has a table headed \"$header\". It must be exactly | Job | Agent |: the Agent
       column is read by position, and a Model column is gone because every role runs on the
       model that started the task."
+      elif [ "$odd_kind" = cells ]; then
+        have_roles_table=0
+        note "$ROLES has a table row \"$odd_row\" that is not two cells. Every row under ## The table
+      is | Job | Agent |: the Agent column is read by position, and a model has no column."
+      elif [ "$odd_kind" = table ]; then
+        have_roles_table=0
+        note "$ROLES has a second table under ## The table, headed \"$odd_row\". The section is one
+      | Job | Agent | table: a second one is where a model column comes back."
+      elif [ "$odd_kind" = model ]; then
+        note "$ROLES has a table row \"$odd_row\" that names a model. Every role runs on the model
+      that started the task; a row naming one tells the orchestrator to pass it, and a passed
+      \`model\` overrides \`inherit\`."
       fi
       awk -F'|' '
         index($0, "## The table") == 1 { t = 1; next }
@@ -1055,13 +1112,30 @@ if [ -d "$PROCESS_DIR" ]; then
             note "$a has no frontmatter at byte 0, so it declares no name and no model — the
       roles table cannot bind to it."; continue
           fi
-          name=$(tr -d '\r' < "$a" | awk 'NR == 1 { next } /^---$/ { exit } /^name:/ { sub(/^name:[ \t]*/, ""); print }')
-          model=$(tr -d '\r' < "$a" | awk 'NR == 1 { next } /^---$/ { exit } /^model:/ { sub(/^model:[ \t]*/, ""); sub(/[ \t]+#.*$/, ""); sub(/[ \t]+$/, ""); if ($0 ~ /^".*"$/ || $0 ~ /^\047.*\047$/) $0 = substr($0, 2, length($0) - 2); print }')
+          name=$(agent_key "$a" name)
+          model=$(agent_key "$a" model)
           [ "$name" = "$stem" ] || note "$a declares name \"$name\" but is named $stem.md. The roles table names
       agents by file stem; a mismatch binds to nothing."
           [ "$model" = "inherit" ] || note "$a declares model \"$model\". Allowed: inherit. Every subagent runs on
       the model that started the task; a named model pins the role to another one, and an empty
       model falls back to CLAUDE_CODE_SUBAGENT_MODEL when that is set."
+          # 13l — prose that still routes the role. The old descriptions named a model ("Opus by the
+          # routing table", "the orchestrator passes model fable"), and a description is what the
+          # orchestrator reads when it picks a role: one naming a model invites the per-call
+          # `model` that overrides `inherit`. Model words are read in the DESCRIPTION only — a
+          # body may warn that a built-in runs on Opus, and a name or a domain word may be one —
+          # including a block scalar's indented lines, while model-routing.md is stale anywhere.
+          stale=$(tr -d '\r' < "$a" | awk -v re="$MODEL_WORDS" '
+            NR == 1 { fm = 1; next }
+            fm && /^---$/ { fm = 0; next }
+            { l = tolower($0) }
+            index(l, "model-routing.md") { print; exit }
+            fm && index(l, "description:") == 1 { d = 1; if (l ~ re) { print; exit } next }
+            fm && d && /^[ \t]/ { if (l ~ re) { print; exit } next }
+            { d = 0 }')
+          [ -z "$stale" ] || note "$a names a model or the old routing doc: \"$stale\". Every role runs on the
+      model that started the task; text naming a model tells the orchestrator to pass one, and a
+      passed \`model\` overrides \`inherit\`."
           [ "$have_roles_table" -eq 1 ] || continue   # a missing anchor is reported once above, not once per agent
           grep -qxF "$stem" "$ROSTER" || note "$a is not named in $ROLES (## The table, Agent column). An agent the table
       does not name is a role nobody is told to use."
