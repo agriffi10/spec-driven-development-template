@@ -41,6 +41,11 @@ written in: `knowledge-layout.md` → *Frontmatter*. What makes a spec *buildabl
   unanswered questions. Issues that only surface during the build are handled in-session (`session-rhythm.md`), not
   parked in the spec. A sentence that *promises* a decision is an Open Question in declarative
   clothes (`reviewer-contract.md`).
+- **Cite the human's answer only from the repo.** Before a spec relies on the human's answer, record
+  it in `docs/decisions/` (`knowledge-layout.md` → *The decision register*) and cite that file, or
+  record it in the spec where it is relied on. Never cite a chat, a numbered answer from a
+  conversation (such as "answer 7") or a path outside the repo: those disappear with the session, and
+  a later builder can no longer check the spec against its authority.
 - **Then the reviewer gate** (`reviewer-contract.md`). A freshly-authored spec goes to a
   fresh-context reviewer before it is Draft-ready, and its findings are fixed or flagged.
   The commonest thing this catches is not a wrong requirement — it is an acceptance criterion that

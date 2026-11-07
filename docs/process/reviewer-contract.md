@@ -49,10 +49,19 @@ sends the new plan through again.
   the reviewed plan and the phase list, and nothing else — the question is only whether the split is
   the fewest the dependencies allow, and whether any boundary leaves `main` in a half-built state.
   Handing over the authoring rationale tells the reviewer what to conclude.
+- **Freeze the sources before the brief.** Gather every answer the artifact depends on, fold it into
+  the artifact, and only then brief the reviewer. A source that changes mid-review — the human still
+  answering questions while the spec reviews run — turns findings into "the draft is older than the
+  newest answer", which costs a round and hides which findings are real defects. If a source must
+  change anyway, tell the reviewer, and treat the findings that rest on the new answer as revisions
+  to apply, not as defects the gate found — and the text that applies the new answer goes back
+  through the gate (re-entry, above), because nobody has reviewed it — late text inherits a
+  confidence it has not earned (*Scope added mid-review restarts the clock*, below).
 - **What each review is for.** A **spec** review asks: is every FR testable and binary; **can every
   pair of FRs hold at once**; does any acceptance criterion pass vacuously; is anything in Out of Scope
   actually required by an FR; does it contradict a settled decision or silently supersede one without
-  saying so; are there Open Questions wearing declarative clothes. The pairwise question is there
+  saying so; are there Open Questions wearing declarative clothes; does every answer from the human
+  that it relies on resolve to a file in the repo (`authoring-a-spec.md`). The pairwise question is there
   because the rest of the list tests one requirement at a time, and two FRs that are each testable,
   binary and in scope can still be mutually exclusive. The frame that reliably catches such a pair is
   the build-it-from-the-spec rotation below; asking the question here is what keeps the reading frames
