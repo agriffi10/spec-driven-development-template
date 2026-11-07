@@ -92,8 +92,8 @@ four before the first push.
   - **Product-changing / ambiguous** (anything that alters behavior the user would notice, or a call
     with no clearly-right answer): **stop and escalate to the human.** Don't silently pick — ask with
     the **question tool** (`AskUserQuestion`), the options as selections and the recommended one
-    first, and go on with the answer; options written out in prose that end the turn are the same
-    stop by another name.
+    first, and go on with the answer, recorded in the spec or a decision (`authoring-a-spec.md`);
+    options written out in prose that end the turn are the same stop by another name.
     Auto-deciding these is how an autonomous run drifts away from what was actually wanted.
   - **The spec contradicting itself** (two FRs that cannot both hold): a spec defect, not a preference
     call, and the tie-break is evidence — implement **each** reading, run the suite, and record the
