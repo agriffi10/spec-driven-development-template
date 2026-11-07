@@ -27,9 +27,9 @@ another by its brief, its tools and its isolation, never by its model.
 *implementation*, whatever documents it also touches; a change with no code in its diff is
 *docs-only*. A review is always a `reviewer` row, whatever produced the artifact.
 
-**Hand a fixing author the finding's full text, not a summary.** The author was not in the
+**Hand a fixing agent the finding's full text, not a summary.** The fixer was not in the
 reviewer's context, so a one-line relay leaves it unable to act on the finding and it has to ask for
-the text. Pass each finding you have decided to fix verbatim to the author who fixes it, with its
+the text. Pass each finding you have decided to fix verbatim to the agent who fixes it, with its
 file:line and its reproducing mutation or concrete failing input.
 
 ## Fences
