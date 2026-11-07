@@ -30,7 +30,9 @@ another by its brief, its tools and its isolation, never by its model.
 **Hand a fixing agent the finding's full text, not a summary.** The fixer was not in the
 reviewer's context, so a one-line relay leaves it unable to act on the finding and it has to ask for
 the text. Pass each finding you have decided to fix verbatim to the agent who fixes it, with its
-file:line and its reproducing mutation or concrete failing input.
+file:line and, where one exists, its reproducing mutation or concrete failing input. A human's
+answer to a question an agent returned is relayed the same way: the question and the option chosen,
+word for word, to the agent that resumes, which records it (`authoring-a-spec.md`) in its next commit.
 
 ## Fences
 

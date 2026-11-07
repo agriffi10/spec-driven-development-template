@@ -60,7 +60,8 @@ sends the new plan through again.
 - **What each review is for.** A **spec** review asks: is every FR testable and binary; **can every
   pair of FRs hold at once**; does any acceptance criterion pass vacuously; is anything in Out of Scope
   actually required by an FR; does it contradict a settled decision or silently supersede one without
-  saying so; are there Open Questions wearing declarative clothes. The pairwise question is there
+  saying so; are there Open Questions wearing declarative clothes; does every answer of the human's
+  it relies on resolve to a file in the repo (`authoring-a-spec.md`). The pairwise question is there
   because the rest of the list tests one requirement at a time, and two FRs that are each testable,
   binary and in scope can still be mutually exclusive. The frame that reliably catches such a pair is
   the build-it-from-the-spec rotation below; asking the question here is what keeps the reading frames
