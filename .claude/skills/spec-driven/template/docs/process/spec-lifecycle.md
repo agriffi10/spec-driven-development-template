@@ -7,14 +7,13 @@ is one edit and a regeneration, never two edits kept in step by hand.
 
 - **Draft** — written, **reviewed by a fresh-context reviewer (`reviewer-contract.md`)** and
   refined, but **do not build until told.** Specs are often authored well ahead of implementation. A
-  Draft spec sitting in the repo is not a signal to start it. Being told to build an arc is being
-  told to build each of its specs in `arc_order`, and an orchestrating session starts the next one as
-  each lands (`several-agents.md`). A spec is not Draft-ready while it still
+  Draft spec sitting in the repo is not a signal to start it. A spec is not Draft-ready while it still
   has unresolved questions (`authoring-a-spec.md`), and a spec that has not been through the gate is not Draft-ready,
-  whatever its `spec_status` says.
+  whatever its `spec_status` says. Being told to build an arc is being told to build each of its
+  specs, and the session told orchestrates them (`several-agents.md`).
 - **In Progress** — exactly one spec at a time is in flight. Set when you branch to build it.
   The exception is a deliberate **multi-agent run**, where several sessions build different specs
-  at once; what stays serial there is the *remote*, not the work (`several-agents.md`). Running
+  at once (an arc run whose independent specs build in parallel is one); what stays serial there is the *remote*, not the work (`several-agents.md`). Running
   several by accident — two sessions that each think they are alone — is the
   thing this rule exists to prevent.
 - **Completed** — merged on green CI, delivery doc written (`completion-ritual.md`).
@@ -23,7 +22,8 @@ is one edit and a regeneration, never two edits kept in step by hand.
 spec's frontmatter: `arc: <slug>` names the arc and `arc_order: <n>` the spec's place in it, and the
 generated `docs/specs/index.yaml` lists every arc in that order. Grouping is a choice; recording the
 order of a **size split** (`authoring-a-spec.md`) is not — a spec cut for size always joins an arc.
-Build in that order; arcs can have non-obvious dependencies. `spec-lint.sh` fails an ambiguous order
+Build in that order, except that independent specs may build at once (`several-agents.md`); arcs
+can have non-obvious dependencies. `spec-lint.sh` fails an ambiguous order
 (two specs in one place) and a spec that depends on one later in its own arc, since the order would
 then contradict the dependency. Inserting a spec mid-arc renumbers the ones after it — rare, since a
 size split appends. If an arc needs *narrative*, it goes in a `docs/specs/ARCS.md` with **one `##`

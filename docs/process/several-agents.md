@@ -44,25 +44,37 @@ Full protocol, configuration and the stale-entry rules: `scripts/pr-queue/PROTOC
 
 **Running an arc through — one build session per spec**
 
-When one session orchestrates an arc, starting a build session per spec, the instruction to build
-the arc is the instruction to build each of its specs in turn (`spec-lifecycle.md`). The orchestrator
-does not ask again between them.
+A session told to build an arc **orchestrates** it rather than building the specs itself: it starts
+a new build session per spec, and the instruction to build the arc is the instruction to build each
+of its specs (`spec-lifecycle.md`), so it does not ask again between them. Every session it starts is
+briefed from `docs/templates/multi-agent-briefing.md`.
 
-- **Start the next spec's session as soon as the last one has landed, without asking.** The next
-  spec is the next in `arc_order`, and its session is a new one, briefed like the first.
-- **Landed is checked, never taken from a report.** The PR is merged, `main` is green on the merge
-  commit, the queue lock is released, and the spec is `Completed` on `origin/main`. The session's own
-  account of its finish is not that proof, and a turn-end note that reports progress (a plan drafted,
-  a review running) is not a finish at all, so nothing starts on one.
-- **Independent specs may build in parallel, each in its own session; the rest chain one at a time.**
-  Two specs are independent when they touch different files and neither needs the other's result,
-  whether through `depends_on` or through something the earlier one builds. Arcs can carry
-  dependencies the frontmatter does not name, so when independence is not clear, chain them. The
-  queue still serialises their PRs.
-- **Archive a finished session in the step that verifies its landing,** before starting the next one,
-  wherever the harness can archive sessions. A session idle partway through its work, or one waiting
-  on an answer, is not finished.
-- **Brief each new session** from `docs/templates/multi-agent-briefing.md`, including the lessons the
-  previous spec left.
-- **Stop the chain and ask the human** if a session ends blocked, `main` is red, or the next spec is
-  not `Draft`.
+- **Start every ready spec, without asking — at the outset and again each time a spec lands.** A spec
+  is ready when it is Draft-ready (below) and every earlier spec in `arc_order` that it is not
+  independent of has landed. With no independent specs this is one session at a time, in
+  `arc_order`.
+- **Two specs are independent** when neither needs the other's result, whether through `depends_on`
+  or through something the earlier one builds, and they touch different source files. The files every
+  completion ritual edits (the generated indexes, `CLAUDE.md`'s `## Specs`, the component inventory)
+  do not count; name them in each briefing's *Files you and a peer will both touch*. Arcs can carry
+  dependencies the frontmatter does not name, so when independence is not clear, chain them.
+- **Install the PR queue (`scripts/pr-queue/install.sh`) before two build sessions first run at
+  once.** A chain that only ever runs one needs no queue, and its briefings drop the queue section.
+- **Landed is checked, never taken from a report.** After `git fetch origin`: every PR in the
+  spec's grouping is merged, `main` is green on the last merge commit, the spec reads `Completed` on
+  `origin/main` (`git show origin/main:<spec path>`), and, where the queue is installed, the spec
+  holds neither the lock nor a ticket. A session's own account of its finish is not that proof, and
+  a turn-end note that reports progress (a plan drafted, a review running) is not a finish at all, so
+  nothing starts on one.
+- **Archive each finished session in the step that verifies its landing,** before starting the next,
+  wherever the harness can archive sessions. That covers every session the orchestrator started, a
+  fix or a review session as much as a build. A session idle partway through its work, or one
+  waiting on an answer, is not finished.
+- **Stop the chain and ask the human** when:
+  - a session ends blocked, or ends with its spec not landed by the check above;
+  - `main` is red: start nothing, fix it first as `CLAUDE.md` says, and ask before the chain resumes;
+  - the next spec this orchestrator has not started, skipping any already `Completed`, is not
+    Draft-ready (`spec_status: Draft`, `spec-lint` clean and through its review gate), or depends on
+    a spec outside the arc that is not `Completed`.
+- **When the arc's last spec lands,** archive its session and report the arc done to the human,
+  with the lessons its sessions reported.

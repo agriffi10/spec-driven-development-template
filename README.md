@@ -414,13 +414,15 @@ conflict is never resolved by deleting a peer's work. A session that isn't told 
 thing for a session working alone, which is precisely what breaks a parallel run.
 
 **Running an arc through.** Ask for a whole arc ("Build the stability arc") and the session you
-asked becomes the orchestrator: it starts one build session per spec and, as each one lands, starts
-the next in the arc's order without coming back to you. Landed means checked, not reported: the
-pull request merged, `main` green on the merge commit, and the spec marked `Completed` on
-`origin/main`. Specs that touch different files and don't need each other's results build in
-parallel, each in its own session; the rest go one at a time. The chain stops and asks you when a
-session ends blocked, `main` goes red, or the next spec isn't a Draft ready to build. Finished
-sessions are archived as their landing is verified.
+asked becomes the orchestrator rather than the builder: it starts one build session per spec, and at
+the outset and each time a spec lands it starts every spec that is now ready, without coming back to
+you. Specs that don't need each other's results and touch different source files build in parallel,
+each in its own session (install the queue before the first time two run at once); the rest go one
+at a time in the arc's order. Landed means checked, not reported: every pull request merged, `main`
+green on the merge commit, and the spec marked `Completed` on `origin/main`. The chain stops and
+asks you when a session ends blocked or without its spec landed, `main` goes red, or the next spec
+isn't a Draft ready to build. Finished sessions are archived as their landing is verified, and when
+the last spec lands you get a report with the lessons the arc's sessions gathered.
 
 **What you'll see.** Each agent builds normally, and at the end — after its own tests and its two
 reviews, which the queue does *not* replace — it gets in line and waits its turn to push. `queue.sh
@@ -444,7 +446,7 @@ Claude Code you can also invoke it directly with `/spec-driven`.
 | Build a spec | "Build SPEC-007." | Plans from the spec's phases, gets the plan and the PR grouping reviewed, then builds on a branch straight through. |
 | Review work | "Review this branch against SPEC-007 in a fresh context." | Runs **two** reviews in **different frames**, each in its own session or subagent, against the acceptance criteria and the relevant rulebooks — before the push, so the branch reaches GitHub already reviewed. |
 | Finish a spec | "Run the completion ritual for SPEC-007." | Sets the status, regenerates the index, writes the delivery note, updates the component inventory. |
-| Build a whole arc | "Build the stability arc." | Starts a build session for the arc's first spec and, as each lands, the next, without asking: independent specs in parallel, the rest in order. Stops and asks if a session ends blocked, `main` goes red, or the next spec isn't Draft. |
+| Build a whole arc | "Build the stability arc." | Orchestrates: starts a build session for each spec as it becomes ready, without asking, independent specs in parallel and the rest in order. Stops and asks if a session ends blocked, `main` goes red, or the next spec isn't ready to build. |
 | Run several at once | "Set up the PR queue and brief three agents for SPEC-007, SPEC-008 and SPEC-009." | Installs the queue, writes a briefing per session from the template, and tells each one to take its turn on the remote rather than push when ready. |
 
 The scripts, which Claude runs for you or you can run yourself:
