@@ -41,3 +41,28 @@ whole idea, and the invariant is **one PR open at a time, taken in the order age
   reasonable thing for a session working alone, which is exactly what breaks a parallel run.
 
 Full protocol, configuration and the stale-entry rules: `scripts/pr-queue/PROTOCOL.md`.
+
+**Running an arc through — one build session per spec**
+
+When one session orchestrates an arc, starting a build session per spec, the instruction to build
+the arc is the instruction to build each of its specs in turn (`spec-lifecycle.md`). The orchestrator
+does not ask again between them.
+
+- **Start the next spec's session as soon as the last one has landed, without asking.** The next
+  spec is the next in `arc_order`, and its session is a new one, briefed like the first.
+- **Landed is checked, never taken from a report.** The PR is merged, `main` is green on the merge
+  commit, the queue lock is released, and the spec is `Completed` on `origin/main`. The session's own
+  account of its finish is not that proof, and a turn-end note that reports progress (a plan drafted,
+  a review running) is not a finish at all, so nothing starts on one.
+- **Independent specs may build in parallel, each in its own session; the rest chain one at a time.**
+  Two specs are independent when they touch different files and neither needs the other's result,
+  whether through `depends_on` or through something the earlier one builds. Arcs can carry
+  dependencies the frontmatter does not name, so when independence is not clear, chain them. The
+  queue still serialises their PRs.
+- **Archive a finished session in the step that verifies its landing,** before starting the next one,
+  wherever the harness can archive sessions. A session idle partway through its work, or one waiting
+  on an answer, is not finished.
+- **Brief each new session** from `docs/templates/multi-agent-briefing.md`, including the lessons the
+  previous spec left.
+- **Stop the chain and ask the human** if a session ends blocked, `main` is red, or the next spec is
+  not `Draft`.

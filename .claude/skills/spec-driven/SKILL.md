@@ -180,7 +180,8 @@ before handing off.
 
 ## 2. Build a spec (plan-gated)
 
-Only when told to build — a Draft spec sitting in the repo is not a signal to start.
+Only when told to build — a Draft spec sitting in the repo is not a signal to start. Being told to
+build an arc is being told to build each of its specs in `arc_order` (§5).
 
 Follow `session-rhythm.md` from the top: it carries the fetch-and-branch step, the plan and the PR
 grouping that gate the start, the run-to-completion rule, the two diff frames that gate the push, and
@@ -210,6 +211,13 @@ configuration seams for a project that is not on GitHub.
 Install it once, before launching anyone — `sh scripts/pr-queue/install.sh` (the optional
 `'<branch-regex>'` defaults to `.`, every branch; a narrowed one fails open the day branch naming
 moves on) — and brief every session from `docs/templates/multi-agent-briefing.md`.
+
+**Running an arc through** is the same exception, and the user asking for the arc is the ask. The
+orchestrating session starts one build session per spec and, as each one lands, starts the next in
+`arc_order` without asking: independent specs in parallel, the rest one at a time. It stops and asks
+if a session ends blocked, `main` is red or the next spec is not `Draft`. `several-agents.md` →
+*Running an arc through* carries what counts as landed (checked on `origin/main`, never taken from
+the session's report), what makes two specs independent, and archiving the finished session.
 
 One fact about installing is worth knowing before the first run: `install.sh` exits **3**, having
 installed everything else, when it could not wire the hook — a foreign `pre-push` already occupies

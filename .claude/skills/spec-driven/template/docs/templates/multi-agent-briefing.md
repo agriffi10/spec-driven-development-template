@@ -29,6 +29,9 @@ below, that rebase belongs *after* you take the lock, not before.
 **Who else is running.** [One line per peer: session, spec, branch. "You are the only one" is also an
 answer, and a useful one.]
 
+**What the last spec left.** [In an arc run: the lessons the previous spec's session reported, and
+anything it left for this one. "First in its arc" is also an answer.]
+
 **Files you and a peer will both touch.** [List them — the always-loaded `CLAUDE.md`, an index, a
 shared module. Name them even when you think the overlap is small.] These will conflict at rebase.
 Resolve by **keeping both changes**; never resolve a conflict by discarding a peer's work, and if the

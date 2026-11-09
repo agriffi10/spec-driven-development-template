@@ -7,7 +7,9 @@ is one edit and a regeneration, never two edits kept in step by hand.
 
 - **Draft** — written, **reviewed by a fresh-context reviewer (`reviewer-contract.md`)** and
   refined, but **do not build until told.** Specs are often authored well ahead of implementation. A
-  Draft spec sitting in the repo is not a signal to start it. A spec is not Draft-ready while it still
+  Draft spec sitting in the repo is not a signal to start it. Being told to build an arc is being
+  told to build each of its specs in `arc_order`, and an orchestrating session starts the next one as
+  each lands (`several-agents.md`). A spec is not Draft-ready while it still
   has unresolved questions (`authoring-a-spec.md`), and a spec that has not been through the gate is not Draft-ready,
   whatever its `spec_status` says.
 - **In Progress** — exactly one spec at a time is in flight. Set when you branch to build it.
