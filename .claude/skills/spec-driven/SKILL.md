@@ -12,8 +12,8 @@ description: >-
   always-loaded tier stays lean (budget + a register of one file per decision, its fences in a generated index).
   Triggers on phrases like "set up
   spec-driven", "scaffold the docs structure", "write a spec", "start SPEC-XXX", "build this spec",
-  "complete the spec / run the completion ritual", "run several agents at once", "which agent
-  should review this".
+  "complete the spec / run the completion ritual", "run several agents at once", "build the X
+  arc", "which agent should review this".
 ---
 
 # Spec-Driven Development
@@ -158,6 +158,7 @@ site was found only after three review frames. A pointer cannot drift from what 
 | Watch PRs, watch `main` | `docs/process/session-rhythm.md` → *Landing the spec* |
 | Finish a spec | `docs/process/completion-ritual.md` |
 | Several sessions on one repo | `docs/process/several-agents.md`, then `scripts/pr-queue/PROTOCOL.md` |
+| Build a whole arc | `docs/process/several-agents.md` → *Running an arc through* |
 | Which agent does which job | `docs/process/agent-roles.md` |
 | What a spec's status means | `docs/process/spec-lifecycle.md` |
 
@@ -180,7 +181,8 @@ before handing off.
 
 ## 2. Build a spec (plan-gated)
 
-Only when told to build — a Draft spec sitting in the repo is not a signal to start.
+Only when told to build — a Draft spec sitting in the repo is not a signal to start. Being told to
+build an arc is being told to build each of its specs in `arc_order` (§5).
 
 Follow `session-rhythm.md` from the top: it carries the fetch-and-branch step, the plan and the PR
 grouping that gate the start, the run-to-completion rule, the two diff frames that gate the push, and
@@ -210,6 +212,15 @@ configuration seams for a project that is not on GitHub.
 Install it once, before launching anyone — `sh scripts/pr-queue/install.sh` (the optional
 `'<branch-regex>'` defaults to `.`, every branch; a narrowed one fails open the day branch naming
 moves on) — and brief every session from `docs/templates/multi-agent-briefing.md`.
+
+**Running an arc through** is the same exception, and the user asking for the arc is the ask. The
+session told orchestrates: it starts one build session per spec, and at the outset and each time a
+spec lands it starts every spec now ready without asking, independent specs in parallel and the rest
+one at a time in `arc_order`. It stops and asks if a session ends blocked, without its spec
+landed or waiting on an answer, `main` is red, or the next spec is not `Draft`. `several-agents.md` → *Running an arc
+through* carries what makes a spec ready and two specs independent, installing the queue first, what
+counts as landed (checked on `origin/main`, never taken from the session's report), archiving
+finished sessions, and the end of the arc.
 
 One fact about installing is worth knowing before the first run: `install.sh` exits **3**, having
 installed everything else, when it could not wire the hook — a foreign `pre-push` already occupies
