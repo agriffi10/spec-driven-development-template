@@ -216,9 +216,9 @@ moves on) — and brief every session from `docs/templates/multi-agent-briefing.
 **Running an arc through** is the same exception, and the user asking for the arc is the ask. The
 session told orchestrates: it starts one build session per spec, and at the outset and each time a
 spec lands it starts every spec now ready without asking, independent specs in parallel and the rest
-one at a time in `arc_order`. It stops and asks if a session ends blocked or without its spec
-landed, `main` is red, or the next spec is not Draft-ready. `several-agents.md` → *Running an arc
-through* carries what makes a spec ready and two specs independent, when the queue is needed, what
+one at a time in `arc_order`. It stops and asks if a session ends blocked, without its spec
+landed or waiting on an answer, `main` is red, or the next spec is not `Draft`. `several-agents.md` → *Running an arc
+through* carries what makes a spec ready and two specs independent, installing the queue first, what
 counts as landed (checked on `origin/main`, never taken from the session's report), archiving
 finished sessions, and the end of the arc.
 

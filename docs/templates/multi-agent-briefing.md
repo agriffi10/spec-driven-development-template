@@ -29,9 +29,9 @@ below, that rebase belongs *after* you take the lock, not before.
 **Who else is running.** [One line per peer: session, spec, branch. "You are the only one" is also an
 answer, and a useful one.]
 
-**In an arc run.** [Delete this paragraph outside one, and the queue section below when this
-session is the only build running.] The orchestrator starts the arc's next spec: do not start it,
-and do not ask whether to. What the arc's landed specs left for you: [the lessons and leftovers their
+**In an arc run.** [Delete this paragraph outside one.] The orchestrator starts the arc's next spec:
+do not start it, and do not ask whether to. A question only the human can answer is still asked here
+with the question tool, and the orchestrator relays it. What the arc's landed specs left for you: [the lessons and leftovers their
 sessions reported, or "first in its arc"]. Your spec is finished when `spec_status: Completed` and
 the regenerated indexes are merged on `origin/main`, so the completion ritual's commit rides in your
 last PR or in one of its own that you also land. End your last turn with your PR numbers and the

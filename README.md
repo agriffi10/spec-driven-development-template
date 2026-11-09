@@ -417,11 +417,12 @@ thing for a session working alone, which is precisely what breaks a parallel run
 asked becomes the orchestrator rather than the builder: it starts one build session per spec, and at
 the outset and each time a spec lands it starts every spec that is now ready, without coming back to
 you. Specs that don't need each other's results and touch different source files build in parallel,
-each in its own session (install the queue before the first time two run at once); the rest go one
-at a time in the arc's order. Landed means checked, not reported: every pull request merged, `main`
+each in its own session; the rest go one at a time in the arc's order. The PR queue goes in before
+the first session starts. Landed means checked, not reported: every pull request merged, `main`
 green on the merge commit, and the spec marked `Completed` on `origin/main`. The chain stops and
-asks you when a session ends blocked or without its spec landed, `main` goes red, or the next spec
-isn't a Draft ready to build. Finished sessions are archived as their landing is verified, and when
+asks you when a session ends blocked or without its spec landed, a session is waiting on your
+answer (its question is relayed word for word), `main` goes red, or the next spec isn't a Draft
+ready to build. Finished sessions are archived as their landing is verified, and when
 the last spec lands you get a report with the lessons the arc's sessions gathered.
 
 **What you'll see.** Each agent builds normally, and at the end — after its own tests and its two
