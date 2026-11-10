@@ -32,6 +32,7 @@
 #   `stale_after` (16 — the one check that reads the DATE as well as the tree, by design).
 # ERROR (exit 2): the shared frontmatter reader or the index generator is missing, fails, or
 #   returns no verdict — the checks that read through them cannot run, and must not read as passed.
+#   Also a run stopped by a signal (HUP, INT, PIPE or TERM), which printed nothing it can stand by.
 #
 # There is no WARN tier: `spec-lint.sh` owns the soft per-spec judgements, and every rule
 # here is a shape the layering depends on — a shape is either held or it isn't.
@@ -144,8 +145,15 @@ GENERATOR="scripts/gen-index.sh"
 total=""
 FAILS="${TMPDIR:-/tmp}/docs-lint.$$"
 # Every scratch file this script writes is `${TMPDIR:-/tmp}/docs-lint-<name>.$$`, so one glob
-# covers them all — a check interrupted midway must not leave its scratch behind.
-trap 'rm -f "$FAILS" "${TMPDIR:-/tmp}"/docs-lint-*.$$' EXIT INT TERM
+# covers them all — a check interrupted midway must not leave its scratch behind. The suffix is
+# `.$$` exactly: `docs-lint-fmone.$$.err` escaped the glob and leaked one file per run.
+# `scripts/docs-lint-test.sh` runs every case in an empty TMPDIR and fails one that leaves anything.
+# A signal EXITS, and the EXIT trap then cleans up. A handler that only removed the scratch let the
+# shell resume after it with $FAILS gone, so an interrupted run printed `docs-lint: ok` and exit 0.
+# HUP and PIPE are trapped too: dash runs no EXIT trap when a signal kills it, so an untrapped one
+# leaked the scratch — `docs-lint.sh | head` is enough to raise PIPE.
+trap 'rm -f "$FAILS" "${TMPDIR:-/tmp}"/docs-lint-*.$$' EXIT
+trap 'exit 2' HUP INT PIPE TERM
 : > "$FAILS"
 
 note() { printf 'FAIL  %s\n' "$1" >> "$FAILS"; }
@@ -155,10 +163,11 @@ note() { printf 'FAIL  %s\n' "$1" >> "$FAILS"; }
 # that dies on a syntax error prints nothing, and a check iterating over no records passes. Called
 # from the main shell, never a pipeline, so the `exit 2` reaches the script.
 FM_ONE="${TMPDIR:-/tmp}/docs-lint-fmone.$$"
+FM_ERR="${TMPDIR:-/tmp}/docs-lint-fmerr.$$"
 fm_read() {
   [ -f "$READER" ] || { echo "error: docs-lint: the frontmatter reader $READER is missing; docs-lint.sh, spec-lint.sh and gen-index.sh read every frontmatter through it" >&2; exit 2; }
-  if ! awk -f "$READER" "$1" > "$FM_ONE" 2> "$FM_ONE.err"; then
-    echo "error: docs-lint: the frontmatter reader failed on $1: $(head -1 "$FM_ONE.err")" >&2
+  if ! awk -f "$READER" "$1" > "$FM_ONE" 2> "$FM_ERR"; then
+    echo "error: docs-lint: the frontmatter reader failed on $1: $(head -1 "$FM_ERR")" >&2
     exit 2
   fi
   if [ "$(awk -F'\t' '$2 == "F"' "$FM_ONE" | wc -l | tr -d '[:space:]')" != 1 ]; then
