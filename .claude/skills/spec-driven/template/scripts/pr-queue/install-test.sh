@@ -25,7 +25,11 @@
 set -eu
 SRC="$(cd "$(dirname "$0")" && pwd)"
 WORK="${TMPDIR:-/tmp}/pr-queue-install-test.$$"
-trap 'rm -rf "$WORK"' EXIT INT TERM
+# A signal EXITS, and the EXIT trap then cleans up: a handler that only cleaned up let the shell
+# resume after it with its scratch gone. HUP and PIPE are trapped too, because dash runs no EXIT
+# trap when a signal kills it. `scripts/signal-test.sh` (template repo only) holds every script to this.
+trap 'rm -rf "$WORK"' EXIT
+trap 'exit 1' HUP INT PIPE TERM
 pass=0; fail=0
 
 sh -n "$SRC/install.sh" || { echo "FAIL  install.sh does not parse"; exit 1; }

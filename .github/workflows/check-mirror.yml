@@ -20,3 +20,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check the root scaffold matches the skill payload
         run: sh scripts/check-mirror.sh
+      # Every script that traps a signal must exit on it. Here rather than in a path-filtered
+      # workflow for the same reason as the mirror check: the failure is a script nobody listed.
+      # The self-test first, so a green run over the scripts means the checks themselves fire.
+      # The runner starts every step with SIGPIPE ignored, and a shell cannot trap a signal it
+      # inherited as ignored, so without the reset every PIPE check is skipped — the signal behind
+      # `gen-index.sh | head`. GNU env (coreutils 8.31+) restores the default before sh starts.
+      - name: Self-test the signal test
+        run: env --default-signal=HUP,INT,PIPE,TERM sh scripts/signal-test.sh --self-test
+      - name: Check every script exits on HUP, INT, PIPE and TERM
+        run: env --default-signal=HUP,INT,PIPE,TERM sh scripts/signal-test.sh

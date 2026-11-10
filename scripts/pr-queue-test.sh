@@ -35,7 +35,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="${PR_QUEUE_TEST_SRC:-$ROOT/scripts/pr-queue}"
 FILTER="${1:-}"
 WORK="${TMPDIR:-/tmp}/pr-queue-test.$$"
-trap 'rm -rf "$WORK"' EXIT INT TERM
+# A signal EXITS, and the EXIT trap then cleans up: a handler that only cleaned up let the shell
+# resume after it with its scratch gone. HUP and PIPE are trapped too, because dash runs no EXIT
+# trap when a signal kills it. `scripts/signal-test.sh` (template repo only) holds every script to this.
+trap 'rm -rf "$WORK"' EXIT
+trap 'exit 1' HUP INT PIPE TERM
 
 # Parse the hook before exercising it. A syntax error partway through a shell script can end a
 # run with status 0 — the hook never reaches its checks and every push sails through, which from

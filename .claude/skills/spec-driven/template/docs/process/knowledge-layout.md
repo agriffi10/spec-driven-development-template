@@ -318,7 +318,7 @@ Let `OLD` be the commit before the migration branch.
    ```sh
    : "${OLD:?set OLD to the commit before the migration}"
    ( cd "$(git rev-parse --show-toplevel)" && tmp=$(mktemp -d) &&
-     trap 'rm -rf "$tmp"' EXIT && trap 'exit 1' INT TERM HUP &&
+     trap 'rm -rf "$tmp"' EXIT && trap 'exit 1' HUP INT PIPE TERM &&
      git -c core.quotePath=false ls-tree -r --name-only "$OLD" -- docs/decisions/ |
      while IFS= read -r f; do
        case $f in */INDEX.md) continue ;; *.md) ;; *) continue ;; esac

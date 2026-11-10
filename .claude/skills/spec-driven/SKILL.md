@@ -246,7 +246,7 @@ that exist (not itself); arc keys that are half-present, malformed, ambiguous (t
 or that contradict a dependency; two files with one id; a bold header line (`**Status:** …`) left in
 the body; a spec missing a required section (`## Overview`, `## Scope`, `## Functional Requirements`,
 `## Implementation Phases`), or containing an `Open Questions` / `Checkpoint` heading. **ERROR** (exit
-2): the reader (`scripts/frontmatter.awk`) is missing, fails, or returns no verdict. **WARN** (exit 0): unfilled placeholders, a
+2): the reader (`scripts/frontmatter.awk`) is missing, fails, or returns no verdict, or a signal (HUP, INT, PIPE or TERM) stopped the run. **WARN** (exit 0): unfilled placeholders, a
 spec with FRs but no acceptance criteria anywhere in it, and a spec carrying more than
 `FR_CEILING` (8) distinct FRs. POSIX `sh` — no runtime dependency. `scripts/spec-lint-test.sh` is its
 fixture corpus (`tests/spec-lint/*.case`, plus an unfilled copy of the spec template as a live case):
@@ -288,7 +288,7 @@ agent or decision file in a subdirectory of its tree (dotfiles there are checked
 and, in any standing doc, script or workflow file, a dated measurement — `measured` or `as of`
 beside an ISO date — with no short commit SHA in the same paragraph, bullet or comment block
 (frozen records under `docs/specs`, `docs/spec-delivery` and `docs/templates` are exempt, and so
-is `tests/`). Nothing is exempt: the shipped example area and decision are conformant, so a
+is `tests/`). **ERROR** (exit 2): the reader or the index generator is missing, fails, or returns no verdict, or a signal (HUP, INT, PIPE or TERM) stopped the run. Nothing is exempt: the shipped example area and decision are conformant, so a
 fresh scaffold is green by conformance. **`scripts/docs-lint-test.sh` is its fixture corpus — run it after any change to
 `docs-lint.sh`.** The linter passing against your own docs says nothing about whether its checks
 work; the corpus is what says that. The budgets are **ratchets against accretion**: when one fires because a doc grew a line at a time, cut and re-ratchet at the new
