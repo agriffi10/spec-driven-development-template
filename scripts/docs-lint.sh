@@ -622,7 +622,7 @@ if [ -s "$REG_AREA_INFO" ]; then
     fi
     if [ ! -f "$rule" ]; then
       note "Area \"$title\" governs $(printf '%s' "$want" | tr '\n' ' '| sed 's/ $//'), but $rule does not exist. A governed tree has a
-      path-scoped rule with exactly those globs, so the fences fire when a matching file is opened. Write it as:
+      path-scoped rule with exactly those globs, so the fences fire when a matching file is read or edited. Write it as:
 $({ printf '%s\n' '---' 'paths:'; printf '%s\n' "$want" | sed 's/^/  - "/; s/$/"/'; printf '%s\n' '---' \
   "Files matching these paths are governed by the **$title** decisions in \`docs/decisions/$slug/\`." \
   "Read the area's fences in \`docs/decisions/index.yaml\` first — they are not loaded with CLAUDE.md."; } | sed 's/^/        /')"
@@ -999,7 +999,7 @@ if [ -d "$PROCESS_DIR" ]; then
           note "$r: the body is not the two-line process template (\"Files matching these paths are governed by
       \`docs/process/<part>.md\`.\" / \"Read it before changing one — it is not loaded with CLAUDE.md.\") nor
       the area template (\"…governed by the **<Area>** decisions in \`docs/decisions/<slug>/\`.\").
-      A committed rule reaches every teammate on every matching Read; a template leaves no room for a
+      A committed rule reaches every teammate on every matching read or edit; a template leaves no room for a
       line that is not a pointer."
         elif [ "$have_parts" -eq 1 ] && ! grep -qxF "$PROCESS_DIR/$part.md" "$PARTS"; then
           note "$r points at docs/process/$part.md, which is not a row in the One-file-per-part table. A rule

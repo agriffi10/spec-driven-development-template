@@ -131,7 +131,7 @@ body. Rules that keep the register useful (each earned by a real failure in a pr
 - **Declare what an area governs.** `governs` lists the code trees the area's fences apply to, as
   `dir/**`, `dir/prefix-*/**`, `dir/**/*.ext`, `dir/*.ext` or exact paths, or `[]`. An area that
   governs a tree has a path-scoped rule at `.claude/rules/decisions-<area>.md` — the area template
-  below, with exactly those globs — so its fences fire when a matching file is opened with Read; an
+  below, with exactly those globs — so its fences fire when a matching file is read or edited (`INDEX.md` says how); an
   area that governs none has no rule.
 - **A new area** is a directory `docs/decisions/<slug>/` holding its concept `<slug>.md`, a row in
   `CLAUDE.md`'s Key Decisions table in slug order, its rule when it governs a tree, and then

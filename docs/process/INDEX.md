@@ -31,7 +31,7 @@ recursion, which is the cost this layout exists to avoid.
 | `docs/process/authoring-a-spec.md` | what makes a spec buildable: scope, FRs with binary criteria, size, no Open Questions, the spec's one review | when writing or revising a spec |
 | `docs/process/reviewer-contract.md` | the review gate in full: counts and frames, rotating the frame, briefing the reviewer, the build frame, the exit rule, adjudicating two FRs that cannot both hold, the evidence | before briefing any reviewer, when a round's findings decide the next frame, and when a build hits two FRs that cannot both hold |
 | `docs/process/agent-roles.md` | which agent does which job, and the rule that every agent runs on the model that started the task | before delegating any artifact to a subagent |
-| `docs/process/several-agents.md` | running N sessions on one repo: the PR queue, what the lock covers, briefing each session, running an arc through session by session | when more than one session shares this repo, or when told to build an arc |
+| `docs/process/several-agents.md` | running N sessions on one repo: the PR queue, what the lock covers, briefing each session, running an arc through session by session, which rules a worktree sees | when more than one session shares this repo, or when told to build an arc |
 | `docs/process/completion-ritual.md` | the seven steps at spec completion, and the anti-regrowth & doc-hygiene rules | at spec completion, and before any edit to a file in the table above |
 | `docs/process/operational-traps.md` | traps that pass locally and bite in CI or on deploy — project-specific, seeded as they bite | before the first CI- or deploy-dependent step of a build |
 | `docs/process/ground-rules.md` | the project's load-bearing constraints | when adding a dependency or a constraint |
@@ -68,8 +68,8 @@ is deliberately small and **must not regrow**.
 **Path-scoped rules are a backstop, not the mechanism.** `.claude/rules/*.md` carries one pointer per
 governed tree — the process kind (specs, delivery docs, the register, this directory, the PR queue,
 the agents, the rulebooks, the architecture doc and inventory) and the `decisions-<area>` kind, one per decision area that declares what it governs —
-each firing when a matching file is opened **with the Read tool** — not when it is read through the
-shell, so a session working in `cat` and `grep` never sees one, and only for a path under the
-session's own working directory, so a file opened in another worktree fires nothing. The instruction to pull a part
+each firing on a file tool (Read, Write, Edit) or a one-file shell read with no pipe or redirect (`cat`,
+`head`, `tail`, `sed -n`, `grep` and the like) — not on other shell work. A worktree may see another checkout's rules, or none:
+`several-agents.md`. The instruction to pull a part
 before working in its area lives here and in `CLAUDE.md`; the rule only catches the session that
 forgot.
