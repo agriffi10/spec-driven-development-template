@@ -239,7 +239,7 @@ the router's table says.
    that spec-lint passed — and spec-lint knows nothing about your code. (`docs-lint` runs locally
    before a push, not in CI.)
 5. **Delete the mirror machinery.** Remove `scripts/check-mirror.sh`, `scripts/sync-from-skill.sh`,
-   `.github/workflows/check-mirror.yml` and `.claude-plugin/`. The first three keep *this* template's
+   `.github/workflows/check-mirror.yml`, `scripts/signal-test.sh` and `.claude-plugin/`. The first three keep *this* template's
    two copies of the scaffold in step, and in your project they will fail: the check compares the
    root files against the copy inside the skill, so it goes red the moment you customize `CLAUDE.md`
    in step 2. `.claude-plugin/` publishes this template's skill, which your project does not do. If
@@ -521,8 +521,9 @@ from the template don't need them.
 | `scripts/pr-queue/PROTOCOL.md` | The protocol the agents read: the four commands, what the lock covers, the configuration seams, and the stale-entry rules. | Claude (multi-agent runs) |
 | `scripts/sync-from-skill.sh` | Maintenance for **this template repo only** — regenerates the root scaffold from the skill's canonical copy. Delete it in a derived project. | Maintainers of this template |
 | `scripts/check-mirror.sh` | Maintenance for **this template repo only** — fails if the root scaffold has drifted from the canonical copy, in either direction. Delete it in a derived project, where customizing `CLAUDE.md` makes it fail by design. | CI + maintainers |
+| `scripts/signal-test.sh` | Maintenance for **this template repo only** — every script under `scripts/` with a `trap` must end its signal handling with one column-0 `trap 'exit N' HUP INT PIPE TERM`, trap no signal after it or off column 0, and exit with that N on each of the four. A script with no trap is not checked. A handler that only cleans up lets the shell resume after it; an untrapped signal kills dash without its EXIT trap. `--self-test` runs it against fixtures, one per way of breaking the rule. Delete it in a derived project. | CI + maintainers |
 | `.github/workflows/spec-lint.yml` | Runs the spec-lint corpus and then spec-lint, on pull requests and pushes to `main` that touch `docs/specs/`, the spec template, the lint script, the frontmatter reader, its corpus, or the workflow itself. | CI |
-| `.github/workflows/check-mirror.yml` | Runs the mirror check on every pull request and push to `main`, in **this template repo only**. Deliberately not path-filtered — the failure it exists to catch is a change in a path nobody thought to list. Delete it in a derived project. | CI |
+| `.github/workflows/check-mirror.yml` | Runs the mirror check and the signal test on every pull request and push to `main`, in **this template repo only**. Deliberately not path-filtered — the failure it exists to catch is a change in a path nobody thought to list. Delete it in a derived project. | CI |
 | `.github/workflows/ci.yml.example` | **Inert** template for your language's formatter, linter, type-checker and tests (Node and Python jobs included). The `.example` extension means GitHub never runs it; you turn it into a real `ci.yml` at setup. | CI (once you fill it in) |
 | `.github/pull_request_template.md` | PR checklist restating the rules: maps to the plan, no new open questions, **both framed pre-push reviews done**, gates green, owed criteria named, watch to green. | You + Claude |
 | `.claude/rules/*.md` | **Path-scoped pointers**, one per governed tree, of two kinds: the process kind (specs, delivery docs, the register, the process, the PR queue, the agents, the rulebooks, the architecture doc), which says which process part to read first, and `decisions-<area>.md`, one per decision area that declares what it governs, which says to read that area's fences in the generated index first. Each fires when Claude opens a matching file with its Read tool. A backstop for a session that forgot, not the mechanism. | Claude Code (on Read) |
@@ -555,9 +556,9 @@ situation, editing the root copy and copying it back into the skill is fine. Wha
 two end up identical and both are committed.)
 
 **Never hand-edit the root `docs/`, `CLAUDE.md`, or `.github/` in this repository** — they are
-generated. The next sync silently discards your change and then reports success. Six files at the
+generated. The next sync silently discards your change and then reports success. Seven files at the
 root are *not* mirrored, because they can't be: `README.md`, `.gitignore`,
-`.claude-plugin/marketplace.json`, the two maintenance scripts, and
+`.claude-plugin/marketplace.json`, the three maintenance scripts, and
 `.github/workflows/check-mirror.yml`. Those you edit directly.
 
 **CI checks the mirror**, in both directions, because the two failures are different:
@@ -609,6 +610,7 @@ which is which tells you what breaks silently if you skip a step.
 | One pull request open at a time when several agents share the repo | `scripts/pr-queue/` (the `pre-push` hook) |
 | A branch is rebased on current `main` before it reaches the remote | `scripts/pr-queue/pre-push`, **for branches matching the enforced pattern in a checkout where the queue is installed** — a solo session, a repo that never installs it, and a branch outside the pattern are all still on prose alone. Nothing checks this server-side; GitHub's "require branches to be up to date" is the setting that would |
 | The root scaffold matches the skill's canonical copy | `check-mirror.sh` (CI **and** local pre-push — the other gates cannot see the mirror) |
+| Every script with a `trap` exits on a signal rather than resuming | `signal-test.sh` (CI, in the check-mirror workflow, **this template repo only**) |
 | Your language's own quality gates | the `ci.yml` you create from `ci.yml.example` |
 
 The rows enforced only by documents are the ones worth reading `docs/process/` for. They hold because the router and the session rhythm load with `CLAUDE.md` every session and the
@@ -685,7 +687,7 @@ script's `ROOT_ONLY` list names a file that no longer exists, so drop that entry
 **`check-mirror` fails in a project I created from this template.** It's meant to, and the fix is to
 delete it. That check exists to keep the template's own two copies of the scaffold identical; your
 project has one scaffold, and customizing `CLAUDE.md` or `docs/` makes the root differ from the copy
-bundled in the skill. Remove `scripts/check-mirror.sh`, `scripts/sync-from-skill.sh` and
+bundled in the skill. Remove `scripts/check-mirror.sh`, `scripts/sync-from-skill.sh`, `scripts/signal-test.sh` and
 `.github/workflows/check-mirror.yml`, and keep the rest of `.claude/skills/spec-driven/` unless you
 use the plugin.
 

@@ -23,7 +23,8 @@
 # FAIL (exit 1): a file is missing, differs, is orphaned, or differs in mode.
 # PASS (exit 0): the root is exactly the payload plus the root-only files below.
 # ERROR (exit 2): the repo, payload or file list is not in a shape this can
-#                 compare — a vacuous pass is refused rather than reported.
+#                 compare — a vacuous pass is refused rather than reported. Also
+#                 a run stopped by a signal (HUP, INT, PIPE or TERM).
 #
 # File lists come from `git ls-files`, not `find`, for two reasons: it lists
 # what the repo actually ships (so .DS_Store, node_modules/ and anything else
@@ -42,9 +43,10 @@ SKILL_TEMPLATE="$ROOT/$PAYLOAD_PREFIX"
 
 # Root files that are deliberately NOT mirrored, because they cannot be: the
 # first two describe this repo rather than the scaffold, the third publishes this
-# repo's skill as a Claude Code plugin, and the last three are
+# repo's skill as a Claude Code plugin, the next three are
 # the mirror machinery itself, which by definition is not part of what it
-# mirrors (a scaffolded repo has no payload, so it needs none of them). Every
+# mirrors (a scaffolded repo has no payload, so it needs none of them), and the
+# last tests this repo's scripts, both copies, from the root alone. Every
 # entry is checked to exist below, so this list cannot rot into a set of
 # exemptions for files nobody has — which is the way such a list fails.
 #
@@ -56,7 +58,8 @@ ROOT_ONLY='README.md
 .claude-plugin/marketplace.json
 scripts/sync-from-skill.sh
 scripts/check-mirror.sh
-.github/workflows/check-mirror.yml'
+.github/workflows/check-mirror.yml
+scripts/signal-test.sh'
 
 command -v git >/dev/null 2>&1 || {
   echo "error: git is required to enumerate the repo's files" >&2
@@ -81,8 +84,12 @@ if [ -n "$symlinks" ]; then
 fi
 
 tmp=$(mktemp -d) || exit 2
-# shellcheck disable=SC2064
-trap "rm -rf '$tmp'" EXIT INT TERM
+# A signal EXITS, and the EXIT trap then cleans up. A handler that only removed $tmp let the shell
+# resume after it with the file lists gone, ending in "No such file" errors rather than a verdict.
+# HUP and PIPE are trapped too, because dash runs no EXIT trap when a signal kills it.
+# `scripts/signal-test.sh` holds every script with a trap to this.
+trap 'rm -rf "$tmp"' EXIT
+trap 'exit 2' HUP INT PIPE TERM
 
 # core.quotePath=false keeps non-ASCII paths literal. Git still quotes a path
 # containing a newline or a double quote, which would break line-based reading —

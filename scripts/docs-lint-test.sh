@@ -40,7 +40,7 @@ CASES="${DOCS_LINT_TEST_CASES:-$ROOT/tests/docs-lint}"
 FILTER="${1:-}"
 WORK="${TMPDIR:-/tmp}/docs-lint-test.$$"
 trap 'rm -rf "$WORK" "$WORK.idx" "$WORK.missing" "$WORK.self" "$WORK.floor" "$WORK.rg" "$WORK.tmp" "$WORK.leak"' EXIT
-trap 'exit 1' INT TERM
+trap 'exit 1' HUP INT PIPE TERM
 
 # Parse the linter before exercising it. A syntax error partway through a shell script can
 # end a run with status 0 — the linter never reaches its checks and reports success on a

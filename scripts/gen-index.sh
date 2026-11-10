@@ -38,8 +38,12 @@ TAB=$(printf '\t')
 
 SCRATCH="${TMPDIR:-/tmp}/gen-index.$$"
 TMP_INDEX=""
+# A signal EXITS, and the EXIT trap then cleans up: a handler that only cleaned up let the shell
+# resume after it with its scratch gone. HUP and PIPE are trapped too, because dash runs no EXIT
+# trap when a signal kills it. `scripts/signal-test.sh` (template repo only) holds every script to this.
+# `gen-index.sh | head` is enough to raise PIPE.
 trap 'rm -f "$SCRATCH".* ${TMP_INDEX:+"$TMP_INDEX"}' EXIT
-trap 'exit 2' INT TERM
+trap 'exit 2' HUP INT PIPE TERM
 
 # Every step below is checked by hand rather than left to `set -e`, which is OFF inside a function
 # called as an `if` condition or in an `||` list — exactly how the write and print paths call one.
