@@ -144,7 +144,9 @@ GENERATOR="scripts/gen-index.sh"
 total=""
 FAILS="${TMPDIR:-/tmp}/docs-lint.$$"
 # Every scratch file this script writes is `${TMPDIR:-/tmp}/docs-lint-<name>.$$`, so one glob
-# covers them all — a check interrupted midway must not leave its scratch behind.
+# covers them all — a check interrupted midway must not leave its scratch behind. The suffix is
+# `.$$` exactly: a name such as `docs-lint-x.$$.err` escapes the glob and leaked one file per
+# run until `scripts/docs-lint-test.sh` began running every case in an empty TMPDIR it checks.
 trap 'rm -f "$FAILS" "${TMPDIR:-/tmp}"/docs-lint-*.$$' EXIT INT TERM
 : > "$FAILS"
 
@@ -155,10 +157,11 @@ note() { printf 'FAIL  %s\n' "$1" >> "$FAILS"; }
 # that dies on a syntax error prints nothing, and a check iterating over no records passes. Called
 # from the main shell, never a pipeline, so the `exit 2` reaches the script.
 FM_ONE="${TMPDIR:-/tmp}/docs-lint-fmone.$$"
+FM_ERR="${TMPDIR:-/tmp}/docs-lint-fmerr.$$"
 fm_read() {
   [ -f "$READER" ] || { echo "error: docs-lint: the frontmatter reader $READER is missing; docs-lint.sh, spec-lint.sh and gen-index.sh read every frontmatter through it" >&2; exit 2; }
-  if ! awk -f "$READER" "$1" > "$FM_ONE" 2> "$FM_ONE.err"; then
-    echo "error: docs-lint: the frontmatter reader failed on $1: $(head -1 "$FM_ONE.err")" >&2
+  if ! awk -f "$READER" "$1" > "$FM_ONE" 2> "$FM_ERR"; then
+    echo "error: docs-lint: the frontmatter reader failed on $1: $(head -1 "$FM_ERR")" >&2
     exit 2
   fi
   if [ "$(awk -F'\t' '$2 == "F"' "$FM_ONE" | wc -l | tr -d '[:space:]')" != 1 ]; then

@@ -39,7 +39,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CASES="${DOCS_LINT_TEST_CASES:-$ROOT/tests/docs-lint}"
 FILTER="${1:-}"
 WORK="${TMPDIR:-/tmp}/docs-lint-test.$$"
-trap 'rm -rf "$WORK" "$WORK.idx" "$WORK.missing" "$WORK.self" "$WORK.floor" "$WORK.rg"' EXIT
+trap 'rm -rf "$WORK" "$WORK.idx" "$WORK.missing" "$WORK.self" "$WORK.floor" "$WORK.rg" "$WORK.tmp"' EXIT
 trap 'exit 1' INT TERM
 
 # Parse the linter before exercising it. A syntax error partway through a shell script can
@@ -143,9 +143,19 @@ for case_file in "$CASES"/*.case; do
     [ -n "$d" ] && rm -f "$WORK/$d"
   done
 
-  got=$(cd "$WORK" && sh scripts/docs-lint.sh 2>&1) && rc=0 || rc=$?
+  # Every run gets an EMPTY TMPDIR of its own and must leave it empty. The linter's EXIT trap
+  # removes its scratch by one glob, and a scratch name that escapes the glob leaks a file per run
+  # with nothing to show for it: `docs-lint-fmone.$$.err` did, and a few corpus runs left 516
+  # behind before a review counted them. Checked for every case, so every path through the linter
+  # — the early `exit 2`s included — is held to it, and the generator it calls is held too.
+  rm -rf "$WORK.tmp"; mkdir -p "$WORK.tmp"
+  got=$(cd "$WORK" && TMPDIR="$WORK.tmp" sh scripts/docs-lint.sh 2>&1) && rc=0 || rc=$?
   ok=1
   [ "$rc" = "${want_exit:-0}" ] || { ok=0; why="exit $rc, wanted ${want_exit:-0}"; }
+  left=$(ls -A "$WORK.tmp")
+  if [ "$ok" = 1 ] && [ -n "$left" ]; then
+    ok=0; why="left scratch behind in TMPDIR: $(printf '%s\n' "$left" | head -3 | tr '\n' ' ')"
+  fi
   if [ "$ok" = 1 ]; then
     sed -n 's/^@@@ match //p' "$case_file" | while IFS= read -r m; do
       [ -n "$m" ] || continue
@@ -381,19 +391,26 @@ Reasoning.
       generator-missing) rm "$RG/scripts/gen-index.sh" ;;
       generator-fails)   printf 'exit 2\n' > "$RG/scripts/gen-index.sh" ;;
     esac
-    got=$(cd "$RG" && sh scripts/docs-lint.sh 2>&1) && rc=0 || rc=$?
+    rm -rf "$WORK.tmp"; mkdir -p "$WORK.tmp"
+    got=$(cd "$RG" && TMPDIR="$WORK.tmp" sh scripts/docs-lint.sh 2>&1) && rc=0 || rc=$?
     case "$rc:$got" in
       2:*"$want"*) ;;
       *) echo "FAIL  self-test: a $kind plant did not stop docs-lint — exit $rc, wanted 2 and \"$want\"."
          printf '%s\n' "$got" | sed 's/^/        /' | head -4
          rg_fail=1 ;;
     esac
+    # An early exit is where scratch is likeliest to escape, so the empty-TMPDIR rule holds here too.
+    if [ -n "$(ls -A "$WORK.tmp")" ]; then
+      echo "FAIL  self-test: a $kind plant left scratch behind in TMPDIR: $(ls -A "$WORK.tmp" | head -3 | tr '\n' ' ')"
+      rg_fail=1
+    fi
   done
   rm -rf "$RG"
   if [ "$rg_fail" -ne 0 ]; then
     echo "----"
-    echo "docs-lint-test: the reader/generator guards are not firing. A reader or generator that fails"
-    echo "or prints nothing would leave every check that reads through it passing over nothing."
+    echo "docs-lint-test: a reader/generator plant did not stop docs-lint cleanly. A reader or generator"
+    echo "that fails or prints nothing would leave every check that reads through it passing over"
+    echo "nothing, and scratch left by an early exit leaks a file per run."
     exit 1
   fi
   echo "docs-lint-test: reader and generator guards verified — 5 plants, each stops docs-lint."
