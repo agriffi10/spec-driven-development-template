@@ -17,7 +17,7 @@ pulled **on demand**, when the router's table says:
 - `@docs/component-inventory.md` — reusable modules/services/components already built
 - `@docs/spec-delivery/SPEC-XXX-*.md` — what a past spec delivered (pull only when a dependency points to one)
 - `@docs/best-practices/INDEX.md` — domain coding rulebooks (React, accessibility, …); route here, then load only the section(s) you need
-- `.claude/rules/` — one path-scoped pointer per governed tree; fires when a matching file is opened with Read (a backstop, not the mechanism)
+- `.claude/rules/` — one path-scoped pointer per governed tree; fires on a matching file's read or edit, as the router says (a backstop, not the mechanism)
 - `.claude/agents/` — the subagent roles the roles table names, each inheriting the parent's model
 
 ---

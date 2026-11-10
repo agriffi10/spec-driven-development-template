@@ -39,6 +39,18 @@ whole idea, and the invariant is **one PR open at a time, taken in the order age
   off fresh `origin/main`, who else is running and on what, the files two agents will both edit, and
   that a rebase conflict is never resolved by discarding a peer's work. An unbriefed session does the
   reasonable thing for a session working alone, which is exactly what breaks a parallel run.
+- **Path-scoped rules follow the session's directory, not your branch.** A session's rules come from
+  the folder it started in, or moved to with `/cd` or `EnterWorktree`, so a session started in its
+  own worktree (the desktop app's, or `claude --worktree`) gets that worktree's rules. A subagent with
+  `isolation: worktree` keeps its parent session's rules. When the parent is in the main checkout,
+  they match the subagent's own paths, so a rule your branch changes fires for it only once the
+  branch merges and that checkout is fast-forwarded; when the parent is itself in a worktree, the
+  subagent's worktree is still cut under the main checkout, and its reads fire no rule at all. A
+  worktree outside the checkout fires nothing for a session started elsewhere. Check a rule change's
+  shape with `sh scripts/docs-lint.sh`, never by moving a shared checkout. Sources: the "Path-specific
+  rules" section of Claude Code's memory docs and its worktrees page; the two subagent cases were
+  measured by having a subagent read a governed file in its own worktree, its parent started first
+  in the main checkout and then in a worktree under `.claude/worktrees/`.
 
 Full protocol, configuration and the stale-entry rules: `scripts/pr-queue/PROTOCOL.md`.
 
