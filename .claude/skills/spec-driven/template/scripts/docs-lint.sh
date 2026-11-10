@@ -32,6 +32,7 @@
 #   `stale_after` (16 — the one check that reads the DATE as well as the tree, by design).
 # ERROR (exit 2): the shared frontmatter reader or the index generator is missing, fails, or
 #   returns no verdict — the checks that read through them cannot run, and must not read as passed.
+#   Also a run stopped by a signal (HUP, INT, PIPE or TERM), which printed nothing it can stand by.
 #
 # There is no WARN tier: `spec-lint.sh` owns the soft per-spec judgements, and every rule
 # here is a shape the layering depends on — a shape is either held or it isn't.
@@ -149,8 +150,10 @@ FAILS="${TMPDIR:-/tmp}/docs-lint.$$"
 # `scripts/docs-lint-test.sh` runs every case in an empty TMPDIR and fails one that leaves anything.
 # A signal EXITS, and the EXIT trap then cleans up. A handler that only removed the scratch let the
 # shell resume after it with $FAILS gone, so an interrupted run printed `docs-lint: ok` and exit 0.
+# HUP and PIPE are trapped too: dash runs no EXIT trap when a signal kills it, so an untrapped one
+# leaked the scratch — `docs-lint.sh | head` is enough to raise PIPE.
 trap 'rm -f "$FAILS" "${TMPDIR:-/tmp}"/docs-lint-*.$$' EXIT
-trap 'exit 2' INT TERM
+trap 'exit 2' HUP INT PIPE TERM
 : > "$FAILS"
 
 note() { printf 'FAIL  %s\n' "$1" >> "$FAILS"; }

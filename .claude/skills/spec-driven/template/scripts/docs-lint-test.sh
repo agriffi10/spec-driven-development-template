@@ -369,26 +369,41 @@ Reasoning.
   # The wanted texts carry docs-lint's own `docs-lint:` prefix because the GENERATOR guards the
   # same reader with the same words: unprefixed, a plant that removed docs-lint's guard passed
   # here on the generator's message, which docs-lint repeats when the generator fails.
-  # The SIGNAL plant records a failure and then signals docs-lint mid-run. A trap that cleaned up
-  # without exiting let the run resume with its failures deleted and print `docs-lint: ok`.
+  # The SIGNAL plants record a failure and then signal docs-lint mid-run, once per trapped signal.
+  # A trap that cleaned up without exiting let the run resume with its failures deleted and print
+  # `docs-lint: ok`. A signal this shell ignored on entry cannot be trapped at all — INT, when the
+  # harness runs as a background job — so a probe skips that one, naming it, rather than going red.
   RG="$WORK.rg"
-  rg_fail=0
+  rg_fail=0; rg_n=0
   for plant in \
     'reader-syntax:error: docs-lint: the frontmatter reader failed on' \
     'reader-silent:error: docs-lint: the frontmatter reader returned no single verdict' \
     'reader-missing:error: docs-lint: the frontmatter reader scripts/frontmatter.awk is missing' \
     'generator-missing:error: docs-lint: the index generator scripts/gen-index.sh is missing' \
     'generator-fails:error: docs-lint: scripts/gen-index.sh --print specs failed (exit 2)' \
-    'signal:error: docs-lint: planted signal'
+    'signal-HUP:error: docs-lint: planted signal' \
+    'signal-INT:error: docs-lint: planted signal' \
+    'signal-PIPE:error: docs-lint: planted signal' \
+    'signal-TERM:error: docs-lint: planted signal'
   do
     kind=${plant%%:*}; want=${plant#*:}
+    case "$kind" in
+      signal-*)
+        sig=${kind#signal-}
+        sh -c "trap 'exit 3' $sig; kill -$sig \$\$; exit 0" && probe=0 || probe=$?
+        if [ "$probe" -ne 3 ]; then
+          echo "docs-lint-test: SKIPPED the $kind plant — this shell ignores $sig, so no trap can catch it."
+          continue
+        fi ;;
+    esac
+    rg_n=$((rg_n + 1))
     rm -rf "$RG"; mkdir -p "$RG/scripts" "$RG/docs/specs"
     cp "$ROOT/scripts/docs-lint.sh" "$ROOT/scripts/frontmatter.awk" "$ROOT/scripts/gen-index.sh" "$RG/scripts/"
     printf '%s\n' '# P' > "$RG/CLAUDE.md"
     printf '%s\n' '---' 'type: Spec' 'id: SPEC-001' 'title: X' 'description: A spec.' 'spec_status: Draft' \
       'depends_on: []' '---' > "$RG/docs/specs/SPEC-001-x.md"
     case "$kind" in
-      signal)            awk '{ print } /^note\(\) \{/ { print "note planted; echo \"error: docs-lint: planted signal\" >&2; kill -TERM $$" }' \
+      signal-*)          awk -v sig="$sig" '{ print } /^note\(\) \{/ { print "note planted; echo \"error: docs-lint: planted signal\" >&2; kill -" sig " $$" }' \
                            "$ROOT/scripts/docs-lint.sh" > "$RG/scripts/docs-lint.sh" ;;
       reader-syntax)     printf 'BEGIN {\n' > "$RG/scripts/frontmatter.awk" ;;
       reader-silent)     printf 'BEGIN { exit 0 }\n' > "$RG/scripts/frontmatter.awk" ;;
@@ -419,7 +434,7 @@ Reasoning.
     echo "a file per run."
     exit 1
   fi
-  echo "docs-lint-test: reader, generator and signal guards verified — 6 plants, each stops docs-lint."
+  echo "docs-lint-test: reader, generator and signal guards verified — $rg_n plants, each stops docs-lint."
 
   # The EMPTY-TMPDIR guard in the corpus loop has to fire too. Hand-mutating it once proves nothing
   # about the next edit: drop the `TMPDIR=` prefix and the leak lands in the real TMPDIR while the
