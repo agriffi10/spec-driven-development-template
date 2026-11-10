@@ -145,9 +145,12 @@ total=""
 FAILS="${TMPDIR:-/tmp}/docs-lint.$$"
 # Every scratch file this script writes is `${TMPDIR:-/tmp}/docs-lint-<name>.$$`, so one glob
 # covers them all — a check interrupted midway must not leave its scratch behind. The suffix is
-# `.$$` exactly: a name such as `docs-lint-x.$$.err` escapes the glob and leaked one file per
-# run until `scripts/docs-lint-test.sh` began running every case in an empty TMPDIR it checks.
-trap 'rm -f "$FAILS" "${TMPDIR:-/tmp}"/docs-lint-*.$$' EXIT INT TERM
+# `.$$` exactly: `docs-lint-fmone.$$.err` escaped the glob and leaked one file per run.
+# `scripts/docs-lint-test.sh` runs every case in an empty TMPDIR and fails one that leaves anything.
+# A signal EXITS, and the EXIT trap then cleans up. A handler that only removed the scratch let the
+# shell resume after it with $FAILS gone, so an interrupted run printed `docs-lint: ok` and exit 0.
+trap 'rm -f "$FAILS" "${TMPDIR:-/tmp}"/docs-lint-*.$$' EXIT
+trap 'exit 2' INT TERM
 : > "$FAILS"
 
 note() { printf 'FAIL  %s\n' "$1" >> "$FAILS"; }

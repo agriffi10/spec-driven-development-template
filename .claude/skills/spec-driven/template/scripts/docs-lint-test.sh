@@ -39,7 +39,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CASES="${DOCS_LINT_TEST_CASES:-$ROOT/tests/docs-lint}"
 FILTER="${1:-}"
 WORK="${TMPDIR:-/tmp}/docs-lint-test.$$"
-trap 'rm -rf "$WORK" "$WORK.idx" "$WORK.missing" "$WORK.self" "$WORK.floor" "$WORK.rg" "$WORK.tmp"' EXIT
+trap 'rm -rf "$WORK" "$WORK.idx" "$WORK.missing" "$WORK.self" "$WORK.floor" "$WORK.rg" "$WORK.tmp" "$WORK.leak"' EXIT
 trap 'exit 1' INT TERM
 
 # Parse the linter before exercising it. A syntax error partway through a shell script can
@@ -145,9 +145,9 @@ for case_file in "$CASES"/*.case; do
 
   # Every run gets an EMPTY TMPDIR of its own and must leave it empty. The linter's EXIT trap
   # removes its scratch by one glob, and a scratch name that escapes the glob leaks a file per run
-  # with nothing to show for it: `docs-lint-fmone.$$.err` did, and a few corpus runs left 516
-  # behind before a review counted them. Checked for every case, so every path through the linter
-  # — the early `exit 2`s included — is held to it, and the generator it calls is held too.
+  # with nothing to show for it: `docs-lint-fmone.$$.err` did, for every run. Checked for every
+  # case and every plant below, so every path the corpus and the plants reach is held to it, the
+  # generator docs-lint calls included. A path neither reaches is not.
   rm -rf "$WORK.tmp"; mkdir -p "$WORK.tmp"
   got=$(cd "$WORK" && TMPDIR="$WORK.tmp" sh scripts/docs-lint.sh 2>&1) && rc=0 || rc=$?
   ok=1
@@ -369,6 +369,8 @@ Reasoning.
   # The wanted texts carry docs-lint's own `docs-lint:` prefix because the GENERATOR guards the
   # same reader with the same words: unprefixed, a plant that removed docs-lint's guard passed
   # here on the generator's message, which docs-lint repeats when the generator fails.
+  # The SIGNAL plant records a failure and then signals docs-lint mid-run. A trap that cleaned up
+  # without exiting let the run resume with its failures deleted and print `docs-lint: ok`.
   RG="$WORK.rg"
   rg_fail=0
   for plant in \
@@ -376,7 +378,8 @@ Reasoning.
     'reader-silent:error: docs-lint: the frontmatter reader returned no single verdict' \
     'reader-missing:error: docs-lint: the frontmatter reader scripts/frontmatter.awk is missing' \
     'generator-missing:error: docs-lint: the index generator scripts/gen-index.sh is missing' \
-    'generator-fails:error: docs-lint: scripts/gen-index.sh --print specs failed (exit 2)'
+    'generator-fails:error: docs-lint: scripts/gen-index.sh --print specs failed (exit 2)' \
+    'signal:error: docs-lint: planted signal'
   do
     kind=${plant%%:*}; want=${plant#*:}
     rm -rf "$RG"; mkdir -p "$RG/scripts" "$RG/docs/specs"
@@ -385,6 +388,8 @@ Reasoning.
     printf '%s\n' '---' 'type: Spec' 'id: SPEC-001' 'title: X' 'description: A spec.' 'spec_status: Draft' \
       'depends_on: []' '---' > "$RG/docs/specs/SPEC-001-x.md"
     case "$kind" in
+      signal)            awk '{ print } /^note\(\) \{/ { print "note planted; echo \"error: docs-lint: planted signal\" >&2; kill -TERM $$" }' \
+                           "$ROOT/scripts/docs-lint.sh" > "$RG/scripts/docs-lint.sh" ;;
       reader-syntax)     printf 'BEGIN {\n' > "$RG/scripts/frontmatter.awk" ;;
       reader-silent)     printf 'BEGIN { exit 0 }\n' > "$RG/scripts/frontmatter.awk" ;;
       reader-missing)    rm "$RG/scripts/frontmatter.awk" ;;
@@ -408,10 +413,36 @@ Reasoning.
   rm -rf "$RG"
   if [ "$rg_fail" -ne 0 ]; then
     echo "----"
-    echo "docs-lint-test: a reader/generator plant did not stop docs-lint cleanly. A reader or generator"
-    echo "that fails or prints nothing would leave every check that reads through it passing over"
-    echo "nothing, and scratch left by an early exit leaks a file per run."
+    echo "docs-lint-test: a plant did not stop docs-lint cleanly. A reader or generator that fails or"
+    echo "prints nothing would leave every check that reads through it passing over nothing, a signal"
+    echo "that does not stop the run can print a success line, and scratch left by an early exit leaks"
+    echo "a file per run."
     exit 1
   fi
-  echo "docs-lint-test: reader and generator guards verified — 5 plants, each stops docs-lint."
+  echo "docs-lint-test: reader, generator and signal guards verified — 6 plants, each stops docs-lint."
+
+  # The EMPTY-TMPDIR guard in the corpus loop has to fire too. Hand-mutating it once proves nothing
+  # about the next edit: drop the `TMPDIR=` prefix and the leak lands in the real TMPDIR while the
+  # case stays green. So a copy of this harness runs one real silent case against a copy of
+  # docs-lint that leaks a file whose name escapes the trap, and must fail that case naming it.
+  LK="$WORK.leak"
+  rm -rf "$LK"; mkdir -p "$LK/scripts" "$LK/cases"
+  cp "$ROOT/scripts/docs-lint-test.sh" "$ROOT/scripts/frontmatter.awk" "$ROOT/scripts/gen-index.sh" "$LK/scripts/"
+  awk '{ print } /^: > "\$FAILS"$/ { print ": > \"${TMPDIR:-/tmp}/docs-lint-planted.$$.leak\"" }' \
+    "$ROOT/scripts/docs-lint.sh" > "$LK/scripts/docs-lint.sh"
+  for c in "$CASES"/*-ok.case; do [ -f "$c" ] && { cp "$c" "$LK/cases/"; break; }; done
+  leak_out=$(DOCS_LINT_TEST_CASES="$LK/cases" sh "$LK/scripts/docs-lint-test.sh" 2>&1) && leak_rc=0 || leak_rc=$?
+  rm -rf "$LK"
+  leak_fired=1
+  [ "$leak_rc" -ne 0 ] || leak_fired=0
+  case "$leak_out" in *"left scratch behind in TMPDIR: docs-lint-planted."*) ;; *) leak_fired=0 ;; esac
+  if [ "$leak_fired" -ne 1 ]; then
+    echo "FAIL  self-test: a docs-lint that leaks scratch past its trap was not refused — exit $leak_rc."
+    printf '%s\n' "$leak_out" | sed 's/^/        /' | head -4
+    echo "----"
+    echo "docs-lint-test: the empty-TMPDIR guard is not firing. A scratch name that escapes the trap"
+    echo "would leak a file per run with every case green."
+    exit 1
+  fi
+  echo "docs-lint-test: the empty-TMPDIR guard fires — a leaking docs-lint was refused."
 fi
