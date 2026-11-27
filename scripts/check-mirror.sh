@@ -20,8 +20,16 @@
 #                     uses `cp -R`, which never deletes, so the stale root copy
 #                     survives every sync.
 #
-# FAIL (exit 1): a file is missing, differs, is orphaned, or differs in mode.
-# PASS (exit 0): the root is exactly the payload plus the root-only files below.
+# What is root-only BY DESIGN is exempt from the root -> payload walk, and named
+# in two lists below: exact files, and whole directories. An exemption is the one
+# thing here that can make a real orphan pass, so each entry is itself checked —
+# a listed file must exist, a listed directory must hold a tracked file, and the
+# payload must ship nothing under a listed directory.
+#
+# FAIL (exit 1): a file is missing, differs, is orphaned, or differs in mode, or
+#                an exemption below no longer describes the tree.
+# PASS (exit 0): the root is exactly the payload plus the root-only files and
+#                the contents of the root-only directories below.
 # ERROR (exit 2): the repo, payload or file list is not in a shape this can
 #                 compare — a vacuous pass is refused rather than reported. Also
 #                 a run stopped by a signal (HUP, INT, PIPE or TERM).
@@ -50,9 +58,10 @@ SKILL_TEMPLATE="$ROOT/$PAYLOAD_PREFIX"
 # entry is checked to exist below, so this list cannot rot into a set of
 # exemptions for files nobody has — which is the way such a list fails.
 #
-# A legitimately new root-only file goes here. That is the maintenance cost of
-# the orphan direction, and it is the intended trade: a list that must grow is
-# better than deletions passing silently.
+# A legitimately new root-only file goes here, unless it belongs under one of
+# the directories listed after it. That is the maintenance cost of the orphan
+# direction, and it is the intended trade: a list that must grow is better than
+# deletions passing silently.
 ROOT_ONLY='README.md
 .gitignore
 .claude-plugin/marketplace.json
@@ -60,6 +69,30 @@ scripts/sync-from-skill.sh
 scripts/check-mirror.sh
 .github/workflows/check-mirror.yml
 scripts/signal-test.sh'
+
+# Root DIRECTORIES that are deliberately not mirrored, one per line, with no
+# trailing slash. Everything tracked beneath one is exempt, so a file added
+# there needs no entry of its own — which is the point, and also the risk: a
+# directory entry exempts files nobody has listed. So this list is for a tree
+# that is root-only as a whole and cannot live in the scaffold, not a
+# convenience for a file that could go in ROOT_ONLY.
+#
+#   template-specs   the specs for changes to this template itself. They cannot
+#                    live in docs/specs/, because that directory is part of the
+#                    scaffold: a spec there would ship into every project
+#                    created from the template, and the root's generated
+#                    docs/specs/index.yaml would differ from the payload's.
+#
+# Three things keep an entry honest. The match is a path prefix ending at the
+# slash, so `template-specs` exempts neither a sibling directory
+# `template-specs-old/` nor a file `template-specs.md`. An entry must hold at
+# least one tracked file at the root, for the same reason a ROOT_ONLY entry
+# must exist. And the payload must track nothing under the same path: a
+# directory cannot be both exempt at the root and shipped in the scaffold,
+# because the forward walk would then demand a root copy of a file the reverse
+# walk has been told not to look at. The last two are checked below, and each
+# failure counts as drift.
+ROOT_ONLY_DIRS='template-specs'
 
 command -v git >/dev/null 2>&1 || {
   echo "error: git is required to enumerate the repo's files" >&2
@@ -111,7 +144,7 @@ fi
 drift=0
 checked=0
 
-# --- the root-only list must describe reality ------------------------------
+# --- the root-only file list must describe reality -------------------------
 printf '%s\n' "$ROOT_ONLY" | sort > "$tmp/root_only"
 while IFS= read -r rel; do
   [ -n "$rel" ] || continue
@@ -144,6 +177,42 @@ sort -o "$tmp/root_all" "$tmp/root_all"
   exit 2
 }
 
+# --- the root-only directory list must describe reality --------------------
+# Run after the split, because both checks read the tracked lists rather than
+# the worktree: an exempt directory is one git ships, and an untracked or
+# ignored file sitting in it says nothing about what the repo carries. The
+# cost of that choice: a directory deleted from the worktree but not yet staged
+# still passes here, and is reported once the deletion is staged or committed.
+# "$dir"/* is quoted so the entry is matched literally, and it ends at the
+# slash so a longer name that merely starts the same way is not exempted.
+printf '%s\n' "$ROOT_ONLY_DIRS" > "$tmp/root_only_dirs"
+: > "$tmp/root_exempt"
+while IFS= read -r dir; do
+  [ -n "$dir" ] || continue
+  held=0
+  while IFS= read -r rel; do
+    case "$rel" in
+      "$dir"/*)
+        held=$((held + 1))
+        printf '%s\n' "$rel" >> "$tmp/root_exempt"
+        ;;
+    esac
+  done < "$tmp/root_all"
+  if [ "$held" -eq 0 ]; then
+    echo "STALE EXEMPTION  $dir/ — listed as a root-only directory but holds no tracked file"
+    drift=$((drift + 1))
+  fi
+  while IFS= read -r rel; do
+    case "$rel" in
+      "$dir"/*)
+        echo "SHIPPED EXEMPTION  $rel — in the skill payload, under a directory listed as root-only"
+        drift=$((drift + 1))
+        ;;
+    esac
+  done < "$tmp/payload"
+done < "$tmp/root_only_dirs"
+sort -o "$tmp/root_exempt" "$tmp/root_exempt"
+
 # --- payload -> root: missing, differing content, differing mode -----------
 while IFS= read -r rel; do
   [ -n "$rel" ] || continue
@@ -170,7 +239,10 @@ while IFS= read -r rel; do
 done < "$tmp/payload"
 
 # --- root -> payload: orphans left behind by a deletion or rename ----------
-comm -23 "$tmp/root_all" "$tmp/root_only" > "$tmp/root_mirrored"
+# Two subtractions leave the root files that owe a payload counterpart: the
+# listed root-only files, then everything under a listed root-only directory.
+comm -23 "$tmp/root_all" "$tmp/root_only" > "$tmp/root_listed"
+comm -23 "$tmp/root_listed" "$tmp/root_exempt" > "$tmp/root_mirrored"
 while IFS= read -r rel; do
   [ -n "$rel" ] || continue
   if [ ! -f "$SKILL_TEMPLATE/$rel" ]; then
@@ -195,8 +267,13 @@ if [ "$drift" -gt 0 ]; then
   echo
   echo "For an ORPHAN, sync will NOT help — 'cp -R' never deletes. Either remove"
   echo "the root file by hand, restore it to the payload if the deletion was"
-  echo "unintended, or add it to ROOT_ONLY in this script if it is legitimately"
-  echo "root-only."
+  echo "unintended, or, if it is legitimately root-only, add it to ROOT_ONLY in"
+  echo "this script or keep it under a directory listed in ROOT_ONLY_DIRS."
+  echo
+  echo "For a STALE EXEMPTION, drop the entry from ROOT_ONLY or ROOT_ONLY_DIRS: it"
+  echo "names a file that is gone or a directory that tracks nothing. For a SHIPPED"
+  echo "EXEMPTION, choose one: a directory is root-only or part of the scaffold,"
+  echo "so remove it from the payload or remove its entry from ROOT_ONLY_DIRS."
   echo
   echo "NOTE: the root docs/, CLAUDE.md and .github/ are generated. Never"
   echo "hand-edit them — the sync discards the change and then reports green."
