@@ -682,7 +682,9 @@ repair depends on it. `MISSING`, `DIFFERS` or `MODE` after a *payload* edit mean
 *root* edit means you hand-edited a generated file, and syncing would discard your work and then
 report green: move the change into `.claude/skills/spec-driven/template/` first, then sync.
 (`MISSING` has only the one cause — a payload file absent from the root — so sync is always its
-repair.)
+repair.) One root edit is repaired the other way: bookkeeping for one of the template's own specs —
+an inventory row, a decision file, a line in `CLAUDE.md` — is reverted, not moved, because moving it
+ships this template's records to every derived project (`template-specs/README.md`).
 `ORPHAN` means a root file has no counterpart in the payload, usually left behind by a deletion —
 remove it by hand, restore it to the payload if the deletion was a mistake, or, if it's genuinely
 root-only, add it to `ROOT_ONLY` in the script or keep it under a directory listed in
