@@ -146,7 +146,7 @@ full rule set arrived and named the violation correctly — for days more regard
 
 **Every rule below this line lives in one file under `docs/process/`, and this file only routes to
 it.** That is deliberate. SKILL.md used to restate the method by hand, `check-mirror.sh` skips
-`.claude/` by design, and nothing compared the copies — so when the process docs learned that
+`.claude/skills/` by design, and nothing compared the copies — so when the process docs learned that
 `git fetch` has to precede a rebase, four passages here went on saying the old thing, and a fifth
 site was found only after three review frames. A pointer cannot drift from what it points at.
 
