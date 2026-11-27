@@ -66,10 +66,11 @@ These steps are not performed for a spec in this directory:
 Steps 4 to 7 each write to a scaffold file. At the root those files are the blank placeholders a new
 project fills in, and the root is generated from the payload. **Never make one of those edits on
 behalf of a spec in this directory, at the root or in the payload.** An edit at the root makes
-`scripts/check-mirror.sh` report `DIFFERS`. The documented repair for a `DIFFERS` after a root edit is
-to move the change into the payload and sync, and that repair is wrong here: every gate would then be
-green, and this template's own records would ship into every project created from it. A `DIFFERS`
-that follows such an edit is the signal to revert the edit, not to sync it.
+`scripts/check-mirror.sh` report `DIFFERS`, or `ORPHAN` for a file that is new, as a decision file is.
+The documented repairs, moving the change into the payload and syncing, or restoring the file to the
+payload, are wrong here: every gate would then be green, and this template's own records would ship
+into every project created from it. A `DIFFERS` or an `ORPHAN` that follows such an edit is the signal
+to revert the edit, not to carry it into the payload.
 
 This rule is about the record of a spec, not about its work. A spec here usually changes the scaffold,
 because the scaffold is what the template delivers, and that change is made in the payload and synced

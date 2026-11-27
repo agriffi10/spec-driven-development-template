@@ -180,7 +180,9 @@ sort -o "$tmp/root_all" "$tmp/root_all"
 # --- the root-only directory list must describe reality --------------------
 # Run after the split, because both checks read the tracked lists rather than
 # the worktree: an exempt directory is one git ships, and an untracked or
-# ignored file sitting in it says nothing about what the repo carries.
+# ignored file sitting in it says nothing about what the repo carries. The
+# cost of that choice: a directory deleted from the worktree but not yet staged
+# still passes here, and is reported once the deletion is staged or committed.
 # "$dir"/* is quoted so the entry is matched literally, and it ends at the
 # slash so a longer name that merely starts the same way is not exempted.
 printf '%s\n' "$ROOT_ONLY_DIRS" > "$tmp/root_only_dirs"
