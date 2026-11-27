@@ -30,3 +30,19 @@ jobs:
         run: env --default-signal=HUP,INT,PIPE,TERM sh scripts/signal-test.sh --self-test
       - name: Check every script exits on HUP, INT, PIPE and TERM
         run: env --default-signal=HUP,INT,PIPE,TERM sh scripts/signal-test.sh
+      # The template's own specs live in template-specs/, a root-only directory the mirror check
+      # exempts. They are linted here rather than in spec-lint.yml because that workflow is part of
+      # the mirrored scaffold, so a step added to it would ship to every project created from the
+      # template, and because it is path-filtered to docs/specs/, so a change to one of these specs
+      # would never start it. This workflow is root-only and unfiltered.
+      # The step refuses a directory with no SPEC-*.md before it lints, because spec-lint exits 0
+      # with "nothing to check" over one. The mirror check does not cover that case: it fails a
+      # template-specs/ with no tracked file at all, and the directory's README keeps it passing
+      # after every spec has been renamed or moved out from under the lint.
+      - name: Lint the template's own specs
+        run: |
+          ls template-specs/SPEC-*.md > /dev/null || {
+            echo "error: template-specs/ holds no SPEC-*.md, so spec-lint would pass over nothing"
+            exit 1
+          }
+          sh scripts/spec-lint.sh template-specs
