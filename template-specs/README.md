@@ -17,9 +17,10 @@ work on the template, not on your project. Your project's specs go in `docs/spec
 
 ## How the specs here work
 
-Each spec is written from `docs/templates/spec-template.md` and follows the same rules as a spec in
-a scaffolded project. Its frontmatter is the one home of its status, exactly as it is there, so read
-`spec_status` in the file to learn whether a spec is a draft, in progress or completed.
+Each spec is written from `docs/templates/spec-template.md`, and it is authored, reviewed and built
+by the process in `docs/process/`, as a spec in a scaffolded project is. Its frontmatter is the one
+home of its status, exactly as it is there, so read `spec_status` in the file to learn whether a spec
+is a draft, in progress or completed.
 
 Lint the specs with:
 
@@ -27,14 +28,61 @@ Lint the specs with:
 sh scripts/spec-lint.sh template-specs
 ```
 
-The check-mirror workflow (`.github/workflows/check-mirror.yml`) runs the same command in CI on
-every pull request and on every push to `main`.
+Name the directory every time. The bare command `sh scripts/spec-lint.sh` reads `docs/specs/`, which
+holds no spec in this repository, so it exits 0 without having read a single file here. The
+check-mirror workflow (`.github/workflows/check-mirror.yml`) runs the command above in CI on every
+pull request and on every push to `main`.
 
-Two things differ from a scaffolded project:
+There is no generated index here. `scripts/gen-index.sh` reads `docs/specs/` only, so nothing writes
+an `index.yaml` for this directory, and the frontmatter of each file is all there is. Where the
+process says to regenerate the index after a change to a spec's frontmatter, there is nothing to
+regenerate for a spec in this directory.
 
-- **There is no generated index here.** `scripts/gen-index.sh` reads `docs/specs/` only, so nothing
-  writes an `index.yaml` for this directory, and the frontmatter of each file is all there is.
-- **Delivery documents go in `template-specs/delivery/`.** When one of these specs completes, its
-  delivery document is written there and not in `docs/spec-delivery/`, because that directory is
-  mirrored scaffold too. The linter reads only the top level of the directory it is given, so it
-  does not take a delivery document in the subdirectory for a spec.
+## Completing a spec here
+
+`docs/process/completion-ritual.md` numbers the steps that close a spec. It was written for a
+scaffolded project, where `docs/` and `CLAUDE.md` belong to the project. In this repository those
+files are the scaffold itself: the root copies mirror the skill's payload, and whatever the payload
+carries is copied into every project created from the template. So a spec in this directory is
+closed by the steps whose target is this directory, and by no others.
+
+These steps are performed, and here:
+
+- **Step 1, the status.** Set `spec_status: Completed` in the spec's frontmatter, in this directory.
+- **Step 3, the delivery document.** Write it from `docs/templates/spec-completion-template.md` at
+  `template-specs/delivery/SPEC-XXX-<name>.md`, and not in `docs/spec-delivery/`, because that
+  directory is mirrored scaffold too. The spec linter reads only the top level of the directory it is
+  given, so it does not take a delivery document in the subdirectory for a spec.
+
+These steps are not performed for a spec in this directory:
+
+- **Step 2, regenerating the indexes.** There is no index to regenerate, because `gen-index.sh` does
+  not read this directory.
+- **Step 4, the row in `docs/component-inventory.md`.**
+- **Step 5, the decision file under `docs/decisions/<area>/`.**
+- **Step 6, the row in the Architecture Decision Record in `docs/architecture.md`.**
+- **Step 7, the prune of the `## Specs` section of `CLAUDE.md`.**
+
+Steps 4 to 7 each write to a scaffold file. At the root those files are the blank placeholders a new
+project fills in, and the root is generated from the payload. **Never make one of those edits on
+behalf of a spec in this directory, at the root or in the payload.** An edit at the root makes
+`scripts/check-mirror.sh` report `DIFFERS`. The documented repair for a `DIFFERS` after a root edit is
+to move the change into the payload and sync, and that repair is wrong here: every gate would then be
+green, and this template's own records would ship into every project created from it. A `DIFFERS`
+that follows such an edit is the signal to revert the edit, not to sync it.
+
+This rule is about the record of a spec, not about its work. A spec here usually changes the scaffold,
+because the scaffold is what the template delivers, and that change is made in the payload and synced
+as always. What stays out of the scaffold is the bookkeeping that says a spec of the template's was
+completed.
+
+**A decision reached by a spec here is recorded in that spec's delivery document.** This repository
+keeps no decision register of its own, because `docs/decisions/` is scaffold.
+
+## What does not watch this directory
+
+`scripts/docs-lint.sh` reads `docs/specs/` and `docs/spec-delivery/` only. Its check that a completed
+spec has a delivery document, and its cap on the length of a delivery document, never see a spec or a
+delivery document here, so both are held by whoever completes the spec. The path-scoped rules in
+`.claude/rules/` match `docs/specs/**` and `docs/spec-delivery/**` only, so no pointer to the process
+fires when a file in this directory is opened. This file is that pointer.

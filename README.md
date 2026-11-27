@@ -238,16 +238,16 @@ the router's table says.
    which is why the shipped copy is inert. Until you do this, "green CI" in your project means only
    that spec-lint passed — and spec-lint knows nothing about your code. (`docs-lint` runs locally
    before a push, not in CI.)
-5. **Delete the mirror machinery and the template's own specs.** Remove `scripts/check-mirror.sh`, `scripts/sync-from-skill.sh`,
-   `.github/workflows/check-mirror.yml`, `scripts/signal-test.sh`, `.claude-plugin/` and `template-specs/`. The first three keep *this* template's
-   two copies of the scaffold in step, and in your project they will fail: the check compares the
-   root files against the copy inside the skill, so it goes red the moment you customize `CLAUDE.md`
-   in step 2. `.claude-plugin/` publishes this template's skill, which your project does not do.
+5. **Delete the mirror machinery and the template's own specs.** Remove `scripts/check-mirror.sh`,
+   `scripts/sync-from-skill.sh`, `.github/workflows/check-mirror.yml`, `scripts/signal-test.sh`,
+   `.claude-plugin/` and `template-specs/`. The first three keep *this* template's two copies of the
+   scaffold in step, and in your project they will fail: the check compares the root files against
+   the copy inside the skill, so it goes red the moment you customize `CLAUDE.md` in step 2.
+   `.claude-plugin/` publishes this template's skill, which your project does not do.
    `template-specs/` holds the specs for changes to the template itself; your project's specs go in
-   `docs/specs/`. If
-   you use the plugin (see *Making the skill available*), delete `.claude/skills/spec-driven/` too,
-   so the project does not carry a second copy that goes stale; otherwise keep it — that's the
-   skill Claude uses.
+   `docs/specs/`. If you use the plugin (see *Making the skill available*), delete
+   `.claude/skills/spec-driven/` too, so the project does not carry a second copy that goes stale;
+   otherwise keep it — that's the skill Claude uses.
 6. Trim `docs/best-practices/` to the domains you actually use — a Python library doesn't need the
    React rulebook — and update `docs/best-practices/INDEX.md` to match.
 7. **Protect `main`.** In Settings → Rules, require pull requests (no direct pushes) and add

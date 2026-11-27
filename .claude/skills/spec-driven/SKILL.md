@@ -179,6 +179,11 @@ between Draft and Draft-ready. Fill in its frontmatter (`docs/process/knowledge-
 `sh scripts/gen-index.sh` — the spec index is generated, never edited — and `sh scripts/spec-lint.sh`
 before handing off.
 
+🔴 **In the template repo itself, its own specs live in `template-specs/`, not `docs/specs/`,** and
+that folder's `README.md` governs them. There is no index to regenerate, and the lint is
+`sh scripts/spec-lint.sh template-specs`: the bare command reads the empty `docs/specs/` and exits 0
+over nothing.
+
 ## 2. Build a spec (plan-gated)
 
 Only when told to build — a Draft spec sitting in the repo is not a signal to start. Being told to
@@ -192,7 +197,9 @@ for a change that removes things.
 
 🔴 **In the template repo itself, `sh scripts/check-mirror.sh` is a pre-push gate too.** CI runs it,
 the scaffold's own `CLAUDE.md` cannot name it (derived projects delete it), and every edit under
-`template/` owes a `sh scripts/sync-from-skill.sh` before it passes.
+`template/` owes a `sh scripts/sync-from-skill.sh` before it passes. When the spec being built is one
+of the template's own (`template-specs/`), `sh scripts/spec-lint.sh template-specs` is a pre-push gate
+as well: the bare `sh scripts/spec-lint.sh` reads the empty `docs/specs/` and exits 0 over nothing.
 
 ## 3. Watch PRs and watch main
 
@@ -200,7 +207,11 @@ the scaffold's own `CLAUDE.md` cannot name it (derived projects delete it), and 
 
 ## 4. Completion ritual
 
-`completion-ritual.md`, in one pass when a spec is done. Nothing here to add.
+`completion-ritual.md`, in one pass when a spec is done. Nothing here to add, with one exception.
+
+🔴 **In the template repo itself, a spec in `template-specs/` is completed by that folder's
+`README.md`, not by the ritual as written.** Most of the ritual's steps write to scaffold files, which
+ship to every derived project; the README says which steps apply and where.
 
 ## 5. Running several agents on one repo
 
